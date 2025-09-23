@@ -443,7 +443,7 @@ const BookingPage = () => {
   const updateBooking = async (bookingId, updatedData) => {
     try {
       const res = await fetch(
-        `https://backend-hazel-xi.vercel.app/api/bookings/update/${bookingId}`,
+        `https://ashoka-backend.vercel.app/api/bookings/update/${bookingId}`,
         {
           method: "PUT",
           headers: {
@@ -486,7 +486,7 @@ const BookingPage = () => {
   const updateBookingStatus = async (bookingId, newStatus) => {
     try {
       const res = await fetch(
-        `https://backend-hazel-xi.vercel.app/api/bookings/update/${bookingId}`,
+        `https://ashoka-backend.vercel.app/api/bookings/update/${bookingId}`,
         {
           method: "PUT",
           headers: {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import buddhaLogo from '../assets/buddha.jpg';
+import ashokaLogo from '../assets/Lakeview Rooftop.png';
 import { RiPhoneFill, RiMailFill } from 'react-icons/ri';
 import { useAppContext } from '../context/AppContext';
 
@@ -151,15 +151,15 @@ export default function Invoice() {
           <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="border border-black p-2">
               <div className="w-16 h-16 sm:w-20 sm:h-20">
-                <img src={buddhaLogo} alt="Buddha Avenue Logo" className="w-full h-full object-cover" />
+                <img src={ashokaLogo} alt="Ashoka Logo" className="w-full h-full object-cover" />
               </div>
             </div>
             <div className="text-xs text-center sm:text-left">
-              <p className="font-bold text-sm sm:text-base">BUDDHA AVENUE</p>
-              <p className="text-xs">Buddha Avenue,H.N Singh Chauraha, Medical College Road,</p>
+              <p className="font-bold text-sm sm:text-base">ASHOKA</p>
+              <p className="text-xs">Ashoka,H.N Singh Chauraha, Medical College Road,</p>
               <p className="text-xs">Basahichpur, GORAKHPUR - 273004</p>
-              <p className="text-xs">Website: <a href="http://buddhaavenue.in" className="text-blue-600">buddhaavenue.in</a></p>
-              <p className="text-xs">team@buddhaavenue.in</p>
+              <p className="text-xs">Website: <a href="http://ashoka.in" className="text-blue-600">ashoka.in</a></p>
+              <p className="text-xs">team@ashoka.in</p>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
@@ -169,7 +169,7 @@ export default function Invoice() {
             </div>
             <div className="text-xs flex items-center space-x-2">
                 <RiMailFill className="text-lg text-yellow-600" />
-                <span>team@buddhaavenue.in</span>
+                <span>team@ashoka.in</span>
             </div>
           </div>
         </div>

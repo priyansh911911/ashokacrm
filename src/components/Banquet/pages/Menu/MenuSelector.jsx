@@ -26,8 +26,8 @@ const MenuSelector = ({
       try {
         const [menuRes, categoriesRes, limitsRes] = await Promise.all([
           axios.get('/api/menu-items'),
-          axios.get('https://backend-hazel-xi.vercel.app/api/banquet-categories/all'),
-          axios.get('https://backend-hazel-xi.vercel.app/api/plan-limits/get')
+          axios.get('https://ashoka-backend.vercel.app/api/banquet-categories/all'),
+          axios.get('https://ashoka-backend.vercel.app/api/plan-limits/get')
         ]);
         
         const menuData = menuRes.data.success ? menuRes.data.data : menuRes.data;

@@ -3,7 +3,7 @@ import { Save, Bell, Mail, MessageSquare, Smartphone, Clock } from 'lucide-react
 
 const NotificationSettings = () => {
     const [channels, setChannels] = useState({
-        email: { enabled: true, address: 'admin@buddhaavenue.com' },
+        email: { enabled: true, address: 'admin@ashokaavenue.com' },
         sms: { enabled: false, number: '+91 9876543210' },
         push: { enabled: true },
         inApp: { enabled: true }

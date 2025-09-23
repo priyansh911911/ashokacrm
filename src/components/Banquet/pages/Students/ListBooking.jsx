@@ -838,7 +838,7 @@ const ListBooking = () => {
                               return;
                             }
                             const message =
-                              `🌟 *Welcome to Hotal Buddha Avenue!* 🌟\n\n` +
+                              `🌟 *Welcome to Hotal Ashoka!* 🌟\n\n` +
                               `Here's your booking confirmation:\n\n` +
                               `📅 *Date:* ${new Date(
                                 item.startDate

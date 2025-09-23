@@ -146,7 +146,7 @@ const AllBookings = ({ setActiveTab }) => {
         </head>
         <body>
           <div class="header">
-            <h1>Restaurant Invoice</h1>
+            <h1>Ashoka Restaurant Invoice</h1>
             <p>Invoice #: ${invoiceData.invoiceNumber || orderId.slice(-6)}</p>
             <p>Date: ${new Date(invoiceData.date || Date.now()).toLocaleDateString()}</p>
           </div>

@@ -10,8 +10,8 @@ const IntegrationSettings = () => {
     
     const [communicationServices, setCommunicationServices] = useState([
         { id: 1, name: 'Twilio SMS', type: 'sms', enabled: false, status: 'Disconnected', config: { accountSid: '', authToken: '', fromNumber: '' } },
-        { id: 2, name: 'MSG91', type: 'sms', enabled: true, status: 'Connected', config: { apiKey: 'msg91_***', senderId: 'BUDDHA' } },
-        { id: 3, name: 'SendGrid', type: 'email', enabled: true, status: 'Connected', config: { apiKey: 'sg_***', fromEmail: 'noreply@buddhaavenue.com' } },
+        { id: 2, name: 'MSG91', type: 'sms', enabled: true, status: 'Connected', config: { apiKey: 'msg91_***', senderId: 'ashoka' } },
+        { id: 3, name: 'SendGrid', type: 'email', enabled: true, status: 'Connected', config: { apiKey: 'sg_***', fromEmail: 'noreply@ashokaavenue.com' } },
         { id: 4, name: 'SMTP', type: 'email', enabled: false, status: 'Disconnected', config: { host: '', port: 587, username: '', password: '' } }
     ]);
     
@@ -23,8 +23,8 @@ const IntegrationSettings = () => {
     ]);
     
     const [webhooks, setWebhooks] = useState([
-        { id: 1, name: 'Payment Success', url: 'https://buddhaavenue.com/webhook/payment', enabled: true, events: ['payment.success', 'payment.failed'] },
-        { id: 2, name: 'Booking Updates', url: 'https://buddhaavenue.com/webhook/booking', enabled: true, events: ['booking.created', 'booking.cancelled'] }
+        { id: 1, name: 'Payment Success', url: 'https://ashokaavenue.com/webhook/payment', enabled: true, events: ['payment.success', 'payment.failed'] },
+        { id: 2, name: 'Booking Updates', url: 'https://ashokaavenue.com/webhook/booking', enabled: true, events: ['booking.created', 'booking.cancelled'] }
     ]);
 
     const handlePaymentToggle = (id) => {

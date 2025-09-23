@@ -4,7 +4,7 @@ import { Save, Upload, Eye, EyeOff } from 'lucide-react';
 const GeneralSettings = () => {
     const [profile, setProfile] = useState({
         name: 'John Doe',
-        email: 'john.doe@buddhaavenue.com',
+        email: 'john.doe@ashokaavenue.com',
         phone: '+91 9876543210',
         profilePicture: null
     });

@@ -3,11 +3,11 @@ import { Save, Plus, Trash2 } from 'lucide-react';
 
 const BusinessSettings = () => {
     const [hotelInfo, setHotelInfo] = useState({
-        name: 'Buddha Avenue Hotel',
+        name: 'Ashoka Hotel',
         address: '123 Main Street, City',
         phone: '+91 9876543210',
-        email: 'info@buddhaavenue.com',
-        website: 'www.buddhaavenue.com',
+        email: 'info@ashokaavenue.com',
+        website: 'www.ashokaavenue.com',
         license: 'HTL-2024-001',
         gst: '22AAAAA0000A1Z5'
     });

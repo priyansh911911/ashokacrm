@@ -29,7 +29,7 @@ const CheckoutPage = () => {
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('https://backend-hazel-xi.vercel.app/api/housekeeping/available-staff', {
+      const response = await axios.get('https://ashoka-backend.vercel.app/api/housekeeping/available-staff', {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('Staff API response:', response.data);
@@ -56,7 +56,7 @@ const CheckoutPage = () => {
   const fetchBookings = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('https://backend-hazel-xi.vercel.app/api/bookings/all', {
+      const response = await axios.get('https://ashoka-backend.vercel.app/api/bookings/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBookings(response.data);
@@ -68,7 +68,7 @@ const CheckoutPage = () => {
   const fetchRooms = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('https://backend-hazel-xi.vercel.app/api/rooms/all', {
+      const response = await axios.get('https://ashoka-backend.vercel.app/api/rooms/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRooms(response.data);
@@ -92,7 +92,7 @@ const CheckoutPage = () => {
       
       if (roomData) {
         try {
-          const inspectionResponse = await axios.get(`https://backend-hazel-xi.vercel.app/api/housekeeping/checklist/${roomData._id}`, {
+          const inspectionResponse = await axios.get(`https://ashoka-backend.vercel.app/api/housekeeping/checklist/${roomData._id}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (Array.isArray(inspectionResponse.data)) {
@@ -110,7 +110,7 @@ const CheckoutPage = () => {
       let laundryCharges = 0;
       try {
         const grcNo = selectedBookingData?.grcNo || selectedBookingData?.guestRegistrationCardNo;
-        const laundryResponse = await axios.get(`https://backend-hazel-xi.vercel.app/api/laundry/by-grc/${grcNo}`, {
+        const laundryResponse = await axios.get(`https://ashoka-backend.vercel.app/api/laundry/by-grc/${grcNo}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const laundryData = laundryResponse.data;
@@ -119,7 +119,7 @@ const CheckoutPage = () => {
         console.log('No laundry charges found');
       }
       
-      const checkoutResponse = await axios.post('https://backend-hazel-xi.vercel.app/api/checkout/create', {
+      const checkoutResponse = await axios.post('https://ashoka-backend.vercel.app/api/checkout/create', {
         bookingId: bookingId,
         roomId: roomId
       }, {
@@ -173,13 +173,13 @@ const CheckoutPage = () => {
         notes: 'Room cleaning after checkout and inspection'
       };
       
-      const taskResponse = await axios.post('https://backend-hazel-xi.vercel.app/api/housekeeping/tasks', taskData, {
+      const taskResponse = await axios.post('https://ashoka-backend.vercel.app/api/housekeeping/tasks', taskData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       // Then assign it using PUT if task creation returns an ID
       if (taskResponse.data._id) {
-        await axios.put(`https://backend-hazel-xi.vercel.app/api/housekeeping/tasks/${taskResponse.data._id}/assign`, {
+        await axios.put(`https://ashoka-backend.vercel.app/api/housekeeping/tasks/${taskResponse.data._id}/assign`, {
           assignedTo: selectedStaff
         }, {
           headers: { Authorization: `Bearer ${token}` }
@@ -212,7 +212,7 @@ const CheckoutPage = () => {
       const token = localStorage.getItem('token');
       
       // Process payment
-      await axios.put(`https://backend-hazel-xi.vercel.app/api/checkout/${checkoutData._id}/payment`, {
+      await axios.put(`https://ashoka-backend.vercel.app/api/checkout/${checkoutData._id}/payment`, {
         status: 'paid',
         paidAmount: parseFloat(paymentAmount),
         method: paymentMethod
@@ -221,7 +221,7 @@ const CheckoutPage = () => {
       });
       
       // Update booking status to 'Checked Out'
-      await axios.put(`https://backend-hazel-xi.vercel.app/api/bookings/update/${selectedBooking}`, {
+      await axios.put(`https://ashoka-backend.vercel.app/api/bookings/update/${selectedBooking}`, {
         status: 'Checked Out'
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -233,7 +233,7 @@ const CheckoutPage = () => {
       const roomData = rooms.find(room => room.roomNumber === roomNumber || room.room_number === roomNumber);
       
       if (roomData) {
-        await axios.put(`https://backend-hazel-xi.vercel.app/api/rooms/update/${roomData._id}`, {
+        await axios.put(`https://ashoka-backend.vercel.app/api/rooms/update/${roomData._id}`, {
           status: 'available'
         }, {
           headers: { Authorization: `Bearer ${token}` }
@@ -324,7 +324,7 @@ const CheckoutPage = () => {
       // Fetch checklist from API
       let checklist = [];
       try {
-        const checklistResponse = await axios.get(`https://backend-hazel-xi.vercel.app/api/housekeeping/checklist/${roomData._id}`, {
+        const checklistResponse = await axios.get(`https://ashoka-backend.vercel.app/api/housekeeping/checklist/${roomData._id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -361,7 +361,7 @@ const CheckoutPage = () => {
         status: 'completed'
       };
       
-      await axios.post('https://backend-hazel-xi.vercel.app/api/housekeeping/room-inspection', inspectionData, {
+      await axios.post('https://ashoka-backend.vercel.app/api/housekeeping/room-inspection', inspectionData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

@@ -45,7 +45,7 @@ const HelpSupport = () => {
             icon: Mail,
             title: "Email Support",
             description: "Send us your queries via email",
-            contact: "support@buddhaavenue.com",
+            contact: "support@ashokaavenue.com",
             availability: "Response within 24 hours"
         },
         {
