@@ -1,0 +1,120 @@
+{
+  "Silver": {
+    "Veg": {
+      "STARTERS_GROUP": 3,
+      
+      "BEVERAGES": 3,
+      "SOUP_VEG": 1,
+      "MAIN_COURSE_PANEER": 1,
+      "VEGETABLES": 2,
+      "MAIN_COURSE_GHAR_KA_SWAD": 1,
+      "RICE": 1,
+      "INDIAN BREADS": 3,
+      "SALAD BAR": 2,
+      "CURD AND RAITA": 1,
+      "DESSERTS": 1,
+      "ICE CREAM": 1,
+      "WATER": 1,
+      "LIVE COUNTER": 0
+    },
+    "Non-Veg": {
+      "STARTERS_GROUP": 3,
+      "BEVERAGES": 2,
+    "SOUP_VEG": 1,
+      "SOUP_NON_VEG": false,
+      "MAIN_COURSE_PANEER": 1,
+      "MAIN_COURSE_CHICKEN": 1,
+      "MAIN_COURSE_FISH_WITH_BONE": false ,
+      "MAIN_COURSE_MUTTON": false,
+      "VEGETABLES": 2,
+      "MAIN_COURSE_GHAR_KA_SWAD": 1,
+      "RICE": 1,
+      "INDIAN BREADS": 3,
+      "SALAD BAR": 2,
+      "CURD AND RAITA": 1,
+      "DESSERTS": 1,
+      "ICE CREAM": 1,
+      "WATER": 1,
+      "LIVE COUNTER": 0,
+      "NON-VEG SOUP": 0
+    }
+  },
+  "Gold": {
+    "Veg": {
+      "STARTERS_GROUP": 4,
+      "BEVERAGES": 3,
+      "SOUP_VEG": 2,
+      "MAIN_COURSE_PANEER": 1,
+      "VEGETABLES": 2,
+      "MAIN_COURSE_GHAR_KA_SWAD": 1,
+      "RICE": 1,
+      "INDIAN BREADS": 5,
+      "SALAD BAR": 3,
+      "CURD AND RAITA": 2,
+      "DESSERTS": 2,
+      "ICE CREAM": 1,
+      "WATER": 1,
+      "LIVE COUNTER": 0
+    },
+    "Non-Veg": {
+      "STARTERS_GROUP": 5,
+      "BEVERAGES": 3,
+      "SOUP_VEG": 1,
+      "SOUP_NON_VEG": 1,
+      
+      "MAIN_COURSE_CHICKEN": 1,
+      "MAIN_COURSE_MUTTON": 1,
+      "MAIN_COURSE_FISH_WITH_BONE": 1,
+      "MAIN_COURSE_PANEER": 1,
+      "VEGETABLES": 2,
+      "MAIN_COURSE_GHAR_KA_SWAD": 1,
+      "RICE": 1,
+      "INDIAN BREADS": 5,
+      "SALAD BAR": 3,
+      "CURD AND RAITA": 2,
+      "DESSERTS": 2,
+      "ICE CREAM": 1,
+      "WATER": 1,
+      "LIVE COUNTER": 0
+    }
+  },
+  "Platinum": {
+    "Veg": {
+      "STARTERS_GROUP": 8,
+      "BEVERAGES": 3,
+      "SOUP_VEG": 2,
+      "MAIN_COURSE_PANEER": 2,
+      "VEGETABLES": 3,
+      "MAIN_COURSE_GHAR_KA_SWAD": 2,
+      "RICE": 2,
+      "INDIAN BREADS": 6,
+      "SALAD BAR": 5,
+      "CURD AND RAITA": 2,
+      "DESSERTS": 3,
+      "ICE CREAM": 2,
+      "WATER": 1,
+      "LIVE COUNTER": 0
+    },
+    "Non-Veg": {
+      "STARTERS_GROUP": 8,
+      "BEVERAGES": 3,
+      "SOUP_VEG": 1,
+      "SOUP_NON_VEG": 1,
+      "NONVEG SOUP": 1,
+      "MAIN_COURSE_CHICKEN": 1,
+       "MAIN_COURSE_MUTTON": 1,
+      "MAIN_COURSE_FISH_WITH_BONE": 1,
+      "MAIN_COURSE_PANEER": 2,
+      "VEGETABLES": 3,
+     "MAIN_COURSE_GHAR_KA_SWAD": 2,
+      "RICE": 2,
+      "INDIAN BREADS": 6,
+      "SALAD BAR": 5,
+      "CURD AND RAITA": 2,
+      "DESSERTS": 3,
+      "ICE CREAM": 2,
+      "WATER": 1,
+      "LIVE COUNTER": 1
+    }
+  }
+}

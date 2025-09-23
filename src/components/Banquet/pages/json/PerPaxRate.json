@@ -1,0 +1,32 @@
+{
+  "RatePerPax": {
+    "Veg": {
+      "Silver": {
+        "basePrice": 1299,
+        "taxPercent": 18
+      },
+      "Gold": {
+        "basePrice": 1499,
+        "taxPercent": 18
+      },
+      "Platinum": {
+        "basePrice": 1899,
+        "taxPercent": 18
+      }
+    },
+    "NonVeg": {
+      "Silver": {
+        "basePrice": 1599,
+        "taxPercent": 18
+      },
+      "Gold": {
+        "basePrice": 1899,
+        "taxPercent": 18
+      },
+      "Platinum": {
+        "basePrice": 2299,
+        "taxPercent": 18
+      }
+    }
+  }
+}
