@@ -4,7 +4,7 @@ import { useAppContext } from "../../context/AppContext";
 import { showToast } from "../../utils/toaster";
 import { validateRequired, validateMinLength } from "../../utils/validation";
 import backgroundImage from "../../assets/9e5a6b521cd43319c86acf395f110951.jpg";
-import logoImage from "../../assets/buddhaavenuelogo.png";
+import logoImage from "../../assets/Lakeview Rooftop.png";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -86,7 +86,7 @@ const LoginPage = () => {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl overflow-hidden relative z-10">
         <div className="bg-primary py-2 ">
           <div className="text-center">
-            <img src={logoImage} alt="Buddha Avenue" className="h-25 mx-auto" />{" "}
+            <img src={logoImage} alt="Lakeview Rooftop" className="h-25 mx-auto" />{" "}
           </div>
         </div>
 

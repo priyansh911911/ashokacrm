@@ -20,7 +20,7 @@ import {
   Package,
   Bell,
 } from "lucide-react";
-import logoImage from "../assets/buddhaavenuelogo.png";
+import logoImage from "../assets/Lakeview Rooftop.png";
 
 const Sidebar = () => {
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -248,7 +248,7 @@ const Sidebar = () => {
         } transition-transform duration-300 ease-in-out md:relative md:translate-x-0 z-30 flex flex-col h-screen overflow-y-auto`}
       >
       <div className="flex items-center justify-between md:justify-center p-2">
-        <img src={logoImage} alt="Buddha Avenue" className="h-20 sm:h-24 md:h-30" />
+        <img src={logoImage} alt="Lakeview Rooftop" className="h-20 sm:h-24 md:h-30" />
         <button
           onClick={closeSidebar}
           className="md:hidden p-2 text-[#c2ab65] hover:text-white"
