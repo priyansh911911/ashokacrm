@@ -97,7 +97,7 @@ const OrderList = ({
                     {order._id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {order.staffName} ({order.tableNo})
+                    {order.staffName || order.staff_name || order.assignedStaff || 'No Staff'} ({order.tableNo || order.table_number || order.table || 'No Table'})
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     <ul className="list-disc list-inside">
@@ -155,6 +155,8 @@ const OrderList = ({
 const Orders = () => {
   const { axios } = useAppContext();
   const [orders, setOrders] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -171,10 +173,34 @@ const Orders = () => {
         : [];
       setOrders(fetchedOrders);
     } catch (error) {
-      console.error("Error fetching orders:", error);
       setOrders([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchTables = async () => {
+    try {
+      const { data } = await axios.get("/api/restaurant/tables", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const tablesData = Array.isArray(data) ? data : (data.tables || []);
+      setTables(tablesData);
+    } catch (error) {
+      setTables([]);
+    }
+  };
+
+  const fetchStaff = async () => {
+    try {
+      const { data } = await axios.get("/api/auth/all-users", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const allUsers = Array.isArray(data) ? data : (data.users || data.data || []);
+      const staffUsers = allUsers.filter(user => user.role === 'staff');
+      setStaff(staffUsers);
+    } catch (error) {
+      setStaff([]);
     }
   };
 
@@ -201,6 +227,8 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders();
+    fetchTables();
+    fetchStaff();
   }, []);
 
   const filteredOrders = orders.filter(
@@ -218,6 +246,58 @@ const Orders = () => {
         <p className="text-gray-600">View and manage restaurant orders</p>
       </header>
       <main className="w-full max-w-6xl mx-auto">
+        {/* Order Creation Form */}
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Create Order</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Order Type
+              </label>
+              <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="regular">Regular</option>
+                <option value="in-house">In-House</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Table Number
+              </label>
+              <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Select Table</option>
+                {tables.map((table) => (
+                  <option key={table._id} value={table.tableNumber}>
+                    Table {table.tableNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Staff
+              </label>
+              <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Select Staff</option>
+                {staff.map((staffMember) => (
+                  <option key={staffMember._id} value={staffMember.username}>
+                    {staffMember.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              placeholder="Phone Number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
         <OrderList
           orders={filteredOrders}
           onUpdateOrderStatus={updateOrderStatus}

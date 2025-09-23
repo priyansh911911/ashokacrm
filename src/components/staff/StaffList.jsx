@@ -22,6 +22,8 @@ const StaffList = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredStaff, setFilteredStaff] = useState([]);
 
   const getAuthToken = () => {
     return localStorage.getItem("token");
@@ -35,8 +37,18 @@ const StaffList = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
+      
+      console.log('=== ALL API CALLS ===');
+      console.log('1. GET /api/auth/all-users (filtering by role)');
+      console.log('2. POST /api/auth/register (for adding staff)');
+      console.log('3. PUT /api/auth/update/:id (for updating staff)');
+      console.log('4. DELETE /api/auth/delete/:id (for deleting staff)');
+      console.log('Base URL:', import.meta.env.VITE_BACKEND_URL);
+      console.log('Token present:', !!token);
+      console.log('==================');
+      
       const { data } = await axios.get(
-        "/api/housekeeping/available-staff",
+        "/api/auth/all-users",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -49,15 +61,26 @@ const StaffList = () => {
       console.log('Response Type:', typeof data);
       console.log('Is Array:', Array.isArray(data));
       
-      if (data && data.availableStaff) {
-        console.log('Using availableStaff array:', data.availableStaff);
-        setStaff(data.availableStaff);
-      } else {
-        console.log('Using direct data array:', data || []);
-        setStaff(data || []);
+      let allUsers = [];
+      if (Array.isArray(data)) {
+        allUsers = data;
+      } else if (data && data.users && Array.isArray(data.users)) {
+        allUsers = data.users;
+      } else if (data && data.data && Array.isArray(data.data)) {
+        allUsers = data.data;
       }
       
-      console.log('Final staff array length:', (data?.availableStaff || data || []).length);
+      // Filter users to show only staff role
+      const staffUsers = allUsers.filter(user => 
+        user.role === 'staff'
+      );
+      
+      console.log('All users count:', allUsers.length);
+      console.log('Filtered staff count:', staffUsers.length);
+      console.log('Staff users:', staffUsers);
+      
+      setStaff(staffUsers);
+      setFilteredStaff(staffUsers);
       console.log('========================');
 
       setError(null);
@@ -167,15 +190,58 @@ const StaffList = () => {
   };
 
   const getDepartmentName = (departments) => {
-    if (!departments || departments.length === 0) return "None";
-    return departments
-      .map((dept) => dept.name.charAt(0).toUpperCase() + dept.name.slice(1))
-      .join(", ");
+    if (!departments) return "None";
+    
+    // Handle different department formats
+    let deptArray = [];
+    
+    if (Array.isArray(departments)) {
+      deptArray = departments;
+    } else if (typeof departments === 'string') {
+      // Handle comma-separated string
+      deptArray = departments.split(',').map(d => ({ name: d.trim() }));
+    } else if (departments.name) {
+      // Single department object
+      deptArray = [departments];
+    }
+    
+    if (deptArray.length === 0) return "None";
+    
+    const validDepartments = ['kitchen', 'laundry', 'reception', 'maintenance'];
+    
+    return deptArray
+      .map((dept) => {
+        const deptName = (dept.name || dept).toLowerCase();
+        if (validDepartments.includes(deptName)) {
+          return deptName.charAt(0).toUpperCase() + deptName.slice(1);
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .join(", ") || "None";
   };
 
-  const totalPages = Math.ceil(staff.length / itemsPerPage);
+  const handleSearch = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+    
+    if (!query) {
+      setFilteredStaff(staff);
+    } else {
+      const filtered = staff.filter(staffMember => 
+        (staffMember.username || '').toLowerCase().includes(query) ||
+        (staffMember.email || '').toLowerCase().includes(query) ||
+        (staffMember.role || '').toLowerCase().includes(query) ||
+        getDepartmentName(staffMember.department).toLowerCase().includes(query)
+      );
+      setFilteredStaff(filtered);
+    }
+    setCurrentPage(1);
+  };
+
+  const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedStaff = staff.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedStaff = filteredStaff.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -191,6 +257,16 @@ const StaffList = () => {
         >
           <Plus size={18} className="w-4 h-4 inline mr-2" /> Add Staff
         </button>
+      </div>
+
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search staff by username, email, role, or department..."
+          value={searchQuery}
+          onChange={handleSearch}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        />
       </div>
 
       {loading ? (
@@ -310,7 +386,7 @@ const StaffList = () => {
             totalPages={totalPages}
             onPageChange={handlePageChange}
             itemsPerPage={itemsPerPage}
-            totalItems={staff.length}
+            totalItems={filteredStaff.length}
           />
         </div>
       )}

@@ -388,14 +388,14 @@ const Sidebar = () => {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowSettingsSlider(false)} />
           <div className="fixed left-0 md:left-64 bottom-0 md:bottom-16 z-50 w-full md:w-auto">
-            <div className="bg-white w-full md:w-60 rounded-t-lg md:rounded-lg shadow-lg border max-h-96 overflow-y-auto" style={{borderColor: 'hsl(45, 100%, 85%)'}}>
-              <div className="p-3 border-b flex justify-between items-center" style={{borderColor: 'hsl(45, 100%, 85%)'}}>
-                <h3 className="text-sm font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>
+            <div className="w-full md:w-60 rounded-t-lg md:rounded-lg shadow-lg border max-h-96 overflow-y-auto" style={{background: 'linear-gradient(to bottom, hsl(45, 100%, 95%), hsl(45, 100%, 90%))', borderColor: 'hsl(45, 43%, 58%)'}}>
+              <div className="p-3 border-b flex justify-between items-center" style={{background: 'linear-gradient(to bottom, hsl(45, 43%, 58%), hsl(45, 32%, 46%))', borderColor: 'hsl(45, 43%, 58%)'}}>
+                <h3 className="text-sm font-semibold text-white">
                   Settings
                 </h3>
                 <button 
                   onClick={() => setShowSettingsSlider(false)}
-                  className="md:hidden p-1 rounded-full hover:bg-gray-100"
+                  className="md:hidden p-1 rounded-full hover:bg-white hover:bg-opacity-20 text-white"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -411,7 +411,7 @@ const Sidebar = () => {
                       setShowSettingsSlider(false);
                       window.innerWidth < 768 && closeSidebar();
                     }}
-                    className="block p-3 md:p-2 rounded hover:bg-gray-50 transition-colors text-sm md:text-xs"
+                    className="block p-3 md:p-2 rounded transition-colors text-sm md:text-xs border border-transparent hover:border-[hsl(45,43%,58%)] hover:bg-[hsl(45,100%,98%)]"
                   >
                     <span style={{color: 'hsl(45, 100%, 20%)'}}>
                       {setting.label}
