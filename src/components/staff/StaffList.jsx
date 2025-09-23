@@ -23,51 +23,6 @@ const StaffList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // Add this after your useState declarations
-  useEffect(() => {
-    // Use dummy data if API fails
-    const dummyStaff = [
-      {
-        _id: "1",
-        username: "admin123",
-        email: "admin@example.com",
-        role: "admin",
-        department: [],
-      },
-      {
-        _id: "2",
-        username: "kitchen1",
-        email: "kitchen@example.com",
-        role: "staff",
-        department: [{ id: 1, name: "kitchen" }],
-      },
-      {
-        _id: "3",
-        username: "maintenance1",
-        email: "maintenance@example.com",
-        role: "staff",
-        department: [
-          { id: 4, name: "maintenance" },
-          { id: 5, name: "other" },
-        ],
-      },
-      {
-        _id: "4",
-        username: "reception1",
-        email: "reception@example.com",
-        role: "staff",
-        department: [{ id: 3, name: "reception" }],
-      },
-    ];
-
-    // Try to fetch from API first
-    fetchStaff().catch(() => {
-      // If API fails, use dummy data
-      setStaff(dummyStaff);
-      setLoading(false);
-    });
-  }, []);
-
   const getAuthToken = () => {
     return localStorage.getItem("token");
   };
@@ -89,12 +44,21 @@ const StaffList = () => {
         }
       );
 
-      // Check if the response has the expected structure
+      console.log('=== STAFF API RESPONSE ===');
+      console.log('Raw API Response:', data);
+      console.log('Response Type:', typeof data);
+      console.log('Is Array:', Array.isArray(data));
+      
       if (data && data.availableStaff) {
+        console.log('Using availableStaff array:', data.availableStaff);
         setStaff(data.availableStaff);
       } else {
+        console.log('Using direct data array:', data || []);
         setStaff(data || []);
       }
+      
+      console.log('Final staff array length:', (data?.availableStaff || data || []).length);
+      console.log('========================');
 
       setError(null);
     } catch (err) {
@@ -112,7 +76,7 @@ const StaffList = () => {
       email: "",
       username: "",
       password: "",
-      role: "", // Set to empty string instead of "staff"
+      role: "",
       department: [],
     });
     setShowModal(true);
@@ -160,7 +124,6 @@ const StaffList = () => {
       };
 
       if (editMode) {
-        // If password is empty, remove it from the request
         if (!staffData.password) {
           delete staffData.password;
         }
@@ -175,13 +138,11 @@ const StaffList = () => {
         );
         showToast.success("Staff member updated successfully");
       } else {
-        // Make sure department is properly formatted for staff role
         if (staffData.role === "staff" && staffData.department.length === 0) {
           showToast.error("Please select a department for staff member");
           return;
         }
 
-        // For admin role, ensure department is an empty array
         if (staffData.role === "admin") {
           staffData.department = [];
         }
@@ -192,7 +153,6 @@ const StaffList = () => {
           config
         );
 
-        // Add the new staff member to the list
         if (data) {
           setStaff([...staff, data]);
           showToast.success("Staff member added successfully");
@@ -264,7 +224,9 @@ const StaffList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedStaff.map((staffMember) => (
+                {paginatedStaff.map((staffMember) => {
+                  console.log('Rendering staff member:', staffMember);
+                  return (
                   <tr key={staffMember._id} className="hover:bg-gray-50">
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -328,7 +290,8 @@ const StaffList = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {paginatedStaff.length === 0 && (
                   <tr>
                     <td

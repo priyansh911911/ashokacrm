@@ -355,7 +355,7 @@ const Sidebar = () => {
             {item.isSlider ? (
               <button
                 onClick={() => setShowSettingsSlider(true)}
-                className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg hover:bg-hover transition-colors duration-200 w-full text-left text-sm sm:text-base"
+                className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg w-full text-left text-sm sm:text-base"
               >
                 <item.icon className="w-4 sm:w-5 h-4 sm:h-5 mr-2 sm:mr-3" />
                 <span className="truncate">{item.label}</span>
@@ -364,7 +364,7 @@ const Sidebar = () => {
               <Link
                 to={item.path}
                 onClick={() => window.innerWidth < 768 && closeSidebar()}
-                className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg hover:bg-hover transition-colors duration-200 text-sm sm:text-base"
+                className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base"
               >
                 <item.icon className="w-4 sm:w-5 h-4 sm:h-5 mr-2 sm:mr-3" />
                 <span className="truncate">{item.label}</span>
@@ -374,7 +374,7 @@ const Sidebar = () => {
         ))}
         <button
           onClick={handleLogout}
-          className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg hover:bg-hover transition-colors duration-200 w-full text-left text-sm sm:text-base"
+          className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg w-full text-left text-sm sm:text-base"
         >
           <LogOut className="w-4 sm:w-5 h-4 sm:h-5 mr-2 sm:mr-3" />
           <span className="truncate">Logout</span>
