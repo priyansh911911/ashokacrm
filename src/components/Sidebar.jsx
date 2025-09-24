@@ -204,6 +204,7 @@ const Sidebar = () => {
           { label: "Billing", path: "/billing", icon: FileText },
           { label: "Menu", path: "/menu", icon: UserRound },
           { label: "Tables", path: "/table", icon: UserRound },
+          { label: "Wastage", path: "/wastage", icon: Package },
         ];
       })(),
     },

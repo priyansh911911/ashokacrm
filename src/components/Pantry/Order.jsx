@@ -1,541 +1,582 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
-import Pagination from '../common/Pagination';
+import { Plus, Edit, Trash2, Package, Clock, User, MapPin } from 'lucide-react';
 
-// Confirmation Modal Component
-function ConfirmationModal({ message, onConfirm, onCancel }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-      <div className="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-xl animate-fade-in-down">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Confirm Action</h3>
-        <p className="mb-6 text-gray-700">{message}</p>
-        <div className="flex justify-end space-x-4">
-          <button
-            onClick={onCancel}
-            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition duration-300"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300"
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Success Modal Component for showing success messages
-function SuccessModal({ message, onClose }) {
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-      <div className="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-xl animate-fade-in-down">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Success!</h3>
-        <p className="mb-6 text-gray-700">{message}</p>
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300"
-          >
-            OK
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Order Form Component for adding/editing orders
-function OrderForm({ initialData, pantryItems, onSubmit, onCancel }) {
-  // State for the order form data, now includes notes and priority
-  const [formData, setFormData] = useState({
-    pantryItem: '',
-    quantity: 1,
-    orderDate: new Date().toISOString().slice(0, 10),
-    deliveryDate: '',
-    notes: '',
-    priority: 'medium',
-  });
-
-  // Effect to populate form data when editing an existing order
-  useEffect(() => {
-    if (initialData) {
-      // Create a Date object from the initial deliveryDate and check if it's a valid date
-      const deliveryDate = initialData.deliveryDate
-        ? new Date(initialData.deliveryDate)
-        : null;
-      const formattedDeliveryDate = deliveryDate && !isNaN(deliveryDate.getTime())
-        ? deliveryDate.toISOString().slice(0, 10)
-        : '';
-
-      // Add a similar robust check for the orderDate
-      // The provided data uses requestDate, so we'll map that to orderDate
-      const orderDate = initialData.requestDate
-        ? new Date(initialData.requestDate)
-        : new Date(); // Default to current date if invalid or missing
-      const formattedOrderDate = !isNaN(orderDate.getTime())
-        ? orderDate.toISOString().slice(0, 10)
-        : new Date().toISOString().slice(0, 10); // Default to current date if invalid
-
-      setFormData({
-        // Extract pantryItemId from the items array
-        pantryItem: initialData.items[0]?.pantryItemId || '',
-        quantity: initialData.items[0]?.quantity || 1,
-        orderDate: formattedOrderDate,
-        deliveryDate: formattedDeliveryDate,
-        notes: initialData.notes || '',
-        priority: initialData.priority || 'medium',
-      });
-    } else {
-      setFormData({
-        pantryItem: pantryItems.length > 0 ? pantryItems[0]._id : '',
-        quantity: 1,
-        orderDate: new Date().toISOString().slice(0, 10),
-        deliveryDate: '',
-        notes: '',
-        priority: 'medium',
-      });
-    }
-  }, [initialData, pantryItems]);
-
-  // Handle input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevData => ({ ...prevData, [name]: value }));
-  };
-
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.pantryItem) {
-      // Use a custom message box instead of alert()
-      // You would typically use a state variable to show an in-app message
-      console.log("Please select a pantry item.");
-      return;
-    }
-    const dataToSend = {
-      pantryItem: formData.pantryItem,
-      quantity: parseFloat(formData.quantity),
-      orderDate: formData.orderDate,
-      deliveryDate: formData.deliveryDate, 
-      notes: formData.notes,
-      priority: formData.priority,
-    };
-    onSubmit(initialData ? initialData._id : null, dataToSend);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="pantryItem" className="block text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Pantry Item</label>
-        <select
-          id="pantryItem"
-          name="pantryItem"
-          value={formData.pantryItem}
-          onChange={handleChange}
-          required
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-        >
-          {pantryItems.length > 0 ? (
-            pantryItems.map(item => (
-              <option key={item._id} value={item._id}>
-                {item.name}
-              </option>
-            ))
-          ) : (
-            <option value="">No items available</option>
-          )}
-        </select>
-      </div>
-
-      <div>
-        <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Quantity</label>
-        <input
-          type="number"
-          id="quantity"
-          name="quantity"
-          value={formData.quantity}
-          onChange={handleChange}
-          min="1"
-          required
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="orderDate" className="block text-sm font-medium text-gray-700">Order Date</label>
-        <input
-          type="date"
-          id="orderDate"
-          name="orderDate"
-          value={formData.orderDate}
-          onChange={handleChange}
-          required
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="deliveryDate" className="block text-sm font-medium text-gray-700">Delivery Date (Optional)</label>
-        <input
-          type="date"
-          id="deliveryDate"
-          name="deliveryDate"
-          value={formData.deliveryDate}
-          onChange={handleChange}
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-      
-      <div>
-        <label htmlFor="priority" className="block text-sm font-medium text-gray-700">Priority</label>
-        <select
-          id="priority"
-          name="priority"
-          value={formData.priority}
-          onChange={handleChange}
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="urgent">Urgent</option>
-        </select>
-      </div>
-
-      <div>
-        <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-        <textarea
-          id="notes"
-          name="notes"
-          rows="2"
-          value={formData.notes}
-          onChange={handleChange}
-          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-        ></textarea>
-      </div>
-
-      <div className="flex justify-end space-x-3 mt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-5 py-2 border rounded-lg transition duration-150 ease-in-out"
-          style={{ borderColor: 'hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)' }}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="px-5 py-2 font-bold rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
-          style={{ backgroundColor: 'hsl(45, 43%, 58%)', color: 'hsl(45, 100%, 20%)' }}
-        >
-          {initialData ? 'Update Order' : 'Place Order'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-// Main App Component for Orders Management
-function App() {
+const Order = () => {
   const { axios } = useAppContext();
-  // State variables for application data and UI
+  const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [pantryItems, setPantryItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  
-  // Order Form states
-  const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+  const [showOrderForm, setShowOrderForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterType, setFilterType] = useState('');
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  // Form state
+  const [formData, setFormData] = useState({
+    orderType: 'Kitchen to Pantry',
+    selectedItems: [],
+    priority: 'medium',
+    notes: '',
+    guestName: '',
+    roomNumber: '',
+    totalAmount: 0
+  });
 
-  // Helper function to get auth token from local storage
-  const getAuthToken = () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("Authentication token not found. Please log in again.");
-      return null;
-    }
-    return token;
-  };
-
-  // Function to fetch all pantry items from the backend
-  const fetchPantryItems = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const token = getAuthToken();
-
-    try {
-      if (!token) {
-        return;
-      }
-
-      const { data } = await axios.get('/api/pantry/items', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setPantryItems(data.items || []);
-    } catch (err) {
-      console.error("Error fetching pantry items:", err);
-      const errorMessage = err.response?.data?.message || err.message;
-      setError(`Failed to load pantry items: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Function to fetch all orders from the backend
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const token = getAuthToken();
-
-    try {
-      if (!token) {
-        return;
-      }
-
-      const { data } = await axios.get('/api/pantry/orders', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setOrders(data.orders || []);
-    } catch (err) {
-      console.error("Error fetching orders:", err);
-      const errorMessage = err.response?.data?.message || err.message;
-      setError(`Failed to load orders: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Initial data fetch for both items and orders
   useEffect(() => {
-    fetchPantryItems();
     fetchOrders();
-  }, [fetchPantryItems, fetchOrders]);
+    fetchPantryItems();
+  }, []);
 
-  // Order Management Functions
-  const handleOrderSubmit = async (id, data) => {
+  const fetchOrders = async () => {
     setLoading(true);
-    setError(null);
-    const token = getAuthToken();
-
     try {
-      if (!token) {
-        throw new Error("Authentication token not found.");
-      }
-
-
-
-      if (id) {
-        await axios.put(`/api/pantry/orders/${id}`, data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } else {
-        await axios.post('/api/pantry/orders', data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-
-      showToast.success(`Order ${id ? 'updated' : 'placed'} successfully!`);
-      resetOrderForm();
-      fetchOrders();
-    } catch (err) {
-      console.error("Error saving order:", err);
-      const errorMessage = err.response?.data?.message || err.message;
-      setError(`Failed to save order: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-      setTimeout(() => setError(null), 3000);
-    }
-  };
-
-  const handleOrderEdit = (order) => {
-    setEditingOrder(order);
-    setIsOrderFormOpen(true);
-  };
-
-  const handleOrderDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this order?")) return;
-    
-    setLoading(true);
-    setError(null);
-    const token = getAuthToken();
-
-    try {
-      if (!token) {
-        throw new Error("Authentication token not found.");
-      }
-
-      await axios.delete(`/api/pantry/orders/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const { data } = await axios.get('/api/pantry/orders', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      showToast.success('Order deleted successfully!');
-      fetchOrders();
-    } catch (err) {
-      console.error("Error deleting order:", err);
-      const errorMessage = err.response?.data?.message || err.message;
-      showToast.error(`Failed to delete order: ${errorMessage}`);
+      setOrders(data.orders || data.data || data || []);
+    } catch (error) {
+      showToast.error('Failed to fetch orders');
     } finally {
       setLoading(false);
     }
   };
 
-  const resetOrderForm = () => {
-    setEditingOrder(null);
-    setIsOrderFormOpen(false);
-  };
-
-  // Handle clicks outside the modal content to close it
-  const handleModalClick = (e) => {
-    if (e.target.id === 'order-form-modal-overlay') {
-      resetOrderForm();
+  const fetchPantryItems = async () => {
+    try {
+      const { data } = await axios.get('/api/pantry/items', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      console.log('Pantry Items API Response:', data);
+      
+      // Handle different response formats
+      let items = [];
+      if (Array.isArray(data)) {
+        items = data;
+      } else if (data.items && Array.isArray(data.items)) {
+        items = data.items;
+      } else if (data.data && Array.isArray(data.data)) {
+        items = data.data;
+      }
+      
+      console.log('All Pantry Items:', items);
+      
+      // Don't filter by category, use all items
+      setPantryItems(items);
+      
+      if (items.length === 0) {
+        showToast.error('No pantry items found. Please add some items first.');
+      }
+    } catch (error) {
+      console.error('Pantry Items Error:', error);
+      showToast.error('Failed to fetch pantry items: ' + error.message);
+      setPantryItems([]);
     }
   };
 
-  const totalPages = Math.ceil(orders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedOrders = orders.slice(startIndex, startIndex + itemsPerPage);
+  const handleSubmitOrder = async (e) => {
+    e.preventDefault();
+    if (formData.selectedItems.length === 0) {
+      showToast.error('Please add at least one item');
+      return;
+    }
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
+    setLoading(true);
+    try {
+      const orderData = {
+        orderType: formData.orderType,
+        items: formData.selectedItems.map(item => ({
+          itemId: item.pantryItemId,
+          pantryItemId: item.pantryItemId,
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          unitPrice: item.unitPrice || 0,
+          notes: item.notes || ''
+        })),
+        priority: formData.priority,
+        notes: formData.notes,
+        guestName: formData.guestName,
+        roomNumber: formData.roomNumber,
+        totalAmount: formData.totalAmount,
+        orderNumber: `ORD-${Date.now()}`
+      };
+
+      if (editingOrder) {
+        await axios.put(`/api/pantry/orders/${editingOrder._id}`, orderData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        showToast.success('Order updated successfully');
+      } else {
+        await axios.post('/api/pantry/orders', orderData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        showToast.success('Order created successfully');
+      }
+
+      resetForm();
+      fetchOrders();
+    } catch (error) {
+      showToast.error(error.response?.data?.message || 'Failed to save order');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleDeleteOrder = async (orderId) => {
+    if (!window.confirm('Are you sure you want to delete this order?')) return;
+
+    try {
+      await axios.delete(`/api/pantry/orders/${orderId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      showToast.success('Order deleted successfully');
+      fetchOrders();
+    } catch (error) {
+      showToast.error('Failed to delete order');
+    }
+  };
+
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await axios.patch(`/api/pantry/orders/${orderId}/status`, 
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      showToast.success('Order status updated');
+      fetchOrders();
+    } catch (error) {
+      showToast.error('Failed to update order status');
+    }
+  };
+
+  const addItem = () => {
+    console.log('Add Item clicked, pantryItems:', pantryItems);
+    if (pantryItems.length === 0) {
+      showToast.error('No pantry items available. Please add items first.');
+      return;
+    }
+    const firstItem = pantryItems[0];
+    console.log('Adding item:', firstItem);
+    setFormData(prev => {
+      const newFormData = {
+        ...prev,
+        selectedItems: [...prev.selectedItems, {
+          pantryItemId: firstItem._id,
+          name: firstItem.name,
+          quantity: 1,
+          unit: firstItem.unit || 'pcs',
+          unitPrice: firstItem.price || 0,
+          notes: ''
+        }]
+      };
+      console.log('Updated formData:', newFormData);
+      return newFormData;
+    });
+  };
+
+  const removeItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedItems: prev.selectedItems.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateItem = (index, field, value) => {
+    setFormData(prev => {
+      const updatedItems = [...prev.selectedItems];
+      if (field === 'pantryItemId') {
+        const selectedItem = pantryItems.find(item => item._id === value);
+        if (selectedItem) {
+          updatedItems[index] = {
+            ...updatedItems[index],
+            pantryItemId: value,
+            name: selectedItem.name,
+            unit: selectedItem.unit
+          };
+        }
+      } else {
+        updatedItems[index] = {
+          ...updatedItems[index],
+          [field]: field === 'quantity' ? Number(value) : value
+        };
+      }
+      return { ...prev, selectedItems: updatedItems };
+    });
+  };
+
+  const resetForm = () => {
+    setFormData({
+      orderType: 'Kitchen to Pantry',
+      selectedItems: [],
+      priority: 'medium',
+      notes: '',
+      guestName: '',
+      roomNumber: '',
+      totalAmount: 0
+    });
+    setEditingOrder(null);
+    setShowOrderForm(false);
+  };
+
+  const handleEditOrder = (order) => {
+    setEditingOrder(order);
+    setFormData({
+      orderType: order.orderType || 'Kitchen to Pantry',
+      selectedItems: order.items || [],
+      priority: order.priority || 'medium',
+      notes: order.notes || '',
+      guestName: order.guestName || '',
+      roomNumber: order.roomNumber || '',
+      totalAmount: order.totalAmount || 0
+    });
+    setShowOrderForm(true);
+  };
+
+  const getStatusBadge = (status) => {
+    const colors = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      approved: 'bg-blue-100 text-blue-800',
+      fulfilled: 'bg-green-100 text-green-800',
+      cancelled: 'bg-red-100 text-red-800'
+    };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+        {status?.charAt(0).toUpperCase() + status?.slice(1) || 'Pending'}
+      </span>
+    );
+  };
+
+  const getPriorityBadge = (priority) => {
+    const colors = {
+      low: 'bg-gray-100 text-gray-800',
+      medium: 'bg-blue-100 text-blue-800',
+      high: 'bg-orange-100 text-orange-800',
+      urgent: 'bg-red-100 text-red-800'
+    };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[priority] || 'bg-blue-100 text-blue-800'}`}>
+        {priority?.charAt(0).toUpperCase() + priority?.slice(1) || 'Medium'}
+      </span>
+    );
+  };
+
+  const filteredOrders = orders.filter(order => {
+    if (filterStatus && order.status !== filterStatus) return false;
+    if (filterType && order.orderType !== filterType) return false;
+    return true;
+  });
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8 font-sans" style={{ backgroundColor: 'hsl(45, 100%, 95%)' }}>
-      <div className="w-full bg-white rounded-xl shadow-lg p-6">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">Pantry Orders Management</h1>
-
-       
-
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <span className="block sm:inline">{error}</span>
-          </div>
-        )}
-
-        {/* Controls: Add Order */}
-        <div className="flex justify-end mb-6">
+    <div className="p-4 sm:p-6 overflow-auto h-full bg-background">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Pantry Orders</h1>
+        <div className="flex gap-2">
           <button
-            onClick={() => setIsOrderFormOpen(true)}
-            className="font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
-            style={{ backgroundColor: 'hsl(45, 43%, 58%)', color: 'hsl(45, 100%, 20%)' }}
+            onClick={fetchPantryItems}
+            className="bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm"
           >
-            Place New Order
+            Refresh Items ({pantryItems.length})
+          </button>
+          <button
+            onClick={() => setShowOrderForm(true)}
+            className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Create Order
           </button>
         </div>
-
-        {/* Loading Indicator */}
-        {loading && (
-          <div className="flex items-center justify-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            <p className="ml-3 text-gray-700">Loading data...</p>
-          </div>
-        )}
-
-        {/* Orders List Table */}
-        {!loading && (
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">All Orders</h2>
-            <div className="overflow-x-auto rounded-lg shadow-md border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order No.</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Date</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedOrders.length > 0 ? (
-                    paginatedOrders.map((order) => (
-                      <tr key={order._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-3 text-sm text-gray-500">{order.orderNumber || 'N/A'}</td>
-                        <td className="px-6 py-3 text-sm font-medium text-gray-900">{order.items[0]?.name || 'Item Not Found'}</td>
-                        <td className="px-6 py-3 text-sm text-gray-500">{order.items[0]?.quantity || 'N/A'} {order.items[0]?.unit || ''}</td>
-                        <td className="px-6 py-3 text-sm text-gray-500">{new Date(order.requestDate).toLocaleDateString()}</td>
-                        <td className="px-6 py-3 text-sm text-gray-500 capitalize">{order.priority || 'N/A'}</td>
-                        <td className="px-6 py-3 text-sm text-gray-500 max-w-xs truncate">{order.notes || 'No notes'}</td>
-                        <td className="px-6 py-3 text-sm">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            (order.status === 'fulfilled' || order.deliveryDate) ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {order.status || (order.deliveryDate ? 'Delivered' : 'Ordered')}
-                          </span>
-                        </td>
-                        <td className="px-6 py-3 text-right text-sm font-medium flex items-center justify-end space-x-2">
-                          <button
-                            onClick={() => handleOrderEdit(order)}
-                            className="text-indigo-600 hover:text-indigo-900 transition duration-150 ease-in-out"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleOrderDelete(order._id)}
-                            className="text-red-600 hover:text-red-900 transition duration-150 ease-in-out"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" className="px-6 py-3 text-center text-sm text-gray-500">
-                        No orders found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              itemsPerPage={itemsPerPage}
-              totalItems={orders.length}
-            />
-          </div>
-        )}
-        
-        {/* Add/Edit Order Form Modal */}
-        {isOrderFormOpen && (
-          <div
-            id="order-form-modal-overlay"
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50"
-            onClick={handleModalClick}
-          >
-            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto transform scale-95 animate-fade-in hide-scrollbar">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-                {editingOrder ? 'Edit Order' : 'Place New Order'}
-              </h2>
-              <OrderForm
-                initialData={editingOrder}
-                pantryItems={pantryItems}
-                onSubmit={handleOrderSubmit}
-                onCancel={resetOrderForm}
-              />
-            </div>
-          </div>
-        )}
-
-
       </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="fulfilled">Fulfilled</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">All Types</option>
+            <option value="Kitchen to Pantry">Kitchen to Pantry</option>
+            <option value="Pantry to Reception">Pantry to Reception</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Orders List */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-4 text-center">Loading...</td>
+                </tr>
+              ) : filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No orders found</td>
+                </tr>
+              ) : (
+                filteredOrders.map((order) => (
+                  <tr key={order._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
+                      {order.orderNumber || order._id?.slice(-8)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {order.orderType === 'kitchen-to-pantry' ? 'Kitchen → Pantry' : 'Pantry → Reception'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {order.guestName || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {order.roomNumber || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {order.items?.length || 0} items
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getPriorityBadge(order.priority)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(order.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditOrder(order)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteOrder(order._id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        {order.status === 'pending' && (
+                          <button
+                            onClick={() => updateOrderStatus(order._id, 'approved')}
+                            className="text-green-600 hover:text-green-900 text-xs"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {order.status === 'approved' && (
+                          <button
+                            onClick={() => updateOrderStatus(order._id, 'fulfilled')}
+                            className="text-blue-600 hover:text-blue-900 text-xs"
+                          >
+                            Fulfill
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Order Form Modal */}
+      {showOrderForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-6">
+                {editingOrder ? 'Edit Order' : 'Create New Order'}
+              </h2>
+              
+              <form onSubmit={handleSubmitOrder} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
+                    <select
+                      value={formData.orderType}
+                      onChange={(e) => setFormData(prev => ({ ...prev, orderType: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="Kitchen to Pantry">Kitchen to Pantry</option>
+                      <option value="Pantry to Reception">Pantry to Reception</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <select
+                      value={formData.priority}
+                      onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Guest Name</label>
+                    <input
+                      type="text"
+                      value={formData.guestName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, guestName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
+                    <input
+                      type="text"
+                      value={formData.roomNumber}
+                      onChange={(e) => setFormData(prev => ({ ...prev, roomNumber: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {formData.orderType === 'Pantry to Reception' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.totalAmount}
+                      onChange={(e) => setFormData(prev => ({ ...prev, totalAmount: parseFloat(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="block text-sm font-medium text-gray-700">Items</label>
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      disabled={pantryItems.length === 0}
+                      className="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    >
+                      <Plus size={14} />
+                      Add Item ({pantryItems.length} available)
+                    </button>
+                  </div>
+                  
+                  {pantryItems.length === 0 ? (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                      No pantry items available. Please add pantry items first before creating orders.
+                    </div>
+                  ) : formData.selectedItems.length === 0 ? (
+                    <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+                      No items added yet. Click "Add Item" to add items to this order.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {formData.selectedItems.map((item, index) => (
+                        <div key={index} className="flex items-center space-x-3 p-3 border rounded">
+                          <select
+                            value={item.pantryItemId}
+                            onChange={(e) => updateItem(index, 'pantryItemId', e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                          >
+                            {pantryItems.map(pantryItem => (
+                              <option key={pantryItem._id} value={pantryItem._id}>
+                                {pantryItem.name}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                            className="w-20 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                          
+                          <span className="text-sm text-gray-600">{item.unit}</span>
+                          
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea
+                    rows={3}
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Add any additional notes"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || formData.selectedItems.length === 0}
+                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Saving...' : editingOrder ? 'Update Order' : 'Create Order'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
 
-export default App;
+export default Order;

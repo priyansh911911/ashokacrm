@@ -63,6 +63,7 @@ import SecuritySettings from "./components/Settings/SecuritySettings.jsx";
 import DataBackupSettings from "./components/Settings/DataBackupSettings.jsx";
 import IntegrationSettings from "./components/Settings/IntegrationSettings.jsx";
 import HelpSupport from "./components/HelpSupport.jsx";
+import WastageForm from "./components/Wastage/WastageForm.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -181,6 +182,7 @@ const App = () => {
                       <Route path="/settings/data" element={<DataBackupSettings />} />
                       <Route path="/settings/integrations" element={<IntegrationSettings />} />
                       <Route path="/help" element={<HelpSupport />} />
+                      <Route path="/wastage" element={<WastageForm />} />
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>
                   </main>

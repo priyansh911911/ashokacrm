@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaIndianRupeeSign } from "react-icons/fa6";
 import { SlCalender } from "react-icons/sl";
 import {
@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   LogOut,
 } from "lucide-react";
+import { useAppContext } from "../context/AppContext";
+import { useNavigate } from "react-router-dom";
 import BookingCalendar from "./BookingCalendar";
 import BookingCard from "./cards/BookingCard.jsx";
 import RoomCard from "./cards/RoomCard.jsx";
@@ -30,16 +32,79 @@ import {
 } from "../components/dashboardData.js";
 
 const Dashboard = () => {
+  const { axios } = useAppContext();
+  const navigate = useNavigate();
   const [activeCard, setActiveCard] = useState(() => {
     const savedCard = localStorage.getItem("activeCard");
     return savedCard || "bookings"; // Default to "bookings"
   });
   const [timeFrame, setTimeFrame] = useState("weekly");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(false);
   const handleCalendarClick = () => {
     setShowCalendar(true);
   };
   const [selectedYear, setSelectedYear] = useState(2025);
+
+  const fetchRooms = async () => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get("/api/rooms/all", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const roomsData = Array.isArray(data) ? data : (data.rooms || data.data || []);
+      console.log('Rooms API Response:', roomsData);
+      setRooms(roomsData);
+    } catch (error) {
+      console.log('Rooms API Error:', error);
+      setRooms([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const getRoomCategories = () => {
+    const categories = {};
+    rooms.forEach(room => {
+      // Handle category as object or string
+      let category = 'Standard';
+      if (room.category) {
+        if (typeof room.category === 'string') {
+          category = room.category;
+        } else if (room.category.name) {
+          category = room.category.name;
+        } else if (room.category.type) {
+          category = room.category.type;
+        }
+      } else if (room.roomType) {
+        if (typeof room.roomType === 'string') {
+          category = room.roomType;
+        } else if (room.roomType.name) {
+          category = room.roomType.name;
+        }
+      }
+      
+      if (!categories[category]) {
+        categories[category] = {
+          total: 0,
+          available: 0,
+          occupied: 0
+        };
+      }
+      categories[category].total++;
+      if (room.status === 'available') {
+        categories[category].available++;
+      } else {
+        categories[category].occupied++;
+      }
+    });
+    return categories;
+  };
 
   const toggleCard = (cardId) => {
     const newActiveCard = activeCard === cardId ? null : cardId;
@@ -205,6 +270,58 @@ const Dashboard = () => {
           {renderCardDetail()}
         </div>
       )}
+      {/* Room Categories */}
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+        <h2 className="text-lg sm:text-xl font-extrabold text-[#1f2937] mb-4">
+          Room Categories & Availability
+        </h2>
+        {loading ? (
+          <p className="text-gray-600">Loading rooms...</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Object.entries(getRoomCategories()).map(([category, data]) => (
+              <div
+                key={category}
+                className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
+                onClick={() => {
+                  navigate('/bookingform', { state: { category } });
+                }}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-gray-800">{category}</h3>
+                  <Home className="w-5 h-5 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Total:</span>
+                    <span className="font-medium">{data.total}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600">Available:</span>
+                    <span className="font-medium text-green-600">{data.available}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-red-600">Occupied:</span>
+                    <span className="font-medium text-red-600">{data.occupied}</span>
+                  </div>
+                </div>
+                {data.available > 0 && (
+                  <button 
+                    className="w-full mt-3 bg-primary text-white py-2 px-4 rounded-md text-sm hover:bg-primary/90 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/bookingform', { state: { category } });
+                    }}
+                  >
+                    Book Now
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Quick Actions */}
       <QuickActions />
       {/* Add this at the very end, just before the final closing </div> */}
