@@ -125,6 +125,22 @@ const StaffForm = ({
               <option value="admin">Admin</option>
             </select>
           </div>
+          {currentStaff.role === "staff" && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Monthly Salary</label>
+              <input
+                type="number"
+                value={currentStaff.salary || ''}
+                onChange={(e) =>
+                  setCurrentStaff({ ...currentStaff, salary: Number(e.target.value) })
+                }
+                className="w-full px-3 py-2 border rounded-md"
+                required
+                min="0"
+                placeholder="Enter monthly salary"
+              />
+            </div>
+          )}
           {/*  */}
           {currentStaff.role === "staff" && (
             <div className="mb-4">

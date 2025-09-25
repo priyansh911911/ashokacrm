@@ -64,6 +64,10 @@ import DataBackupSettings from "./components/Settings/DataBackupSettings.jsx";
 import IntegrationSettings from "./components/Settings/IntegrationSettings.jsx";
 import HelpSupport from "./components/HelpSupport.jsx";
 import WastageForm from "./components/Wastage/WastageForm.jsx";
+import InventoryForm from "./components/Inventory/InventoryForm.jsx";
+import StaffDashboard from "./components/Staff/StaffDashboard.jsx";
+import AttendanceForm from "./components/Staff/AttendanceForm.jsx";
+import PayrollForm from "./components/Staff/PayrollForm.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -183,6 +187,10 @@ const App = () => {
                       <Route path="/settings/integrations" element={<IntegrationSettings />} />
                       <Route path="/help" element={<HelpSupport />} />
                       <Route path="/wastage" element={<WastageForm />} />
+                      <Route path="/inventory" element={<InventoryForm />} />
+                      <Route path="/staff-dashboard" element={<StaffDashboard />} />
+                      <Route path="/staff/attendance" element={<AttendanceForm />} />
+                      <Route path="/staff/payroll" element={<PayrollForm />} />
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>
                   </main>

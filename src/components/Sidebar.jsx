@@ -19,6 +19,7 @@ import {
   ListChecks,
   Package,
   Bell,
+  Warehouse,
 } from "lucide-react";
 import logoImage from "../assets/Lakeview Rooftop.png";
 
@@ -125,7 +126,18 @@ const Sidebar = () => {
     // { icon: FileText, label: "Checkout", path: "/checkout" },
     { icon: FileText, label: "Reservation", path: "/reservation" },
     { icon: Bell, label: "My Task", path: "/staff-work", count: taskCount },
-    { icon: UserRound, label: "Staff", path: "/staff" },
+    {
+      icon: UserRound,
+      label: "Staff Management",
+      path: "/staff",
+      isDropdown: true,
+      children: [
+        { label: "Staff List", path: "/staff", icon: Users },
+        { label: "Staff Dashboard", path: "/staff-dashboard", icon: LayoutDashboard },
+        // { label: "Attendance", path: "/staff/attendance", icon: UserCheck },
+        // { label: "Payroll", path: "/staff/payroll", icon: BarChart2 },
+      ],
+    },
     {
       icon: UserRound,
       label: "Laundary",
@@ -205,6 +217,7 @@ const Sidebar = () => {
           { label: "Menu", path: "/menu", icon: UserRound },
           { label: "Tables", path: "/table", icon: UserRound },
           { label: "Wastage", path: "/wastage", icon: Package },
+
         ];
       })(),
     },
@@ -220,7 +233,8 @@ const Sidebar = () => {
       ],
     },
     { icon: Users, label: "Customers", path: "/customers" },
-    { icon: Users, label: "All Users", path: "/users" }
+    { icon: Users, label: "All Users", path: "/users" },
+    { icon: Warehouse, label: "Inventory", path: "/inventory" }
     // { icon: Users, label: "Payment", path: "/payment" },
     // { icon: FileText, label: "Invoice", path: "/invoice" },
   ];

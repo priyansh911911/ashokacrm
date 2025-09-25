@@ -1,0 +1,346 @@
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import { Calendar, Clock, Users, CheckCircle } from 'lucide-react';
+
+const AttendanceForm = () => {
+  const [staff, setStaff] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [attendance, setAttendance] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
+  useEffect(() => {
+    if (staff.length > 0) {
+      fetchAttendance();
+    }
+  }, [selectedDate, staff]);
+
+  const fetchStaff = async () => {
+    try {
+      const response = await fetch('https://ashoka-backend.vercel.app/api/staff/all', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setStaff(data || []);
+      } else {
+        toast.error('Failed to fetch staff members');
+      }
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      toast.error('Error loading staff data');
+    }
+  };
+
+  const fetchAttendance = async () => {
+    try {
+      const response = await fetch(`https://ashoka-backend.vercel.app/api/attendance/get?date=${selectedDate}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const attendanceMap = {};
+        data.forEach(record => {
+          attendanceMap[record.staffId] = record;
+        });
+        setAttendance(attendanceMap);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+    }
+  };
+
+  const markAttendance = async (staffId, status, leaveType = null) => {
+    console.log('Marking attendance:', { staffId, status, leaveType });
+    setLoading(true);
+    try {
+      const payload = {
+        staffId,
+        date: selectedDate,
+        status,
+        leaveType,
+        checkIn: status === 'present' ? new Date() : null
+      };
+
+      console.log('Payload:', payload);
+      const response = await fetch('https://ashoka-backend.vercel.app/api/attendance/mark', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Attendance marked:', result);
+        toast.success('Attendance marked successfully');
+        fetchAttendance();
+      } else {
+        const error = await response.json();
+        console.error('Failed to mark attendance:', error);
+        toast.error(error.message || 'Failed to mark attendance');
+      }
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      toast.error('Error marking attendance');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-2 sm:p-4 lg:p-6 bg-background min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <Users className="text-blue-600" size={24} />
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">Staff Attendance</h1>
+        </div>
+
+        {/* Date Selection */}
+        <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="text-green-600" size={18} />
+              <label className="text-sm sm:text-base font-medium text-gray-700">Select Date:</label>
+            </div>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        {/* Staff Attendance Grid */}
+        <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+            <CheckCircle className="text-green-600" size={18} />
+            Mark Attendance
+          </h2>
+          
+          <div className="grid gap-3 sm:gap-4">
+            {staff.map(member => {
+              const currentAttendance = attendance[member._id];
+              return (
+                <div key={member._id} className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50">
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-base font-medium text-gray-800 truncate">{member.userId?.username || member.username}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600">{member.department}</p>
+                      <p className="text-xs text-gray-500">Salary: ₹{member.salary?.toLocaleString()}</p>
+                    </div>
+                    
+                    <div className="w-full lg:w-auto">
+                      {/* Mobile: Stack buttons vertically */}
+                      <div className="grid grid-cols-2 sm:hidden gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Present button clicked for:', member._id);
+                            markAttendance(member._id, 'present');
+                          }}
+                          disabled={loading}
+                          className={`px-2 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                            currentAttendance?.status === 'present'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200 active:bg-green-300'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {loading ? 'Loading...' : 'Present'}
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Absent button clicked for:', member._id);
+                            markAttendance(member._id, 'absent');
+                          }}
+                          disabled={loading}
+                          className={`px-2 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                            currentAttendance?.status === 'absent'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {loading ? 'Loading...' : 'Absent'}
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Half Day button clicked for:', member._id);
+                            markAttendance(member._id, 'half-day');
+                          }}
+                          disabled={loading}
+                          className={`px-2 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                            currentAttendance?.status === 'half-day'
+                              ? 'bg-yellow-600 text-white'
+                              : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 active:bg-yellow-300'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {loading ? 'Loading...' : 'Half Day'}
+                        </button>
+                        
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              console.log('Leave type selected:', e.target.value, 'for:', member._id);
+                              markAttendance(member._id, 'leave', e.target.value);
+                              setTimeout(() => {
+                                e.target.value = '';
+                              }, 100);
+                            }
+                          }}
+                          value={currentAttendance?.status === 'leave' ? currentAttendance.leaveType || '' : ''}
+                          disabled={loading}
+                          className="px-2 py-1.5 border border-gray-300 rounded text-xs cursor-pointer"
+                        >
+                          <option value="" disabled>
+                            {currentAttendance?.status === 'leave' && currentAttendance.leaveType
+                              ? `${currentAttendance.leaveType.charAt(0).toUpperCase() + currentAttendance.leaveType.slice(1)} Leave`
+                              : 'Leave Type'
+                            }
+                          </option>
+                          <option value="casual">Casual</option>
+                          <option value="sick">Sick</option>
+                          <option value="paid">Paid</option>
+                          <option value="unpaid">Unpaid</option>
+                        </select>
+                      </div>
+                      
+                      {/* Desktop: Horizontal layout */}
+                      <div className="hidden sm:flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Present button clicked for:', member._id);
+                            markAttendance(member._id, 'present');
+                          }}
+                          disabled={loading}
+                          className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
+                            currentAttendance?.status === 'present'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200 active:bg-green-300'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {loading ? 'Loading...' : 'Present'}
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Absent button clicked for:', member._id);
+                            markAttendance(member._id, 'absent');
+                          }}
+                          disabled={loading}
+                          className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
+                            currentAttendance?.status === 'absent'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {loading ? 'Loading...' : 'Absent'}
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Half Day button clicked for:', member._id);
+                            markAttendance(member._id, 'half-day');
+                          }}
+                          disabled={loading}
+                          className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
+                            currentAttendance?.status === 'half-day'
+                              ? 'bg-yellow-600 text-white'
+                              : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 active:bg-yellow-300'
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {loading ? 'Loading...' : 'Half Day'}
+                        </button>
+                        
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              console.log('Leave type selected:', e.target.value, 'for:', member._id);
+                              markAttendance(member._id, 'leave', e.target.value);
+                              setTimeout(() => {
+                                e.target.value = '';
+                              }, 100);
+                            }
+                          }}
+                          value={currentAttendance?.status === 'leave' ? currentAttendance.leaveType || '' : ''}
+                          disabled={loading}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm cursor-pointer"
+                        >
+                          <option value="" disabled>
+                            {currentAttendance?.status === 'leave' && currentAttendance.leaveType
+                              ? `${currentAttendance.leaveType.charAt(0).toUpperCase() + currentAttendance.leaveType.slice(1)} Leave`
+                              : 'Select Leave Type'
+                            }
+                          </option>
+                          <option value="casual">Casual Leave</option>
+                          <option value="sick">Sick Leave</option>
+                          <option value="paid">Paid Leave</option>
+                          <option value="unpaid">Unpaid Leave</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {currentAttendance && (
+                    <div className="mt-2 sm:mt-3 p-2 bg-gray-50 rounded">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className="text-xs sm:text-sm text-gray-600">Status:</span>
+                        <span className={`text-xs sm:text-sm font-medium px-2 py-1 rounded inline-block ${
+                          currentAttendance.status === 'present' 
+                            ? 'bg-green-100 text-green-800'
+                            : currentAttendance.status === 'leave'
+                            ? 'bg-blue-100 text-blue-800'
+                            : currentAttendance.status === 'half-day'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {currentAttendance.status === 'leave' && currentAttendance.leaveType 
+                            ? `${currentAttendance.leaveType} Leave`
+                            : currentAttendance.status
+                          }
+                        </span>
+                      </div>
+                      {currentAttendance.checkIn && (
+                        <div className="mt-1 text-xs text-gray-500">
+                          Check-in: {new Date(currentAttendance.checkIn).toLocaleTimeString()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AttendanceForm;

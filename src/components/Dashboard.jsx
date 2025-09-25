@@ -16,6 +16,7 @@ import {
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import BookingCalendar from "./BookingCalendar";
+import CashTransactionCard from "./CashTransaction/CashTransactionCard";
 import BookingCard from "./cards/BookingCard.jsx";
 import RoomCard from "./cards/RoomCard.jsx";
 import RevenueCard from "./cards/RevenueCard.jsx";
@@ -270,6 +271,9 @@ const Dashboard = () => {
           {renderCardDetail()}
         </div>
       )}
+      {/* Cash Management */}
+      <CashTransactionCard />
+
       {/* Room Categories */}
       <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
         <h2 className="text-lg sm:text-xl font-extrabold text-[#1f2937] mb-4">
