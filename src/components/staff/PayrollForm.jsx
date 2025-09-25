@@ -18,19 +18,35 @@ const PayrollForm = () => {
 
   const fetchStaff = async () => {
     try {
+      const token = localStorage.getItem('token');
+      console.log('PayrollForm - Fetching staff with token:', token ? 'Present' : 'Missing');
+      
       const response = await fetch('https://ashoka-backend.vercel.app/api/staff/all', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      console.log('PayrollForm - API Response Status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Staff API Response:', data);
-        setStaff(data || []);
+        console.log('PayrollForm - Raw API Response:', data);
+        console.log('PayrollForm - Staff Array Length:', data?.length || 0);
+        console.log('PayrollForm - First Staff Member:', data?.[0]);
+        
+        if (Array.isArray(data)) {
+          setStaff(data);
+          console.log('PayrollForm - Staff set successfully, count:', data.length);
+        } else {
+          console.error('PayrollForm - Data is not an array:', typeof data);
+          setStaff([]);
+        }
       } else {
+        const errorData = await response.json();
+        console.error('PayrollForm - API Error:', errorData);
         toast.error('Failed to fetch staff members');
       }
     } catch (error) {
-      console.error('Error fetching staff:', error);
+      console.error('PayrollForm - Network Error:', error);
       toast.error('Error loading staff data');
     }
   };
@@ -130,11 +146,24 @@ const PayrollForm = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Choose staff member ({staff.length} available)</option>
-                {staff.map(member => (
-                  <option key={member._id} value={member._id}>
-                    {member.userId?.username || member.username || 'No Name'} - {member.department || 'No Dept'}
-                  </option>
-                ))}
+                {staff.map((member, index) => {
+                  console.log(`PayrollForm Staff Member ${index + 1}:`, member);
+                  const staffName = member.userId?.username || member.username || 'No Name';
+                  const department = Array.isArray(member.department) 
+                    ? member.department.map(d => d.name || d).join(', ')
+                    : member.department || 'No Department';
+                  
+                  console.log(`Staff ${index + 1} - Name: ${staffName}, Dept: ${department}, ID: ${member._id}`);
+                  
+                  return (
+                    <option key={member._id} value={member._id}>
+                      {staffName} - {department} (Salary: ₹{member.salary?.toLocaleString() || 'N/A'})
+                    </option>
+                  );
+                })}
+                {staff.length === 0 && (
+                  <option disabled>No staff members found</option>
+                )}
               </select>
             </div>
             
