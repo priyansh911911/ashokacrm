@@ -27,23 +27,47 @@ const StaffDashboard = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/staff/add', {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      const userRole = localStorage.getItem('role');
+      
+      console.log('Staff Add Debug:', { 
+        token: token ? 'Present' : 'Missing', 
+        userId, 
+        userRole,
+        staffData: currentStaff 
+      });
+      
+      if (!token) {
+        toast.error('No authentication token found. Please login again.');
+        return;
+      }
+
+      const payload = {
+        username: currentStaff.username,
+        email: currentStaff.email,
+        password: currentStaff.password,
+        role: currentStaff.role,
+        department: currentStaff.department,
+        salary: currentStaff.salary
+      };
+      
+      console.log('Staff Add Payload:', payload);
+
+      const response = await fetch('https://ashoka-backend.vercel.app/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          username: currentStaff.username,
-          email: currentStaff.email,
-          password: currentStaff.password,
-          role: currentStaff.role,
-          department: currentStaff.department,
-          salary: currentStaff.salary
-        })
+        body: JSON.stringify(payload)
       });
 
+      console.log('Staff Add Response Status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('Staff Added Successfully:', result);
         toast.success('Staff added successfully!');
         setShowStaffForm(false);
         setCurrentStaff({
@@ -56,10 +80,23 @@ const StaffDashboard = () => {
         });
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Failed to add staff');
+        console.error('Staff Add Error:', error);
+        
+        if (response.status === 401) {
+          toast.error('Authentication failed. Please login again.');
+          localStorage.clear();
+          window.location.href = '/login';
+        } else if (response.status === 403) {
+          toast.error('Access denied. You do not have permission to add staff.');
+        } else if (response.status === 400) {
+          toast.error(error.message || 'Invalid data provided.');
+        } else {
+          toast.error(error.message || 'Failed to add staff');
+        }
       }
     } catch (error) {
-      toast.error('Error adding staff');
+      console.error('Network Error:', error);
+      toast.error('Network error. Please check your connection.');
     }
   };
 
