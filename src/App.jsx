@@ -65,9 +65,9 @@ import IntegrationSettings from "./components/Settings/IntegrationSettings.jsx";
 import HelpSupport from "./components/HelpSupport.jsx";
 import WastageForm from "./components/Wastage/WastageForm.jsx";
 import InventoryForm from "./components/Inventory/InventoryForm.jsx";
-import StaffDashboard from "./components/Staff/StaffDashboard.jsx";
-import AttendanceForm from "./components/Staff/AttendanceForm.jsx";
-import PayrollForm from "./components/Staff/PayrollForm.jsx";
+import StaffDashboard from "./components/staff/StaffDashboard.jsx";
+import AttendanceForm from "./components/staff/AttendanceForm.jsx";
+import PayrollForm from "./components/staff/PayrollForm.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
