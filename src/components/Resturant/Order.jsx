@@ -63,20 +63,64 @@ const Order = () => {
         console.error('Error fetching bookings:', error);
       }
       
-      // Set dummy data for staff and tables if API fails
-      setStaff([
-        { _id: '1', name: 'John Doe', restaurantRole: 'staff' },
-        { _id: '2', name: 'Jane Smith', restaurantRole: 'staff' },
-        { _id: '3', name: 'Mike Johnson', restaurantRole: 'staff' }
-      ]);
+      // Fetch staff with fallback
+      try {
+        const token = localStorage.getItem('token');
+        const staffRes = await axios.get('/api/staff/all', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const staffData = Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.staff || []);
+        
+        // Format staff data to ensure consistent structure
+        const formattedStaff = staffData.map(member => ({
+          _id: member._id,
+          name: member.userId?.username || member.username || member.name || 'Staff Member',
+          username: member.userId?.username || member.username || member.name || 'Staff Member',
+          department: Array.isArray(member.department) 
+            ? member.department.map(dept => dept.name).join(', ') 
+            : (member.department?.name || member.department || 'General'),
+          restaurantRole: 'staff'
+        }));
+        
+        setStaff(formattedStaff);
+        console.log('Staff loaded:', formattedStaff);
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        // Set fallback staff data
+        setStaff([
+          { _id: 'staff1', name: 'Staff Member 1', username: 'Staff Member 1', department: 'General', restaurantRole: 'staff' },
+          { _id: 'staff2', name: 'Staff Member 2', username: 'Staff Member 2', department: 'General', restaurantRole: 'staff' }
+        ]);
+      }
       
-      setTables([
-        { _id: '1', tableNumber: '1', status: 'available' },
-        { _id: '2', tableNumber: '2', status: 'available' },
-        { _id: '3', tableNumber: '3', status: 'available' },
-        { _id: '4', tableNumber: '4', status: 'available' },
-        { _id: '5', tableNumber: '5', status: 'available' }
-      ]);
+      // Fetch tables with fallback
+      try {
+        const token = localStorage.getItem('token');
+        const tablesRes = await axios.get('/api/restaurant/tables', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const tablesData = Array.isArray(tablesRes.data) ? tablesRes.data : (tablesRes.data.tables || []);
+        
+        // Format tables data to ensure consistent structure
+        const formattedTables = tablesData.map(table => ({
+          _id: table._id,
+          tableNumber: table.tableNumber || table.number || table.table_number,
+          status: table.status || 'available'
+        }));
+        
+        setTables(formattedTables);
+        console.log('Tables loaded:', formattedTables);
+      } catch (error) {
+        console.error('Error fetching tables:', error);
+        // Set fallback tables data
+        setTables([
+          { _id: 'table1', tableNumber: '1', status: 'available' },
+          { _id: 'table2', tableNumber: '2', status: 'available' },
+          { _id: 'table3', tableNumber: '3', status: 'available' },
+          { _id: 'table4', tableNumber: '4', status: 'available' },
+          { _id: 'table5', tableNumber: '5', status: 'available' }
+        ]);
+      }
       
     } catch (error) {
       console.error('Error fetching data:', error);
