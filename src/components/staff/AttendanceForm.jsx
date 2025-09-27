@@ -212,67 +212,68 @@ const AttendanceForm = () => {
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   return (
-    <div className="p-4 bg-background min-h-screen">
+    <div className="p-4 sm:p-6 bg-background min-h-screen">
       <div className="max-w-full mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <Users className="text-blue-600" size={24} />
-          <h1 className="text-2xl font-bold text-gray-800">Staff Attendance Management</h1>
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <Users className="text-blue-600" size={20} />
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">Staff Attendance</h1>
         </div>
 
         {/* Staff, Month/Year Selection */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <Calendar className="text-green-600" size={18} />
-            <div className="flex gap-4 flex-wrap">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Staff</label>
-                <select
-                  value={selectedStaff}
-                  onChange={(e) => setSelectedStaff(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48"
-                >
-                  <option value="">Choose Staff Member</option>
-                  {staff.map((staffMember) => (
-                    <option key={staffMember._id} value={staffMember._id}>
-                      {staffMember.username} - {staffMember.department}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {months.map((month, index) => (
-                    <option key={index} value={index + 1}>{month}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {Array.from({length: 5}, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-4 mb-4">
+            <Calendar className="text-green-600" size={16} />
+            <h3 className="text-sm sm:text-base font-medium text-gray-700">Select Period & Staff</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Staff</label>
+              <select
+                value={selectedStaff}
+                onChange={(e) => setSelectedStaff(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Choose Staff Member</option>
+                {staff.map((staffMember) => (
+                  <option key={staffMember._id} value={staffMember._id}>
+                    {staffMember.username} - {staffMember.department}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {months.map((month, index) => (
+                  <option key={index} value={index + 1}>{month}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {Array.from({length: 5}, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
 
         {/* Staff Info & Salary Update */}
         {selectedStaff && (
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800">
                   {staff.find(s => s._id === selectedStaff)?.username}
                 </h3>
                 <p className="text-sm text-gray-600">
@@ -317,7 +318,7 @@ const AttendanceForm = () => {
                       }
                     }
                   }}
-                  className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-20 sm:w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="0"
                 />
               </div>
@@ -330,18 +331,18 @@ const AttendanceForm = () => {
         {/* Attendance Table */}
         {selectedStaff ? (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="p-4 border-b">
-              <h2 className="text-lg font-semibold">
+            <div className="p-3 sm:p-4 border-b">
+              <h2 className="text-base sm:text-lg font-semibold">
                 {months[selectedMonth - 1]} {selectedYear} Attendance
               </h2>
             </div>
             
             <div className="overflow-x-auto overflow-y-visible">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs sm:text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     {days.map(day => (
-                      <th key={day} className="px-3 py-3 text-center font-medium text-gray-700 border min-w-16">
+                      <th key={day} className="px-1 sm:px-3 py-2 sm:py-3 text-center font-medium text-gray-700 border min-w-10 sm:min-w-16">
                         {day}
                       </th>
                     ))}
@@ -354,9 +355,9 @@ const AttendanceForm = () => {
                       const attendance = attendanceData[key];
                       
                       return (
-                        <td key={day} className="px-3 py-3 border text-center">
+                        <td key={day} className="px-1 sm:px-3 py-2 sm:py-3 border text-center">
                           <div
-                            className={`w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center cursor-pointer mx-auto border-2 ${
+                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center cursor-pointer mx-auto border-2 ${
                               getStatusColor(attendance?.status, attendance?.leaveType)
                             }`}
                             title={attendance ? `${attendance.status}${attendance.leaveType ? ` (${attendance.leaveType})` : ''}` : 'Click to mark attendance'}
@@ -375,25 +376,25 @@ const AttendanceForm = () => {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <p className="text-gray-500 text-lg">Please select a staff member to view their attendance sheet</p>
+          <div className="bg-white rounded-lg shadow-md p-6 sm:p-8 text-center">
+            <p className="text-gray-500 text-sm sm:text-lg">Please select a staff member to view their attendance sheet</p>
           </div>
         )}
 
         {/* Attendance Marking Modal */}
         {openDropdown && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4 text-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-sm w-full">
+              <h3 className="text-base sm:text-lg font-semibold mb-4 text-center">
                 Mark Attendance - Day {openDropdown.day}
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <button
                   onClick={() => {
                     markAttendance(openDropdown.staffId, openDropdown.day, 'present');
                     setOpenDropdown(null);
                   }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors"
+                  className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors text-xs sm:text-sm"
                   disabled={loading}
                 >
                   ✅ Present
@@ -461,7 +462,7 @@ const AttendanceForm = () => {
               </div>
               <button
                 onClick={() => setOpenDropdown(null)}
-                className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                className="w-full mt-3 sm:mt-4 px-3 sm:px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm"
               >
                 Cancel
               </button>
@@ -470,12 +471,12 @@ const AttendanceForm = () => {
         )}
 
         {/* Legend */}
-        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-          <h3 className="text-xl font-bold mb-4 text-gray-800">Attendance Status Legend:</h3>
-          <div className="flex flex-wrap gap-4 justify-center text-base">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-100 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-green-200">P</div>
-              <span className="font-medium">Present</span>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mt-4 sm:mt-6">
+          <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-800">Attendance Status Legend:</h3>
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 justify-center text-sm sm:text-base">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 text-green-800 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center border-2 border-green-200">P</div>
+              <span className="font-medium text-xs sm:text-sm">Present</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-red-100 text-red-800 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-red-200">A</div>

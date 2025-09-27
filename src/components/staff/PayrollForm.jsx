@@ -111,20 +111,20 @@ const PayrollForm = () => {
   return (
     <div className="p-4 sm:p-6 bg-background min-h-screen">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <DollarSign className="text-green-600" size={28} />
-          <h1 className="text-2xl font-bold text-gray-800">Payroll Management</h1>
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <DollarSign className="text-green-600" size={20} />
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">Payroll Management</h1>
         </div>
 
         {/* Month/Year Selection */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {months.map((month, index) => (
                   <option key={index} value={index + 1}>{month}</option>
@@ -137,23 +137,21 @@ const PayrollForm = () => {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {Array.from({length: 5}, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
             </div>
-
-
           </div>
         </div>
 
         {/* Generate Payroll Form */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Generate Payroll</h3>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex-1 min-w-48">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+          <h3 className="text-base sm:text-lg font-semibold mb-4">Generate Payroll</h3>
+          <div className="space-y-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Select Staff</label>
               <select
                 value={selectedStaff}
@@ -196,7 +194,7 @@ const PayrollForm = () => {
                 }
               }}
               disabled={loading || !selectedStaff}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Calculator size={16} />
               {loading ? 'Generating...' : 'Generate Payroll'}
@@ -205,10 +203,10 @@ const PayrollForm = () => {
         </div>
 
         {/* Generated Payrolls */}
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
-            <FileText className="text-blue-600" size={20} />
-            <h2 className="text-lg font-semibold">Generated Payrolls</h2>
+            <FileText className="text-blue-600" size={16} />
+            <h2 className="text-base sm:text-lg font-semibold">Generated Payrolls</h2>
           </div>
 
           {generatedPayrolls.length === 0 ? (
@@ -247,7 +245,7 @@ const PayrollForm = () => {
                       </button>
                     </div>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <p className="text-gray-600">Total Salary</p>
                         <p className="font-semibold text-green-600">₹{payroll.totalSalary?.toLocaleString()}</p>
@@ -276,8 +274,8 @@ const PayrollForm = () => {
         {showDetailsModal && selectedPayrollDetails && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-              <div className="flex justify-between items-center p-4 border-b">
-                <h3 className="text-lg font-semibold">Payroll Details - {months[selectedPayrollDetails.month - 1]} {selectedPayrollDetails.year}</h3>
+              <div className="flex justify-between items-center p-3 sm:p-4 border-b">
+                <h3 className="text-base sm:text-lg font-semibold">Payroll Details - {months[selectedPayrollDetails.month - 1]} {selectedPayrollDetails.year}</h3>
                 <button
                   onClick={() => setShowDetailsModal(false)}
                   className="text-gray-500 hover:text-gray-700"
@@ -286,50 +284,50 @@ const PayrollForm = () => {
                 </button>
               </div>
               
-              <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="p-3 sm:p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {/* Summary */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">₹{selectedPayrollDetails.totalSalary?.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">Total Salary</p>
+                    <p className="text-lg sm:text-2xl font-bold text-green-600">₹{selectedPayrollDetails.totalSalary?.toLocaleString()}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Total Salary</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">{selectedPayrollDetails.paidDays}</p>
-                    <p className="text-sm text-gray-600">Paid Days</p>
+                    <p className="text-lg sm:text-2xl font-bold text-blue-600">{selectedPayrollDetails.paidDays}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Paid Days</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-red-600">₹{selectedPayrollDetails.deductions?.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">Deductions</p>
+                    <p className="text-lg sm:text-2xl font-bold text-red-600">₹{selectedPayrollDetails.deductions?.toLocaleString()}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Deductions</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-purple-600">₹{selectedPayrollDetails.netSalary?.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">Net Salary</p>
+                    <p className="text-lg sm:text-2xl font-bold text-purple-600">₹{selectedPayrollDetails.netSalary?.toLocaleString()}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Net Salary</p>
                   </div>
                 </div>
 
                 {/* Daily Breakdown */}
-                <h4 className="text-md font-semibold mb-3">Daily Attendance Breakdown</h4>
+                <h4 className="text-sm sm:text-base font-semibold mb-3">Daily Attendance Breakdown</h4>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm border">
+                  <table className="w-full text-xs sm:text-sm border">
                     <thead className="bg-gray-100">
                       <tr>
-                        <th className="px-3 py-2 text-left border">Date</th>
-                        <th className="px-3 py-2 text-center border">Status</th>
-                        <th className="px-3 py-2 text-center border">Leave Type</th>
-                        <th className="px-3 py-2 text-right border">Deduction</th>
+                        <th className="px-2 sm:px-3 py-2 text-left border">Date</th>
+                        <th className="px-2 sm:px-3 py-2 text-center border">Status</th>
+                        <th className="px-2 sm:px-3 py-2 text-center border">Leave Type</th>
+                        <th className="px-2 sm:px-3 py-2 text-right border">Deduction</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedPayrollDetails.details?.map(detail => (
                         <tr key={detail._id} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 border">
+                          <td className="px-2 sm:px-3 py-2 border">
                             {new Date(detail.date).toLocaleDateString('en-IN', { 
                               day: '2-digit', 
                               month: 'short' 
                             })}
                           </td>
-                          <td className="px-3 py-2 text-center border">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
+                          <td className="px-2 sm:px-3 py-2 text-center border">
+                            <span className={`px-1 sm:px-2 py-1 rounded-full text-xs ${
                               detail.status === 'present' 
                                 ? 'bg-green-100 text-green-800' 
                                 : detail.status === 'leave'
@@ -341,16 +339,16 @@ const PayrollForm = () => {
                               {detail.status}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-center border">
+                          <td className="px-2 sm:px-3 py-2 text-center border">
                             {detail.leaveType ? (
-                              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                              <span className="text-xs bg-gray-100 px-1 sm:px-2 py-1 rounded">
                                 {detail.leaveType}
                               </span>
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-right border">
+                          <td className="px-2 sm:px-3 py-2 text-right border">
                             {detail.deduction > 0 ? (
                               <span className="text-red-600">₹{detail.deduction}</span>
                             ) : (

@@ -108,9 +108,9 @@ const StaffDashboard = () => {
 
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold mb-4">Quick Actions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <button
                   onClick={() => {
                     setCurrentStaff({
@@ -124,34 +124,34 @@ const StaffDashboard = () => {
                     setEditMode(false);
                     setShowStaffForm(true);
                   }}
-                  className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
                 >
-                  <UserPlus className="text-blue-600" size={24} />
+                  <UserPlus className="text-blue-600" size={20} />
                   <div className="text-left">
-                    <p className="font-medium text-gray-800">Add New Staff</p>
-                    <p className="text-sm text-gray-600">Register new employee</p>
+                    <p className="font-medium text-gray-800 text-sm sm:text-base">Add New Staff</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Register new employee</p>
                   </div>
                 </button>
                 
                 <button
                   onClick={() => setActiveTab('attendance')}
-                  className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+                  className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
                 >
-                  <Calendar className="text-green-600" size={24} />
+                  <Calendar className="text-green-600" size={20} />
                   <div className="text-left">
-                    <p className="font-medium text-gray-800">Mark Attendance</p>
-                    <p className="text-sm text-gray-600">Daily attendance tracking</p>
+                    <p className="font-medium text-gray-800 text-sm sm:text-base">Mark Attendance</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Daily attendance tracking</p>
                   </div>
                 </button>
                 
                 <button
                   onClick={() => setActiveTab('payroll')}
-                  className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
+                  className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
                 >
-                  <DollarSign className="text-purple-600" size={24} />
+                  <DollarSign className="text-purple-600" size={20} />
                   <div className="text-left">
-                    <p className="font-medium text-gray-800">Generate Payroll</p>
-                    <p className="text-sm text-gray-600">Monthly salary calculation</p>
+                    <p className="font-medium text-gray-800 text-sm sm:text-base">Generate Payroll</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Monthly salary calculation</p>
                   </div>
                 </button>
               </div>
@@ -176,13 +176,13 @@ const StaffDashboard = () => {
     <div className="p-4 sm:p-6 bg-background min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <Users className="text-blue-600" size={32} />
-          <h1 className="text-3xl font-bold text-gray-800">Staff Management</h1>
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <Users className="text-blue-600" size={24} />
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">Staff Management</h1>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="bg-white rounded-lg shadow-md mb-4 sm:mb-6">
           <div className="flex flex-wrap border-b">
             {tabs.map(tab => {
               const Icon = tab.icon;
@@ -190,14 +190,15 @@ const StaffDashboard = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
+                  className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 font-medium transition-colors text-sm sm:text-base ${
                     activeTab === tab.id
                       ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                       : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                   }`}
                 >
-                  <Icon size={18} />
-                  {tab.label}
+                  <Icon size={16} />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
                 </button>
               );
             })}

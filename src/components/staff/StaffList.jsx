@@ -249,13 +249,13 @@ const StaffList = () => {
 
   return (
     <div className="p-4 sm:p-6 overflow-auto h-full bg-background">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 mt-4 sm:mt-6 gap-4">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Staff</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1f2937]">Staff</h1>
         <button
           onClick={handleAddStaff}
-          className="bg-secondary text-dark px-4 py-2 cursor-pointer rounded-lg hover:shadow-lg transition-shadow font-medium w-full sm:w-auto"
+          className="bg-secondary text-dark px-3 sm:px-4 py-2 cursor-pointer rounded-lg hover:shadow-lg transition-shadow font-medium w-full sm:w-auto text-sm sm:text-base"
         >
-          <Plus size={18} className="w-4 h-4 inline mr-2" /> Add Staff
+          <Plus size={16} className="w-4 h-4 inline mr-1 sm:mr-2" /> Add Staff
         </button>
       </div>
 
@@ -265,36 +265,36 @@ const StaffList = () => {
           placeholder="Search staff by username, email, role, or department..."
           value={searchQuery}
           onChange={handleSearch}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm sm:text-base"
         />
       </div>
 
       {loading ? (
-        <div className="text-center py-8">Loading staff...</div>
+        <div className="text-center py-8 text-sm sm:text-base">Loading staff...</div>
       ) : error ? (
-        <div className="text-center py-8 text-red-600">{error}</div>
+        <div className="text-center py-8 text-red-600 text-sm sm:text-base">{error}</div>
       ) : (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Username
                   </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                     Email
                   </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                     Password
                   </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                     Department
                   </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -304,64 +304,66 @@ const StaffList = () => {
                   console.log('Rendering staff member:', staffMember);
                   return (
                   <tr key={staffMember._id} className="hover:bg-gray-50">
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-primary text-white flex items-center justify-center mr-2 sm:mr-3 text-sm sm:text-base">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full bg-primary text-white flex items-center justify-center mr-2 sm:mr-3 text-xs sm:text-sm lg:text-base">
                           {staffMember.username
                             ? staffMember.username.charAt(0).toUpperCase()
                             : "?"}
                         </div>
-                        <div>
-                          <div className="font-medium text-sm sm:text-base">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-xs sm:text-sm lg:text-base truncate">
                             {staffMember.username || "Unknown"}
                           </div>
-                          <div className="text-xs text-gray-500 sm:hidden">
+                          <div className="text-xs text-gray-500 sm:hidden truncate">
                             {staffMember.email}
                           </div>
-                          <div className="text-xs text-gray-500 lg:hidden">
+                          <div className="text-xs text-gray-500 lg:hidden truncate">
                             {getDepartmentName(staffMember.department)}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm sm:text-base hidden sm:table-cell">
-                      {staffMember.email}
+                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm lg:text-base hidden sm:table-cell">
+                      <div className="truncate max-w-32 sm:max-w-48">{staffMember.email}</div>
                     </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm sm:text-base hidden md:table-cell">
+                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm lg:text-base hidden md:table-cell">
                       {staffMember.password ? "••••••••" : "N/A"}
                     </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap capitalize text-sm sm:text-base">
+                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap capitalize text-xs sm:text-sm lg:text-base">
                       {staffMember.role}
                     </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm sm:text-base hidden lg:table-cell">
-                      {staffMember.role === "admin"
-                        ? "N/A"
-                        : staffMember.department &&
-                          staffMember.department.length > 0
-                        ? staffMember.department
-                            .map(
-                              (dept) =>
-                                dept.name.charAt(0).toUpperCase() +
-                                dept.name.slice(1)
-                            )
-                            .join(", ")
-                        : "None"}
+                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm lg:text-base hidden lg:table-cell">
+                      <div className="truncate max-w-32">
+                        {staffMember.role === "admin"
+                          ? "N/A"
+                          : staffMember.department &&
+                            staffMember.department.length > 0
+                          ? staffMember.department
+                              .map(
+                                (dept) =>
+                                  dept.name.charAt(0).toUpperCase() +
+                                  dept.name.slice(1)
+                              )
+                              .join(", ")
+                          : "None"}
+                      </div>
                     </td>
-                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-1 sm:gap-2">
+                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end gap-1">
                         <button
                           onClick={() => handleEditStaff(staffMember)}
-                          className="text-indigo-600 hover:text-indigo-900 p-1 sm:p-2"
+                          className="text-indigo-600 hover:text-indigo-900 p-1"
                           title="Edit"
                         >
-                          <Edit size={16} />
+                          <Edit size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteStaff(staffMember._id)}
-                          className="text-red-600 hover:text-red-900 p-1 sm:p-2"
+                          className="text-red-600 hover:text-red-900 p-1"
                           title="Delete"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -372,7 +374,7 @@ const StaffList = () => {
                   <tr>
                     <td
                       colSpan="6"
-                      className="px-3 sm:px-6 py-8 text-center text-gray-500 text-sm sm:text-base"
+                      className="px-3 sm:px-6 py-6 sm:py-8 text-center text-gray-500 text-xs sm:text-sm lg:text-base"
                     >
                       No staff found.
                     </td>

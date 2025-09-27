@@ -140,7 +140,7 @@ const Sidebar = () => {
     },
     {
       icon: UserRound,
-      label: "Laundary",
+      label: "Laundry",
       path: "/laundry",
       isDropdown: true,
       children: [
@@ -178,7 +178,7 @@ const Sidebar = () => {
     },
     {
       icon: UserRound,
-      label: "Resturant",
+      label: "Restaurant",
       path: "/resturant",
       isDropdown: true,
       children: (() => {

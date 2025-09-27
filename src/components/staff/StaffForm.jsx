@@ -43,7 +43,7 @@ const StaffForm = ({
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl sm:text-2xl font-bold mb-4">
+        <h2 className="text-lg sm:text-xl font-bold mb-4">
           {editMode ? "Edit Staff" : "Add Staff"}
         </h2>
         <form onSubmit={handleSubmit}>
@@ -55,7 +55,7 @@ const StaffForm = ({
               onChange={(e) =>
                 setCurrentStaff({ ...currentStaff, username: e.target.value })
               }
-              className="w-full px-3 py-2 border rounded-md"
+              className="w-full px-3 py-2 border rounded-md text-sm sm:text-base"
               required
               onBlur={(e) => {
                 if (!validateRequired(e.target.value)) {
@@ -74,7 +74,7 @@ const StaffForm = ({
               onChange={(e) =>
                 setCurrentStaff({ ...currentStaff, email: e.target.value })
               }
-              className="w-full px-3 py-2 border rounded-md"
+              className="w-full px-3 py-2 border rounded-md text-sm sm:text-base"
               required
               onBlur={(e) => {
                 if (!validateEmail(e.target.value)) {
@@ -91,7 +91,7 @@ const StaffForm = ({
               onChange={(e) =>
                 setCurrentStaff({ ...currentStaff, password: e.target.value })
               }
-              className="w-full px-3 py-2 border rounded-md"
+              className="w-full px-3 py-2 border rounded-md text-sm sm:text-base"
               required={!editMode}
               onBlur={(e) => {
                 if (e.target.value && !validateMinLength(e.target.value, 6)) {
@@ -117,7 +117,7 @@ const StaffForm = ({
                     e.target.value === "admin" ? [] : currentStaff.department,
                 })
               }
-              className="w-full px-3 py-2 border rounded-md"
+              className="w-full px-3 py-2 border rounded-md text-sm sm:text-base"
               required
             >
               <option value="">Select Role</option>
@@ -134,7 +134,7 @@ const StaffForm = ({
                 onChange={(e) =>
                   setCurrentStaff({ ...currentStaff, salary: Number(e.target.value) })
                 }
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full px-3 py-2 border rounded-md text-sm sm:text-base"
                 required
                 min="0"
                 placeholder="Enter monthly salary"
@@ -144,10 +144,10 @@ const StaffForm = ({
           {/*  */}
           {currentStaff.role === "staff" && (
             <div className="mb-4">
-              <label className="block text-sm font-medium  mb-2">
+              <label className="block text-sm font-medium mb-2">
                 Departments
               </label>
-              <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-2">
+              <div className="space-y-2 max-h-32 sm:max-h-40 overflow-y-auto border rounded-md p-2">
                 {departments.map((dept) => (
                   <div key={dept.id} className="flex items-center">
                     <input
@@ -180,7 +180,7 @@ const StaffForm = ({
                       }}
                       className="mr-2"
                     />
-                    <label htmlFor={`dept-${dept.id}`}>
+                    <label htmlFor={`dept-${dept.id}`} className="text-sm">
                       {dept.name.charAt(0).toUpperCase() + dept.name.slice(1)}
                     </label>
                   </div>
@@ -200,13 +200,13 @@ const StaffForm = ({
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="px-4 py-2 border rounded-md w-full sm:w-auto"
+              className="px-4 py-2 border rounded-md w-full sm:w-auto text-sm sm:text-base"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary text-white rounded-md w-full sm:w-auto"
+              className="px-4 py-2 bg-primary text-white rounded-md w-full sm:w-auto text-sm sm:text-base"
             >
               {editMode ? "Update" : "Add"}
             </button>

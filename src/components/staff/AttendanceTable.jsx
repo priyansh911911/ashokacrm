@@ -103,17 +103,17 @@ const AttendanceTable = () => {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Staff Attendance</h1>
+    <div className="p-4 sm:p-6">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Staff Attendance</h1>
       
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex gap-4 items-end">
+      <div className="bg-white p-4 rounded-lg shadow mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Month</label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2"
             >
               {months.map((month, index) => (
                 <option key={index} value={index + 1}>{month}</option>
@@ -126,7 +126,7 @@ const AttendanceTable = () => {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2"
             >
               {[2023, 2024, 2025].map(year => (
                 <option key={year} value={year}>{year}</option>
@@ -134,12 +134,12 @@ const AttendanceTable = () => {
             </select>
           </div>
           
-          <div>
+          <div className="sm:col-span-2 lg:col-span-1">
             <label className="block text-sm font-medium mb-1">Select Staff</label>
             <select
               value={selectedStaff}
               onChange={(e) => setSelectedStaff(e.target.value)}
-              className="border rounded px-3 py-2 w-64"
+              className="w-full border rounded px-3 py-2"
             >
               <option value="">Choose Staff</option>
               {staff.map((s) => (
@@ -154,8 +154,8 @@ const AttendanceTable = () => {
 
       {selectedStaff ? (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold">
+          <div className="p-3 sm:p-4 border-b">
+            <h2 className="text-base sm:text-lg font-semibold">
               {staff.find(s => s._id === selectedStaff)?.userId?.username || 'Staff'} - {months[selectedMonth - 1]} {selectedYear}
             </h2>
           </div>
@@ -165,7 +165,7 @@ const AttendanceTable = () => {
               <thead className="bg-gray-50">
                 <tr>
                   {days.map(day => (
-                    <th key={day} className="px-2 py-3 text-center text-sm font-medium border">
+                    <th key={day} className="px-1 sm:px-2 py-2 sm:py-3 text-center text-xs sm:text-sm font-medium border min-w-10 sm:min-w-12">
                       {day}
                     </th>
                   ))}
@@ -174,16 +174,16 @@ const AttendanceTable = () => {
               <tbody>
                 <tr>
                   {days.map(day => (
-                    <td key={day} className="px-2 py-3 text-center border">
+                    <td key={day} className="px-1 sm:px-2 py-2 sm:py-3 text-center border">
                       <div className="relative group">
                         <div
-                          className={`w-8 h-8 rounded cursor-pointer mx-auto flex items-center justify-center text-xs font-bold ${getStatusColor(attendance[day])}`}
+                          className={`w-6 h-6 sm:w-8 sm:h-8 rounded cursor-pointer mx-auto flex items-center justify-center text-xs font-bold ${getStatusColor(attendance[day])}`}
                         >
                           {attendance[day] ? attendance[day][0].toUpperCase() : '-'}
                         </div>
                         
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 bg-white border rounded shadow-lg z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
-                          <div className="p-2 min-w-24">
+                          <div className="p-2 min-w-20 sm:min-w-24">
                             <button
                               onClick={() => markAttendance(day, 'present')}
                               className="block w-full text-left px-2 py-1 text-xs hover:bg-green-100 rounded"
@@ -213,8 +213,8 @@ const AttendanceTable = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500">Please select a staff member to view attendance</p>
+        <div className="bg-white rounded-lg shadow p-6 sm:p-8 text-center">
+          <p className="text-gray-500 text-sm sm:text-base">Please select a staff member to view attendance</p>
         </div>
       )}
     </div>
