@@ -24,17 +24,27 @@ const InventoryTransactions = () => {
 
   const fetchTransactions = async () => {
     try {
+      console.log('Fetching transactions...');
       const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/transactions', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+      console.log('Transactions API response:', response);
       if (response.ok) {
         const data = await response.json();
-        setTransactions(Array.isArray(data) ? data : data.transactions || []);
+        console.log('Transactions API data:', data);
+        const transactionsArray = Array.isArray(data) ? data : data.transactions || [];
+        console.log('Processed transactions array:', transactionsArray);
+        setTransactions(transactionsArray);
+      } else {
+        const errorText = await response.text();
+        console.log('Transactions API failed with status:', response.status, 'Error:', errorText);
+        setTransactions([]);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      setTransactions([]);
     }
   };
 
@@ -253,7 +263,7 @@ const InventoryTransactions = () => {
                 <div className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full ${['added', 'restock', 'return'].includes(transaction.transactionType) ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   <div>
-                    <p className="font-medium">{transaction.inventory?.name || transaction.inventoryItem?.name || 'Unknown Item'}</p>
+                    <p className="font-medium">{transaction.inventory?.name || transaction.inventoryItem?.name || transaction.inventoryId?.name || 'Unknown Item'}</p>
                     <p className="text-sm text-gray-600">{transaction.reason}</p>
                   </div>
                 </div>

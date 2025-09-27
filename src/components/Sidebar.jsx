@@ -210,6 +210,7 @@ const Sidebar = () => {
         
         // Default admin view
         return [
+          { label: "Dashboard", path: "/resturant/dashboard", icon: LayoutDashboard },
           { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
           { label: "Reservation", path: "/resturant/reservation", icon: FileText },
           { label: "KOT", path: "/kot", icon: ListChecks },

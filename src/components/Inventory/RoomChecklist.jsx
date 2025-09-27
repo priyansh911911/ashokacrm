@@ -4,12 +4,14 @@ import { toast } from 'react-hot-toast';
 
 const RoomChecklist = () => {
   const [rooms, setRooms] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState('');
   const [checklist, setChecklist] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchRooms();
+    fetchBookings();
   }, []);
 
   const fetchRooms = async () => {
@@ -28,56 +30,52 @@ const RoomChecklist = () => {
     }
   };
 
-  const fetchChecklist = async (roomId) => {
-    if (!roomId) return;
-    setLoading(true);
+  const fetchBookings = async () => {
     try {
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/inventory/room/${roomId}/checklist`, {
+      const response = await fetch('https://ashoka-backend.vercel.app/api/bookings/all', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       if (response.ok) {
         const data = await response.json();
-        if (data.checklist && data.checklist.items) {
-          setChecklist(data.checklist.items.map(item => ({
+        setBookings(Array.isArray(data) ? data : data.bookings || []);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    }
+  };
+
+  const fetchChecklist = async (roomId) => {
+    if (!roomId) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`https://ashoka-backend.vercel.app/api/housekeeping/checklist/${roomId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.checklist && Array.isArray(data.checklist)) {
+          setChecklist(data.checklist.map(item => ({
             inventoryId: item.inventoryId,
-            itemName: item.itemName,
-            isPresent: item.isPresent,
-            notes: item.notes || ''
+            itemName: item.item,
+            quantity: item.quantity || 1,
+            status: item.status || 'ok',
+            isPresent: item.status === 'ok',
+            notes: item.remarks || '',
+            costPerUnit: item.costPerUnit || 0
           })));
         } else {
-          // Create default checklist items
-          const defaultItems = [
-            { inventoryId: null, itemName: 'Towels', isPresent: true, notes: '' },
-            { inventoryId: null, itemName: 'Bed Sheets', isPresent: true, notes: '' },
-            { inventoryId: null, itemName: 'Pillows', isPresent: true, notes: '' },
-            { inventoryId: null, itemName: 'Soap', isPresent: true, notes: '' },
-            { inventoryId: null, itemName: 'Shampoo', isPresent: true, notes: '' }
-          ];
-          setChecklist(defaultItems);
+          setChecklist([]);
         }
       } else {
-        // Create default checklist items
-        const defaultItems = [
-          { inventoryId: null, itemName: 'Towels', isPresent: true, notes: '' },
-          { inventoryId: null, itemName: 'Bed Sheets', isPresent: true, notes: '' },
-          { inventoryId: null, itemName: 'Pillows', isPresent: true, notes: '' },
-          { inventoryId: null, itemName: 'Soap', isPresent: true, notes: '' },
-          { inventoryId: null, itemName: 'Shampoo', isPresent: true, notes: '' }
-        ];
-        setChecklist(defaultItems);
+        setChecklist([]);
       }
     } catch (error) {
       console.error('Error fetching checklist:', error);
-      const defaultItems = [
-        { inventoryId: null, itemName: 'Towels', isPresent: true, notes: '' },
-        { inventoryId: null, itemName: 'Bed Sheets', isPresent: true, notes: '' },
-        { inventoryId: null, itemName: 'Pillows', isPresent: true, notes: '' },
-        { inventoryId: null, itemName: 'Soap', isPresent: true, notes: '' },
-        { inventoryId: null, itemName: 'Shampoo', isPresent: true, notes: '' }
-      ];
-      setChecklist(defaultItems);
+      setChecklist([]);
     } finally {
       setLoading(false);
     }
@@ -120,17 +118,32 @@ const RoomChecklist = () => {
     setLoading(true);
 
     try {
+      const userId = localStorage.getItem('userId');
       const payload = {
-        housekeepingTaskId: null, // This would come from housekeeping context
-        items: checklist.map(item => ({
+        roomId: selectedRoom,
+        bookingId: bookings.length > 0 ? bookings[0]._id : '507f1f77bcf86cd799439011',
+        inspectedBy: (userId && userId !== 'undefined') ? userId : '507f1f77bcf86cd799439011',
+        inspectionType: 'regular',
+        cleaningType: 'regular',
+        checklist: checklist.map(item => ({
           inventoryId: item.inventoryId,
-          itemName: item.itemName,
-          isPresent: item.isPresent,
-          notes: item.notes
-        }))
+          item: item.itemName,
+          quantity: item.quantity || 1,
+          status: item.isPresent ? 'ok' : 'missing',
+          remarks: item.notes || '',
+          costPerUnit: item.costPerUnit || 0
+        })),
+        totalCharges: checklist.reduce((total, item) => {
+          if (!item.isPresent) {
+            return total + ((item.quantity || 1) * (item.costPerUnit || 0));
+          }
+          return total;
+        }, 0),
+        status: 'completed',
+        completedAt: new Date().toISOString()
       };
 
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/inventory/room/${selectedRoom}/checklist`, {
+      const response = await fetch(`https://ashoka-backend.vercel.app/api/housekeeping/roominspection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -140,14 +153,14 @@ const RoomChecklist = () => {
       });
       
       if (response.ok) {
-        toast.success('Checklist saved successfully!');
+        toast.success('Room inspection saved successfully!');
       } else {
         const errorData = await response.json();
-        toast.error(`Failed to save checklist: ${errorData.message || 'Unknown error'}`);
+        toast.error(`Failed to save inspection: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error saving checklist:', error);
-      toast.error('Error saving checklist');
+      console.error('Error saving inspection:', error);
+      toast.error('Error saving inspection');
     } finally {
       setLoading(false);
     }

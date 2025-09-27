@@ -1,495 +1,510 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { Calendar, Clock, Users, CheckCircle } from 'lucide-react';
+import { Calendar, Users, CheckCircle } from 'lucide-react';
 
 const AttendanceForm = () => {
   const [staff, setStaff] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendance, setAttendance] = useState({});
+  const [selectedStaff, setSelectedStaff] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [attendanceData, setAttendanceData] = useState({});
   const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState(null);
-  const [recentActions, setRecentActions] = useState([]);
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const getDaysInMonth = (month, year) => {
+    return new Date(year, month, 0).getDate();
+  };
 
   useEffect(() => {
     fetchStaff();
   }, []);
 
   useEffect(() => {
-    if (staff.length > 0) {
-      fetchAttendance();
+    if (selectedStaff) {
+      fetchMonthlyAttendance();
     }
-  }, [selectedDate, staff]);
+  }, [selectedMonth, selectedYear, selectedStaff]);
 
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem('token');
-      const userId = localStorage.getItem('userId');
-      const role = localStorage.getItem('role');
-      
-      console.log('Auth Debug:', { token: token ? 'Present' : 'Missing', userId, role });
-      
-      if (!token) {
-        toast.error('No authentication token found. Please login again.');
-        return;
-      }
-
       const response = await fetch('https://ashoka-backend.vercel.app/api/staff/all', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('Staff API Response Status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('Staff Data:', data);
-        setStaff(data || []);
-      } else {
-        const errorData = await response.json();
-        console.error('Staff API Error:', errorData);
+        const staffArray = Array.isArray(data) ? data : data.staff || [];
         
-        if (response.status === 401) {
-          toast.error('Authentication failed. Please login again.');
-          localStorage.clear();
-          window.location.href = '/login';
-        } else if (response.status === 403) {
-          toast.error('Access denied. You do not have permission to view staff data.');
-        } else {
-          toast.error(errorData.message || 'Failed to fetch staff members');
-        }
+        console.log('Raw staff data:', staffArray); // Debug log
+        
+        const formattedStaff = staffArray.map(staffMember => {
+          console.log('Processing staff member:', JSON.stringify(staffMember, null, 2));
+          
+          // Extract username with proper type checking
+          let username = 'Staff Member';
+          if (typeof staffMember.userId?.username === 'string') {
+            username = staffMember.userId.username;
+          } else if (typeof staffMember.username === 'string') {
+            username = staffMember.username;
+          } else if (typeof staffMember.name === 'string') {
+            username = staffMember.name;
+          } else if (staffMember.userId?.username?.name) {
+            username = staffMember.userId.username.name;
+          }
+          
+          // Extract department - handle array of departments
+          let department = 'General';
+          if (staffMember.department) {
+            if (typeof staffMember.department === 'string') {
+              department = staffMember.department;
+            } else if (Array.isArray(staffMember.department)) {
+              // Join all department names with comma
+              department = staffMember.department.map(dept => dept.name).join(', ');
+            } else if (staffMember.department.name) {
+              department = staffMember.department.name;
+            }
+          }
+          
+          console.log('Department extraction:', {
+            raw: staffMember.department,
+            extracted: department
+          });
+          
+          console.log('Final extracted values:', { username, department });
+          
+          return {
+            _id: staffMember._id,
+            userId: staffMember.userId,
+            username,
+            department,
+            salary: staffMember.salary || 0
+          };
+        });
+        
+        setStaff(formattedStaff);
       }
     } catch (error) {
-      console.error('Error fetching staff:', error);
-      toast.error('Network error. Please check your connection.');
+      toast.error('Failed to fetch staff data');
     }
   };
 
-  const fetchAttendance = async () => {
+  const fetchMonthlyAttendance = async () => {
     try {
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/attendance/get?date=${selectedDate}`, {
+      const response = await fetch(`https://ashoka-backend.vercel.app/api/attendance/get`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
       if (response.ok) {
         const data = await response.json();
         const attendanceMap = {};
+        
         data.forEach(record => {
-          attendanceMap[record.staffId] = record;
+          const recordDate = new Date(record.date);
+          if (recordDate.getMonth() + 1 === selectedMonth && 
+              recordDate.getFullYear() === selectedYear &&
+              record.staffId._id === selectedStaff) {
+            const key = `${selectedStaff}-${recordDate.getDate()}`;
+            attendanceMap[key] = {
+              status: record.status,
+              leaveType: record.leaveType,
+              _id: record._id
+            };
+          }
         });
-        setAttendance(attendanceMap);
+        
+        setAttendanceData(attendanceMap);
       }
     } catch (error) {
       console.error('Error fetching attendance:', error);
     }
   };
 
-  const markAttendance = async (staffId, status, leaveType = null) => {
-    console.log('Marking attendance:', { staffId, status, leaveType });
+  const markAttendance = async (staffId, day, status, leaveType = null) => {
     setLoading(true);
-    
-    // Show immediate feedback
-    const staffName = staff.find(s => s._id === staffId)?.userId?.username || 'Staff';
-    const statusText = status === 'present' ? '✅ Present' : 
-                      status === 'absent' ? '❌ Absent' : 
-                      status === 'half-day' ? '⏰ Half Day' : 
-                      status === 'leave' ? `🏖️ ${leaveType} Leave` : status;
-    
-    toast.loading(`Marking ${staffName} as ${statusText}...`, { id: staffId });
+    const date = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     
     try {
       const token = localStorage.getItem('token');
+      const key = `${staffId}-${day}`;
+      const existingAttendance = attendanceData[key];
       
-      if (!token) {
-        toast.error('No authentication token. Please login again.', { id: staffId });
-        setLoading(false);
-        return;
-      }
-
-      const payload = {
-        staffId,
-        date: selectedDate,
-        status,
-        leaveType,
-        checkIn: status === 'present' ? new Date() : null
-      };
-
-      console.log('Attendance Payload:', payload);
-      const response = await fetch('https://ashoka-backend.vercel.app/api/attendance/mark', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('Attendance API Response Status:', response.status);
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Attendance marked:', result);
-        
-        // Show in-page notification
-        setNotification({
-          type: 'success',
-          message: `${staffName} marked as ${statusText}`,
-          timestamp: new Date().toLocaleTimeString()
+      if (existingAttendance) {
+        const response = await fetch('https://ashoka-backend.vercel.app/api/attendance/status', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            attendanceId: existingAttendance._id,
+            status,
+            leaveType
+          })
         });
         
-        // Add to recent actions
-        setRecentActions(prev => [{
-          id: Date.now(),
-          staffName,
-          status: statusText,
-          timestamp: new Date().toLocaleTimeString()
-        }, ...prev.slice(0, 4)]);
-        
-        // Clear notification after 3 seconds
-        setTimeout(() => setNotification(null), 3000);
-        
-        toast.success(`${staffName} marked as ${statusText} ✓`, { id: staffId });
-        fetchAttendance();
+        if (response.ok) {
+          setAttendanceData(prev => ({
+            ...prev,
+            [key]: { ...existingAttendance, status, leaveType }
+          }));
+          toast.success('Attendance updated');
+        }
       } else {
-        const error = await response.json();
-        console.error('Failed to mark attendance:', error);
+        const response = await fetch('https://ashoka-backend.vercel.app/api/attendance/mark', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            staffId,
+            date,
+            status,
+            leaveType,
+            checkIn: status === 'present' ? new Date() : null
+          })
+        });
         
-        if (response.status === 401) {
-          toast.error('Authentication failed. Please login again.', { id: staffId });
-          localStorage.clear();
-          window.location.href = '/login';
-        } else if (response.status === 403) {
-          toast.error('Access denied. You do not have permission to mark attendance.', { id: staffId });
-        } else {
-          toast.error(error.message || 'Failed to mark attendance', { id: staffId });
+        if (response.ok) {
+          const result = await response.json();
+          setAttendanceData(prev => ({
+            ...prev,
+            [key]: { status, leaveType, _id: result._id }
+          }));
+          toast.success('Attendance marked');
         }
       }
     } catch (error) {
-      console.error('Error marking attendance:', error);
-      toast.error('Network error. Please try again.', { id: staffId });
+      toast.error('Failed to mark attendance');
     } finally {
       setLoading(false);
     }
   };
 
+  const getStatusColor = (status, leaveType) => {
+    if (status === 'present') return 'bg-green-100 text-green-800';
+    if (status === 'absent') return 'bg-red-100 text-red-800';
+    if (status === 'half-day') return 'bg-yellow-100 text-yellow-800';
+    if (status === 'leave') {
+      if (leaveType === 'casual') return 'bg-blue-100 text-blue-800';
+      if (leaveType === 'sick') return 'bg-orange-100 text-orange-800';
+      if (leaveType === 'paid') return 'bg-purple-100 text-purple-800';
+      if (leaveType === 'unpaid') return 'bg-gray-100 text-gray-800';
+    }
+    return 'bg-gray-50 text-gray-500';
+  };
+
+  const getStatusText = (status, leaveType) => {
+    if (status === 'present') return 'P';
+    if (status === 'absent') return 'A';
+    if (status === 'half-day') return 'H';
+    if (status === 'leave') return leaveType ? leaveType.charAt(0).toUpperCase() : 'L';
+    return '-';
+  };
+
+  const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
   return (
-    <div className="p-2 sm:p-4 lg:p-6 bg-background min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+    <div className="p-4 bg-background min-h-screen">
+      <div className="max-w-full mx-auto">
+        <div className="flex items-center gap-3 mb-6">
           <Users className="text-blue-600" size={24} />
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">Staff Attendance</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Staff Attendance Management</h1>
         </div>
 
-        {/* In-Page Notification */}
-        {notification && (
-          <div className={`mb-4 p-4 rounded-lg border-l-4 animate-pulse ${
-            notification.type === 'success' 
-              ? 'bg-green-50 border-green-400 text-green-800'
-              : 'bg-red-50 border-red-400 text-red-800'
-          }`}>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">
-                {notification.type === 'success' ? '✅' : '❌'}
-              </span>
+        {/* Staff, Month/Year Selection */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Calendar className="text-green-600" size={18} />
+            <div className="flex gap-4 flex-wrap">
               <div>
-                <p className="font-semibold">{notification.message}</p>
-                <p className="text-xs opacity-75">at {notification.timestamp}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Staff</label>
+                <select
+                  value={selectedStaff}
+                  onChange={(e) => setSelectedStaff(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48"
+                >
+                  <option value="">Choose Staff Member</option>
+                  {staff.map((staffMember) => (
+                    <option key={staffMember._id} value={staffMember._id}>
+                      {staffMember.username} - {staffMember.department}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {months.map((month, index) => (
+                    <option key={index} value={index + 1}>{month}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {Array.from({length: 5}, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Staff Info & Salary Update */}
+        {selectedStaff && (
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {staff.find(s => s._id === selectedStaff)?.username}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {staff.find(s => s._id === selectedStaff)?.department}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Salary: ₹</span>
+                <input
+                  type="number"
+                  value={staff.find(s => s._id === selectedStaff)?.salary || ''}
+                  onChange={(e) => {
+                    const newSalary = parseInt(e.target.value) || 0;
+                    setStaff(prev => prev.map(s => 
+                      s._id === selectedStaff ? {...s, salary: newSalary} : s
+                    ));
+                  }}
+                  onBlur={async (e) => {
+                    const selectedStaffMember = staff.find(s => s._id === selectedStaff);
+                    const newSalary = parseInt(e.target.value) || 0;
+                    if (newSalary !== selectedStaffMember?.salary) {
+                      try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`https://ashoka-backend.vercel.app/api/staff/update/${selectedStaff}`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body: JSON.stringify({ 
+                            salary: newSalary, 
+                            department: selectedStaffMember?.department 
+                          })
+                        });
+                        if (response.ok) {
+                          toast.success(`Salary updated for ${selectedStaffMember?.username}`);
+                        } else {
+                          toast.error('Failed to update salary');
+                        }
+                      } catch (error) {
+                        toast.error('Error updating salary');
+                      }
+                    }
+                  }}
+                  className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="0"
+                />
               </div>
             </div>
           </div>
         )}
 
-        {/* Recent Actions Panel */}
-        {recentActions.length > 0 && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <span>🕒</span> Recent Actions
-              </h3>
-              <button
-                onClick={() => setRecentActions([])}
-                className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                title="Clear all recent actions"
-              >
-                ❌ Clear
-              </button>
+
+
+        {/* Attendance Table */}
+        {selectedStaff ? (
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="p-4 border-b">
+              <h2 className="text-lg font-semibold">
+                {months[selectedMonth - 1]} {selectedYear} Attendance
+              </h2>
             </div>
-            <div className="space-y-1">
-              {recentActions.map(action => (
-                <div key={action.id} className="flex items-center justify-between text-xs text-gray-600 bg-white px-2 py-1 rounded">
-                  <span>{action.staffName} → {action.status}</span>
-                  <span>{action.timestamp}</span>
-                </div>
-              ))}
+            
+            <div className="overflow-x-auto overflow-y-visible">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {days.map(day => (
+                      <th key={day} className="px-3 py-3 text-center font-medium text-gray-700 border min-w-16">
+                        {day}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="hover:bg-gray-50">
+                    {days.map(day => {
+                      const key = `${selectedStaff}-${day}`;
+                      const attendance = attendanceData[key];
+                      
+                      return (
+                        <td key={day} className="px-3 py-3 border text-center">
+                          <div
+                            className={`w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center cursor-pointer mx-auto border-2 ${
+                              getStatusColor(attendance?.status, attendance?.leaveType)
+                            }`}
+                            title={attendance ? `${attendance.status}${attendance.leaveType ? ` (${attendance.leaveType})` : ''}` : 'Click to mark attendance'}
+                            onClick={() => {
+                              setOpenDropdown({ staffId: selectedStaff, day: day });
+                            }}
+                          >
+                            {getStatusText(attendance?.status, attendance?.leaveType)}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <p className="text-gray-500 text-lg">Please select a staff member to view their attendance sheet</p>
+          </div>
+        )}
+
+        {/* Attendance Marking Modal */}
+        {openDropdown && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
+              <h3 className="text-lg font-semibold mb-4 text-center">
+                Mark Attendance - Day {openDropdown.day}
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'present');
+                    setOpenDropdown(null);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors"
+                  disabled={loading}
+                >
+                  ✅ Present
+                </button>
+                <button
+                  onClick={() => {
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'absent');
+                    setOpenDropdown(null);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors"
+                  disabled={loading}
+                >
+                  ❌ Absent
+                </button>
+                <button
+                  onClick={() => {
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'half-day');
+                    setOpenDropdown(null);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors"
+                  disabled={loading}
+                >
+                  ⏰ Half Day
+                </button>
+                <button
+                  onClick={() => {
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'leave', 'casual');
+                    setOpenDropdown(null);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors"
+                  disabled={loading}
+                >
+                  🏖️ Casual
+                </button>
+                <button
+                  onClick={() => {
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'leave', 'sick');
+                    setOpenDropdown(null);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition-colors"
+                  disabled={loading}
+                >
+                  🤒 Sick
+                </button>
+                <button
+                  onClick={() => {
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'leave', 'paid');
+                    setOpenDropdown(null);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200 transition-colors"
+                  disabled={loading}
+                >
+                  💰 Paid
+                </button>
+                <button
+                  onClick={() => {
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'leave', 'unpaid');
+                    setOpenDropdown(null);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
+                  disabled={loading}
+                >
+                  🚫 Unpaid
+                </button>
+              </div>
+              <button
+                onClick={() => setOpenDropdown(null)}
+                className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         )}
 
-        {/* Date Selection */}
-        <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="text-green-600" size={18} />
-              <label className="text-sm sm:text-base font-medium text-gray-700">Select Date:</label>
+        {/* Legend */}
+        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-800">Attendance Status Legend:</h3>
+          <div className="flex flex-wrap gap-4 justify-center text-base">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-green-100 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-green-200">P</div>
+              <span className="font-medium">Present</span>
             </div>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-
-
-        {/* Staff Attendance Grid */}
-        <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
-          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
-            <CheckCircle className="text-green-600" size={18} />
-            Mark Today's Attendance
-          </h2>
-          
-          <div className="grid gap-3 sm:gap-4">
-            {staff.map(member => {
-              const currentAttendance = attendance[member._id];
-              return (
-                <div key={member._id} className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50">
-                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm sm:text-base font-medium text-gray-800 truncate">{member.userId?.username || member.username}</h3>
-                      <p className="text-xs sm:text-sm text-gray-600">{member.department}</p>
-                      <p className="text-xs text-gray-500">Salary: ₹{member.salary?.toLocaleString()}</p>
-                    </div>
-                    
-                    <div className="w-full lg:w-auto">
-                      {/* Current Status Display */}
-                      {currentAttendance && (
-                        <div className="mb-2 p-2 rounded-lg border-2 border-dashed ${
-                          currentAttendance.status === 'present' ? 'border-green-300 bg-green-50' :
-                          currentAttendance.status === 'absent' ? 'border-red-300 bg-red-50' :
-                          currentAttendance.status === 'half-day' ? 'border-yellow-300 bg-yellow-50' :
-                          'border-blue-300 bg-blue-50'
-                        }">
-                          <div className="text-center">
-                            <span className="text-xs font-medium text-gray-600">Current Status:</span>
-                            <div className={`text-sm font-bold mt-1 ${
-                              currentAttendance.status === 'present' ? 'text-green-700' :
-                              currentAttendance.status === 'absent' ? 'text-red-700' :
-                              currentAttendance.status === 'half-day' ? 'text-yellow-700' :
-                              'text-blue-700'
-                            }`}>
-                              {currentAttendance.status === 'present' && '✅ PRESENT'}
-                              {currentAttendance.status === 'absent' && '❌ ABSENT'}
-                              {currentAttendance.status === 'half-day' && '⏰ HALF DAY'}
-                              {currentAttendance.status === 'leave' && `🏖️ ${currentAttendance.leaveType?.toUpperCase()} LEAVE`}
-                            </div>
-                            {currentAttendance.checkIn && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                Check-in: {new Date(currentAttendance.checkIn).toLocaleTimeString()}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Mobile: Stack buttons vertically */}
-                      <div className="grid grid-cols-2 sm:hidden gap-2 mb-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Present button clicked for:', member._id);
-                            markAttendance(member._id, 'present');
-                          }}
-                          disabled={loading}
-                          className={`px-2 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1 ${
-                            currentAttendance?.status === 'present'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200 active:bg-green-300'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <span>✅</span>
-                          {loading ? 'Loading...' : 'Present'}
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Absent button clicked for:', member._id);
-                            markAttendance(member._id, 'absent');
-                          }}
-                          disabled={loading}
-                          className={`px-2 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1 ${
-                            currentAttendance?.status === 'absent'
-                              ? 'bg-red-600 text-white'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <span>❌</span>
-                          {loading ? 'Loading...' : 'Absent'}
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Half Day button clicked for:', member._id);
-                            markAttendance(member._id, 'half-day');
-                          }}
-                          disabled={loading}
-                          className={`px-2 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-                            currentAttendance?.status === 'half-day'
-                              ? 'bg-yellow-600 text-white'
-                              : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 active:bg-yellow-300'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {loading ? 'Loading...' : 'Half Day'}
-                        </button>
-                        
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              console.log('Leave type selected:', e.target.value, 'for:', member._id);
-                              markAttendance(member._id, 'leave', e.target.value);
-                              setTimeout(() => {
-                                e.target.value = '';
-                              }, 100);
-                            }
-                          }}
-                          value={currentAttendance?.status === 'leave' ? currentAttendance.leaveType || '' : ''}
-                          disabled={loading}
-                          className="px-2 py-1.5 border border-gray-300 rounded text-xs cursor-pointer"
-                        >
-                          <option value="" disabled>
-                            {currentAttendance?.status === 'leave' && currentAttendance.leaveType
-                              ? `${currentAttendance.leaveType.charAt(0).toUpperCase() + currentAttendance.leaveType.slice(1)} Leave`
-                              : 'Leave Type'
-                            }
-                          </option>
-                          <option value="casual">Casual</option>
-                          <option value="sick">Sick</option>
-                          <option value="paid">Paid</option>
-                          <option value="unpaid">Unpaid</option>
-                        </select>
-                      </div>
-                      
-                      {/* Desktop: Horizontal layout */}
-                      <div className="hidden sm:flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Present button clicked for:', member._id);
-                            markAttendance(member._id, 'present');
-                          }}
-                          disabled={loading}
-                          className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
-                            currentAttendance?.status === 'present'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200 active:bg-green-300'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {loading ? 'Loading...' : 'Present'}
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Absent button clicked for:', member._id);
-                            markAttendance(member._id, 'absent');
-                          }}
-                          disabled={loading}
-                          className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
-                            currentAttendance?.status === 'absent'
-                              ? 'bg-red-600 text-white'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200 active:bg-red-300'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {loading ? 'Loading...' : 'Absent'}
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('Half Day button clicked for:', member._id);
-                            markAttendance(member._id, 'half-day');
-                          }}
-                          disabled={loading}
-                          className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
-                            currentAttendance?.status === 'half-day'
-                              ? 'bg-yellow-600 text-white'
-                              : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 active:bg-yellow-300'
-                          } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {loading ? 'Loading...' : 'Half Day'}
-                        </button>
-                        
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              console.log('Leave type selected:', e.target.value, 'for:', member._id);
-                              markAttendance(member._id, 'leave', e.target.value);
-                              setTimeout(() => {
-                                e.target.value = '';
-                              }, 100);
-                            }
-                          }}
-                          value={currentAttendance?.status === 'leave' ? currentAttendance.leaveType || '' : ''}
-                          disabled={loading}
-                          className="px-2 py-1 border border-gray-300 rounded text-sm cursor-pointer"
-                        >
-                          <option value="" disabled>
-                            {currentAttendance?.status === 'leave' && currentAttendance.leaveType
-                              ? `${currentAttendance.leaveType.charAt(0).toUpperCase() + currentAttendance.leaveType.slice(1)} Leave`
-                              : 'Select Leave Type'
-                            }
-                          </option>
-                          <option value="casual">Casual Leave</option>
-                          <option value="sick">Sick Leave</option>
-                          <option value="paid">Paid Leave</option>
-                          <option value="unpaid">Unpaid Leave</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {currentAttendance && (
-                    <div className="mt-2 sm:mt-3 p-2 bg-gray-50 rounded">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                        <span className="text-xs sm:text-sm text-gray-600">Status:</span>
-                        <span className={`text-xs sm:text-sm font-medium px-2 py-1 rounded inline-block ${
-                          currentAttendance.status === 'present' 
-                            ? 'bg-green-100 text-green-800'
-                            : currentAttendance.status === 'leave'
-                            ? 'bg-blue-100 text-blue-800'
-                            : currentAttendance.status === 'half-day'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {currentAttendance.status === 'leave' && currentAttendance.leaveType 
-                            ? `${currentAttendance.leaveType} Leave`
-                            : currentAttendance.status
-                          }
-                        </span>
-                      </div>
-                      {currentAttendance.checkIn && (
-                        <div className="mt-1 text-xs text-gray-500">
-                          Check-in: {new Date(currentAttendance.checkIn).toLocaleTimeString()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-red-100 text-red-800 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-red-200">A</div>
+              <span className="font-medium">Absent</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-yellow-200">H</div>
+              <span className="font-medium">Half Day</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-100 text-blue-800 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-blue-200">C</div>
+              <span className="font-medium">Casual Leave</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-orange-100 text-orange-800 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-orange-200">S</div>
+              <span className="font-medium">Sick Leave</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold flex items-center justify-center border-2 border-purple-200">PL</div>
+              <span className="font-medium">Paid Leave</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gray-100 text-gray-800 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-gray-200">U</div>
+              <span className="font-medium">Unpaid Leave</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gray-50 text-gray-500 rounded-lg text-sm font-bold flex items-center justify-center border-2 border-gray-300">-</div>
+              <span className="font-medium">Not Marked</span>
+            </div>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
 
@@ -7,17 +7,20 @@ const RoomInspection = () => {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [inspections, setInspections] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState('');
   const [selectedBooking, setSelectedBooking] = useState('');
   const [inspectionType, setInspectionType] = useState('checkout');
   const [checklist, setChecklist] = useState([]);
+  const [editingInspection, setEditingInspection] = useState(null);
 
   useEffect(() => {
     fetchRooms();
     fetchBookings();
     fetchInspections();
+    fetchTasks();
   }, []);
 
   const fetchRooms = async () => {
@@ -49,52 +52,42 @@ const RoomInspection = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
-      // Try multiple possible endpoints
-      const endpoints = [
-        '/api/housekeeping/room-inspections',
-        '/api/inspections/all',
-        '/api/inspections',
-        '/api/room-inspections'
-      ];
-      
-      let inspectionsData = [];
-      
-      for (const endpoint of endpoints) {
-        try {
-          const response = await axios.get(endpoint, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          inspectionsData = Array.isArray(response.data) ? response.data : response.data.inspections || [];
-          break;
-        } catch (err) {
-          console.log(`Failed endpoint ${endpoint}:`, err.response?.status);
-        }
-      }
-      
-      // Add local inspections if any
-      const localInspections = JSON.parse(localStorage.getItem('localInspections') || '[]');
-      inspectionsData = [...inspectionsData, ...localInspections];
-      
+      const response = await axios.get('/api/housekeeping/roominspections', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const inspectionsData = Array.isArray(response.data) ? response.data : response.data.inspections || [];
       setInspections(inspectionsData);
     } catch (error) {
       console.error('Error fetching inspections:', error);
-      // Load only local inspections if API fails
-      const localInspections = JSON.parse(localStorage.getItem('localInspections') || '[]');
-      setInspections(localInspections);
+      setInspections([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/housekeeping/tasks', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const tasksData = Array.isArray(response.data) ? response.data : response.data.tasks || [];
+      setTasks(tasksData);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      setTasks([]);
     }
   };
 
   const fetchRoomChecklist = async (roomId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/rooms/checklist/${roomId}`, {
+      const response = await axios.get(`/api/housekeeping/checklist/${roomId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const checklistData = Array.isArray(response.data) ? response.data : response.data.checklist || [];
       setChecklist(checklistData.map(item => ({
+        inventoryId: item.inventoryId || null,
         item: item.name || item.item || item.itemName,
         quantity: item.quantity || 1,
         status: 'ok',
@@ -103,13 +96,13 @@ const RoomInspection = () => {
       })));
     } catch (error) {
       console.error('Error fetching room checklist:', error);
-      // Don't set default items - let user add manually
       setChecklist([]);
     }
   };
 
   const addChecklistItem = () => {
     setChecklist([...checklist, {
+      inventoryId: null,
       item: '',
       quantity: 1,
       status: 'ok',
@@ -118,11 +111,13 @@ const RoomInspection = () => {
     }]);
   };
 
-  const updateChecklistItem = (index, field, value) => {
-    const updated = [...checklist];
-    updated[index][field] = value;
-    setChecklist(updated);
-  };
+  const updateChecklistItem = useCallback((index, field, value) => {
+    setChecklist(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  }, []);
 
   const removeChecklistItem = (index) => {
     setChecklist(checklist.filter((_, i) => i !== index));
@@ -130,11 +125,20 @@ const RoomInspection = () => {
 
   const calculateTotalCharges = () => {
     return checklist.reduce((total, item) => {
-      if (item.status === 'missing' || item.status === 'damaged') {
+      if (item.status === 'missing' || item.status === 'damaged' || item.status === 'used') {
         return total + (item.quantity * (item.costPerUnit || 0));
       }
       return total;
     }, 0);
+  };
+
+  const editInspection = (inspection) => {
+    setEditingInspection(inspection);
+    setSelectedRoom(inspection.roomId?._id || inspection.roomId);
+    setSelectedBooking(inspection.bookingId?._id || inspection.bookingId || '');
+    setInspectionType(inspection.inspectionType);
+    setChecklist(inspection.checklist || []);
+    setShowForm(true);
   };
 
   const submitInspection = async () => {
@@ -152,30 +156,39 @@ const RoomInspection = () => {
         bookingId: selectedBooking || null,
         inspectedBy: (userId && userId !== 'undefined') ? userId : '507f1f77bcf86cd799439011',
         inspectionType,
+        cleaningType: inspectionType,
         checklist: checklist.filter(item => item.item.trim() !== ''),
         totalCharges: calculateTotalCharges(),
         status: 'completed',
-        inspectionDate: new Date().toISOString()
+        completedAt: new Date().toISOString()
       };
 
-      console.log('Submitting inspection data:', inspectionData);
-
-      await axios.post('/api/housekeeping/room-inspection', inspectionData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      alert('Room inspection completed successfully!');
+      if (editingInspection) {
+        await axios.put(`/api/housekeeping/roominspection/${editingInspection._id}`, inspectionData, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        alert('Room inspection updated successfully!');
+      } else {
+        await axios.post('/api/housekeeping/roominspection', inspectionData, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        alert('Room inspection completed successfully!');
+      }
+      
       setSelectedRoom('');
       setSelectedBooking('');
       setChecklist([]);
+      setEditingInspection(null);
       setShowForm(false);
       fetchInspections();
     } catch (error) {
       console.error('Error submitting inspection:', error);
-      console.error('Error details:', error.response?.data);
       alert('Error submitting inspection: ' + (error.response?.data?.message || error.message));
     }
   };
@@ -183,11 +196,14 @@ const RoomInspection = () => {
   const InspectionForm = () => (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6" style={{border: '1px solid hsl(45, 100%, 85%)'}}>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>Add Room Inspection</h2>
-        <button
-          onClick={() => setShowForm(false)}
-          className="text-gray-500 hover:text-gray-700"
-        >
+        <h2 className="text-lg font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>{editingInspection ? 'Edit' : 'Add'} Room Inspection</h2>
+        <button onClick={() => {
+          setShowForm(false);
+          setEditingInspection(null);
+          setSelectedRoom('');
+          setSelectedBooking('');
+          setChecklist([]);
+        }} className="text-gray-500 hover:text-gray-700">
           <X size={20} />
         </button>
       </div>
@@ -204,7 +220,7 @@ const RoomInspection = () => {
               }
             }}
             className="p-3 rounded-lg w-full focus:outline-none focus:ring-2"
-            style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
+            style={{border: '1px solid hsl(45, 100%, 85%)'}}
           >
             <option value="">Select Room</option>
             {rooms.map((room) => (
@@ -221,12 +237,12 @@ const RoomInspection = () => {
             value={selectedBooking}
             onChange={(e) => setSelectedBooking(e.target.value)}
             className="p-3 rounded-lg w-full focus:outline-none focus:ring-2"
-            style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
+            style={{border: '1px solid hsl(45, 100%, 85%)'}}
           >
             <option value="">Select Booking</option>
             {bookings.map((booking) => (
               <option key={booking._id} value={booking._id}>
-                {booking.name} - Room {booking.roomNumber} - ₹{booking.rate || 0}
+                {typeof booking.name === 'object' ? booking.name?.name || 'Unknown' : booking.name} - Room {booking.roomNumber} - ₹{booking.rate || 0}
               </option>
             ))}
           </select>
@@ -238,7 +254,7 @@ const RoomInspection = () => {
             value={inspectionType}
             onChange={(e) => setInspectionType(e.target.value)}
             className="p-3 rounded-lg w-full focus:outline-none focus:ring-2"
-            style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
+            style={{border: '1px solid hsl(45, 100%, 85%)'}}
           >
             <option value="checkout">Checkout</option>
             <option value="maintenance">Maintenance</option>
@@ -249,98 +265,91 @@ const RoomInspection = () => {
       </div>
 
       <div className="mb-4">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-3">
-          <h3 className="text-base sm:text-lg font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Checklist Items</h3>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-lg font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Checklist Items</h3>
           <button
             onClick={addChecklistItem}
-            className="text-white px-3 sm:px-4 py-2 rounded transition-colors text-sm sm:text-base w-full sm:w-auto"
-            style={{backgroundColor: 'hsl(45, 43%, 58%)'}} 
-            onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
+            className="text-white px-4 py-2 rounded transition-colors"
+            style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
           >
             Add Item
           </button>
         </div>
         
-        {/* Column Headers - only show when there are items */}
-        {checklist.length > 0 && (
-          <div className="hidden lg:grid lg:grid-cols-6 gap-3 mb-2 px-3">
-            <label className="text-xs font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Item Name</label>
-            <label className="text-xs font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Quantity</label>
-            <label className="text-xs font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Status</label>
-            <label className="text-xs font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Cost/Unit</label>
-            <label className="text-xs font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Remarks</label>
-            <label className="text-xs font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Action</label>
-          </div>
-        )}
-        
-        {checklist.map((item, index) => (
-          <div key={index} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-3 p-3 rounded" style={{border: '1px solid hsl(45, 100%, 85%)', backgroundColor: 'hsl(45, 100%, 98%)'}}>
-            <div className="lg:hidden">
-              <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Item Name</label>
+        <div className="space-y-3">
+          {checklist.map((item, index) => (
+            <div key={index} className="grid grid-cols-6 gap-3 p-3 rounded" style={{border: '1px solid hsl(45, 100%, 85%)', backgroundColor: 'hsl(45, 100%, 98%)'}}>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Item Name</label>
+                <input
+                  type="text"
+                  placeholder="Towel, Pillow, etc."
+                  value={item.item || ''}
+                  onChange={(e) => updateChecklistItem(index, 'item', e.target.value)}
+                  className="w-full p-2 rounded border focus:outline-none focus:ring-2"
+                  style={{border: '1px solid hsl(45, 100%, 85%)'}}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Quantity</label>
+                <input
+                  type="number"
+                  placeholder="1"
+                  value={item.quantity || ''}
+                  onChange={(e) => updateChecklistItem(index, 'quantity', e.target.value)}
+                  className="w-full p-2 rounded border focus:outline-none focus:ring-2"
+                  style={{border: '1px solid hsl(45, 100%, 85%)'}}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Status</label>
+                <select
+                  value={item.status}
+                  onChange={(e) => updateChecklistItem(index, 'status', e.target.value)}
+                  className="w-full p-2 rounded border focus:outline-none focus:ring-2"
+                  style={{border: '1px solid hsl(45, 100%, 85%)'}}
+                >
+                  <option value="ok">OK</option>
+                  <option value="missing">Missing</option>
+                  <option value="damaged">Damaged</option>
+                  <option value="used">Used</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Cost/Unit</label>
+                <input
+                  type="number"
+                  placeholder="150"
+                  value={item.costPerUnit || ''}
+                  onChange={(e) => updateChecklistItem(index, 'costPerUnit', e.target.value)}
+                  className="w-full p-2 rounded border focus:outline-none focus:ring-2"
+                  style={{border: '1px solid hsl(45, 100%, 85%)'}}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Remarks</label>
+                <input
+                  type="text"
+                  placeholder="Good condition"
+                  value={item.remarks || ''}
+                  onChange={(e) => updateChecklistItem(index, 'remarks', e.target.value)}
+                  className="w-full p-2 rounded border focus:outline-none focus:ring-2"
+                  style={{border: '1px solid hsl(45, 100%, 85%)'}}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Action</label>
+                <button
+                  onClick={() => removeChecklistItem(index)}
+                  className="w-full p-2 rounded text-red-600 hover:text-red-800 transition-colors border"
+                  style={{border: '1px solid #fecaca'}}
+                >
+                  <Trash2 size={16} className="mx-auto" />
+                </button>
+              </div>
             </div>
-            <input
-              type="text"
-              placeholder="Item name"
-              value={item.item}
-              onChange={(e) => updateChecklistItem(index, 'item', e.target.value)}
-              className="p-2 rounded focus:outline-none focus:ring-2"
-              style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
-            />
-            <div className="lg:hidden">
-              <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Quantity</label>
-            </div>
-            <input
-              type="number"
-              placeholder="Qty"
-              value={item.quantity}
-              onChange={(e) => updateChecklistItem(index, 'quantity', parseInt(e.target.value))}
-              className="p-2 rounded focus:outline-none focus:ring-2"
-              style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
-            />
-            <div className="lg:hidden">
-              <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Status</label>
-            </div>
-            <select
-              value={item.status}
-              onChange={(e) => updateChecklistItem(index, 'status', e.target.value)}
-              className="p-2 rounded focus:outline-none focus:ring-2"
-              style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
-            >
-              <option value="ok">OK</option>
-              <option value="missing">Missing</option>
-              <option value="damaged">Damaged</option>
-            </select>
-            <div className="lg:hidden">
-              <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Cost per Unit</label>
-            </div>
-            <input
-              type="number"
-              placeholder="Cost per unit"
-              value={item.costPerUnit}
-              onChange={(e) => updateChecklistItem(index, 'costPerUnit', parseFloat(e.target.value))}
-              className="p-2 rounded focus:outline-none focus:ring-2"
-              style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
-            />
-            <div className="lg:hidden">
-              <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Remarks</label>
-            </div>
-            <input
-              type="text"
-              placeholder="Remarks"
-              value={item.remarks}
-              onChange={(e) => updateChecklistItem(index, 'remarks', e.target.value)}
-              className="p-2 rounded focus:outline-none focus:ring-2"
-              style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
-            />
-            <button
-              onClick={() => removeChecklistItem(index)}
-              className="p-2 rounded text-red-600 hover:text-red-800 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <div className="mb-4">
@@ -362,10 +371,8 @@ const RoomInspection = () => {
           onClick={submitInspection}
           className="text-white px-4 py-2 rounded transition-colors"
           style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-          onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
         >
-          Submit Inspection
+          {editingInspection ? 'Update' : 'Submit'} Inspection
         </button>
       </div>
     </div>
@@ -380,8 +387,6 @@ const RoomInspection = () => {
             onClick={() => setShowForm(true)}
             className="text-white px-4 py-2 rounded transition-colors flex items-center"
             style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-            onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
           >
             <Plus size={16} className="mr-2" /> Add Inspection
           </button>
@@ -389,7 +394,6 @@ const RoomInspection = () => {
         
         {showForm && <InspectionForm />}
 
-        {/* Inspections Table */}
         <div className="bg-white rounded-lg shadow" style={{border: '1px solid hsl(45, 100%, 85%)'}}>
           <div className="p-4 border-b" style={{borderColor: 'hsl(45, 100%, 85%)'}}>
             <h2 className="text-lg font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>Room Inspections</h2>
@@ -401,7 +405,6 @@ const RoomInspection = () => {
                   <th className="px-4 py-3 text-left text-sm font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Room No</th>
                   <th className="px-4 py-3 text-left text-sm font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Booking</th>
                   <th className="px-4 py-3 text-left text-sm font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Inspection Type</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Inspector</th>
                   <th className="px-4 py-3 text-left text-sm font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Date</th>
                   <th className="px-4 py-3 text-left text-sm font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Status</th>
                   <th className="px-4 py-3 text-left text-sm font-medium" style={{color: 'hsl(45, 100%, 20%)'}}>Total Charges</th>
@@ -411,24 +414,34 @@ const RoomInspection = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">Loading...</td>
+                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">Loading...</td>
                   </tr>
                 ) : inspections.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">No inspections found</td>
+                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">No inspections found</td>
                   </tr>
                 ) : (
                   inspections.map(inspection => {
-                    const room = rooms.find(r => r._id === inspection.roomId);
-                    const booking = bookings.find(b => b._id === inspection.bookingId);
+                    const room = rooms.find(r => r._id === (inspection.roomId?._id || inspection.roomId));
+                    const booking = bookings.find(b => b._id === (inspection.bookingId?._id || inspection.bookingId));
+                    
                     return (
                       <tr key={inspection._id} className="border-t" style={{borderColor: 'hsl(45, 100%, 85%)'}}>
-                        <td className="px-4 py-3 text-sm font-medium">{room?.roomNumber || room?.room_number || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm font-medium">
+                          {room ? `Room ${room.roomNumber || room.room_number}` : 
+                           inspection.roomId?.roomNumber ? `Room ${inspection.roomId.roomNumber}` :
+                           inspection.roomId?.room_number ? `Room ${inspection.roomId.room_number}` : 'N/A'}
+                        </td>
                         <td className="px-4 py-3 text-sm">
                           {booking ? (
                             <div>
-                              <div className="font-medium">{booking.name}</div>
+                              <div className="font-medium">{typeof booking.name === 'object' ? booking.name?.name || 'Unknown' : booking.name}</div>
                               <div className="text-xs text-gray-500">GRC: {booking.grcNo}</div>
+                            </div>
+                          ) : inspection.bookingId?.name ? (
+                            <div>
+                              <div className="font-medium">{typeof inspection.bookingId.name === 'object' ? inspection.bookingId.name?.name || 'Unknown' : inspection.bookingId.name}</div>
+                              <div className="text-xs text-gray-500">GRC: {inspection.bookingId.grcNo}</div>
                             </div>
                           ) : 'No Booking'}
                         </td>
@@ -444,7 +457,6 @@ const RoomInspection = () => {
                             {inspection.inspectionType}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm">{inspection.inspectedBy?.name || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm">
                           {inspection.createdAt ? new Date(inspection.createdAt).toLocaleDateString() : 'N/A'}
                         </td>
@@ -460,7 +472,10 @@ const RoomInspection = () => {
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <div className="flex gap-2">
-                            <button className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors">
+                            <button 
+                              onClick={() => editInspection(inspection)}
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
+                            >
                               <Edit size={16} />
                             </button>
                             <button className="text-red-600 hover:text-red-800 p-1 rounded transition-colors">

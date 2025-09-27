@@ -19,31 +19,46 @@ const PayrollForm = () => {
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('PayrollForm - Fetching staff with token:', token ? 'Present' : 'Missing');
+      console.log('PayrollForm - Fetching staff from attendance API');
       
-      const response = await fetch('https://ashoka-backend.vercel.app/api/staff/all', {
+      // Get attendance data to extract unique staff members
+      const response = await fetch(`https://ashoka-backend.vercel.app/api/attendance/get`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('PayrollForm - API Response Status:', response.status);
+      console.log('PayrollForm - Attendance API Response Status:', response.status);
       
       if (response.ok) {
-        const data = await response.json();
-        console.log('PayrollForm - Raw API Response:', data);
-        console.log('PayrollForm - Staff Array Length:', data?.length || 0);
-        console.log('PayrollForm - First Staff Member:', data?.[0]);
+        const attendanceData = await response.json();
+        console.log('PayrollForm - Attendance Data:', attendanceData);
         
-        if (Array.isArray(data)) {
-          setStaff(data);
-          console.log('PayrollForm - Staff set successfully, count:', data.length);
-        } else {
-          console.error('PayrollForm - Data is not an array:', typeof data);
-          setStaff([]);
-        }
+        // Extract unique staff from attendance records
+        const uniqueStaff = [];
+        const staffIds = new Set();
+        
+        attendanceData.forEach(record => {
+          if (record.staffId && !staffIds.has(record.staffId._id || record.staffId)) {
+            const staffId = record.staffId._id || record.staffId;
+            staffIds.add(staffId);
+            
+            // Create staff object from attendance data
+            const staffMember = {
+              _id: staffId,
+              userId: record.staffId.userId || { username: record.staffId.username },
+              department: record.staffId.department,
+              salary: record.staffId.salary
+            };
+            
+            uniqueStaff.push(staffMember);
+          }
+        });
+        
+        console.log('PayrollForm - Unique Staff Extracted:', uniqueStaff);
+        setStaff(uniqueStaff);
       } else {
         const errorData = await response.json();
         console.error('PayrollForm - API Error:', errorData);
-        toast.error('Failed to fetch staff members');
+        toast.error('Failed to fetch staff from attendance records');
       }
     } catch (error) {
       console.error('PayrollForm - Network Error:', error);
@@ -148,16 +163,20 @@ const PayrollForm = () => {
                 <option value="">Choose staff member ({staff.length} available)</option>
                 {staff.map((member, index) => {
                   console.log(`PayrollForm Staff Member ${index + 1}:`, member);
-                  const staffName = member.userId?.username || member.username || 'No Name';
+                  const staffName = typeof member.userId?.username === 'object'
+                    ? member.userId?.username?.username || member.userId?.username?.name || member.username || 'No Name'
+                    : member.userId?.username || member.username || 'No Name';
                   const department = Array.isArray(member.department) 
-                    ? member.department.map(d => d.name || d).join(', ')
-                    : member.department || 'No Department';
+                    ? member.department.map(d => typeof d === 'object' ? d.name || 'Unknown' : d).join(', ')
+                    : typeof member.department === 'object' 
+                      ? member.department?.name || 'No Department'
+                      : member.department || 'No Department';
                   
                   console.log(`Staff ${index + 1} - Name: ${staffName}, Dept: ${department}, ID: ${member._id}`);
                   
                   return (
                     <option key={member._id} value={member._id}>
-                      {staffName} - {department} (Salary: ₹{member.salary?.toLocaleString() || 'N/A'})
+                      {String(staffName)} - {String(department)} (Salary: ₹{member.salary?.toLocaleString() || 'N/A'})
                     </option>
                   );
                 })}
@@ -201,15 +220,20 @@ const PayrollForm = () => {
           ) : (
             <div className="space-y-4">
               {generatedPayrolls.map(payroll => {
-                const staffName = staff.find(s => s._id === payroll.staffId)?.userId?.username || 'Unknown Staff';
-                const staffDept = staff.find(s => s._id === payroll.staffId)?.department || 'Unknown Dept';
+                const staffMember = staff.find(s => s._id === payroll.staffId);
+                const staffName = typeof staffMember?.userId?.username === 'object' 
+                  ? staffMember?.userId?.username?.username || staffMember?.userId?.username?.name || 'Unknown Staff'
+                  : staffMember?.userId?.username || 'Unknown Staff';
+                const staffDept = typeof staffMember?.department === 'object' 
+                  ? staffMember?.department?.name || 'Unknown Dept'
+                  : staffMember?.department || 'Unknown Dept';
                 
                 return (
                   <div key={payroll._id} className="border rounded-lg p-4 hover:bg-gray-50">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-semibold text-gray-800">{staffName}</h3>
-                        <p className="text-sm text-gray-600">{staffDept} • {months[payroll.month - 1]} {payroll.year}</p>
+                        <h3 className="font-semibold text-gray-800">{String(staffName)}</h3>
+                        <p className="text-sm text-gray-600">{String(staffDept)} • {months[payroll.month - 1]} {payroll.year}</p>
                       </div>
                       <button
                         onClick={() => {

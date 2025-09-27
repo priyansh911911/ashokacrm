@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Edit, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-const InventoryTable = ({ onEdit }) => {
+const InventoryTable = ({ onEdit, refreshTable }) => {
   const [inventoryData, setInventoryData] = useState([]);
   const [debugStats, setDebugStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchInventoryData();
     fetchDebugStats();
-  }, []);
+  }, [refreshTable]);
 
   const fetchInventoryData = async () => {
     try {
+      setError(null);
       const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/items', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -27,12 +29,24 @@ const InventoryTable = ({ onEdit }) => {
         const inventoryArray = data.items || data.inventory || data.data || data || [];
         setInventoryData(Array.isArray(inventoryArray) ? inventoryArray : []);
       } else {
-        console.log('Get all inventory API failed with status:', response.status);
+        const errorText = await response.text();
+        console.log('Get all inventory API failed with status:', response.status, 'Error:', errorText);
+        if (errorText.includes('buffering timed out') || errorText.includes('timeout')) {
+          setError('Database connection timeout. Please try again in a moment.');
+        } else {
+          setError(`API Error: ${response.status} - ${errorText}`);
+        }
         setInventoryData([]);
       }
     } catch (error) {
       console.error('Error fetching inventory data:', error);
-      toast.error('Failed to fetch inventory data');
+      if (error.message.includes('buffering timed out') || error.message.includes('timeout')) {
+        setError('Database connection timeout. Please try again in a moment.');
+        toast.error('Database connection timeout. Please try again.');
+      } else {
+        setError(`Network Error: ${error.message}`);
+        toast.error('Failed to fetch inventory data');
+      }
       setInventoryData([]);
     } finally {
       setLoading(false);
@@ -123,7 +137,28 @@ const InventoryTable = ({ onEdit }) => {
         
         {inventoryData.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No inventory items found
+            {error ? (
+              <div>
+                <p className="text-red-600 mb-2">Error loading inventory data</p>
+                <p className="text-sm text-gray-600 mb-4">{error}</p>
+                <button
+                  onClick={fetchInventoryData}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="mb-4">No inventory items found</p>
+                <button
+                  onClick={fetchInventoryData}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+                >
+                  Refresh
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <>
