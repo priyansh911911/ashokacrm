@@ -19,6 +19,8 @@ const RestaurantDashboard = () => {
   const [tables, setTables] = useState([]);
   const [kotOrders, setKotOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [showTableModal, setShowTableModal] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -30,16 +32,16 @@ const RestaurantDashboard = () => {
       
       // Fetch all restaurant data in parallel
       const [ordersRes, tablesRes, menuRes, kotRes] = await Promise.all([
-        fetch('https://ashoka-backend.vercel.app/api/orders', {
+        fetch('https://ashoka-backend.vercel.app/api/restaurant-orders/all', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('https://ashoka-backend.vercel.app/api/tables', {
+        fetch('https://ashoka-backend.vercel.app/api/restaurant/tables', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
         fetch('https://ashoka-backend.vercel.app/api/menu', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('https://ashoka-backend.vercel.app/api/kot', {
+        fetch('https://ashoka-backend.vercel.app/api/restaurant-orders/kot', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -54,14 +56,7 @@ const RestaurantDashboard = () => {
         console.log('Orders API failed:', ordersRes.status);
       }
       
-      // If no orders from API, add mock data
-      if (orders.length === 0) {
-        orders = [
-          { _id: '1', tableNumber: 'Table 5', items: [{name: 'Butter Chicken'}, {name: 'Naan'}], totalAmount: 850, status: 'preparing', createdAt: new Date() },
-          { _id: '2', tableNumber: 'Table 2', items: [{name: 'Biryani'}, {name: 'Raita'}], totalAmount: 650, status: 'served', createdAt: new Date() },
-          { _id: '3', tableNumber: 'Table 8', items: [{name: 'Dal Makhani'}, {name: 'Roti'}], totalAmount: 450, status: 'pending', createdAt: new Date() }
-        ];
-      }
+
       
       // Process Tables
       let tablesData = [];
@@ -71,18 +66,6 @@ const RestaurantDashboard = () => {
         tablesData = Array.isArray(tableResponse) ? tableResponse : tableResponse.tables || tableResponse.data || [];
       } else {
         console.log('Tables API failed:', tablesRes.status);
-      }
-      
-      // If no tables from API, add mock data
-      if (tablesData.length === 0) {
-        tablesData = [
-          { _id: '1', tableNumber: 'Table 1', name: 'Table 1', status: 'available', capacity: 4 },
-          { _id: '2', tableNumber: 'Table 2', name: 'Table 2', status: 'occupied', capacity: 2 },
-          { _id: '3', tableNumber: 'Table 3', name: 'Table 3', status: 'available', capacity: 6 },
-          { _id: '4', tableNumber: 'Table 4', name: 'Table 4', status: 'reserved', capacity: 4 },
-          { _id: '5', tableNumber: 'Table 5', name: 'Table 5', status: 'occupied', capacity: 8 },
-          { _id: '6', tableNumber: 'Table 6', name: 'Table 6', status: 'available', capacity: 2 }
-        ];
       }
       
       console.log('Tables Data:', tablesData);
@@ -95,22 +78,26 @@ const RestaurantDashboard = () => {
         menuData = Array.isArray(menuResponse) ? menuResponse : menuResponse.menu || [];
       }
       
-      // Process KOT
+      // Process KOT from existing orders
       let kotData = [];
       if (kotRes.ok) {
         const kotResponse = await kotRes.json();
         console.log('KOT API Response:', kotResponse);
         kotData = Array.isArray(kotResponse) ? kotResponse : kotResponse.kot || kotResponse.data || [];
-        setKotOrders(kotData.slice(0, 5));
       } else {
-        console.log('KOT API failed:', kotRes.status);
-        // Add mock KOT data if API fails
-        const mockKot = [
-          { _id: '1', kotNumber: 'KOT001', tableNumber: 'Table 3', items: [{name: 'Biryani'}, {name: 'Raita'}], status: 'preparing' },
-          { _id: '2', kotNumber: 'KOT002', tableNumber: 'Table 7', items: [{name: 'Dal Makhani'}], status: 'pending' }
-        ];
-        setKotOrders(mockKot);
+        console.log('KOT API failed, using orders data for KOT');
+        // Generate KOT from existing orders
+        kotData = orders.filter(order => 
+          order.status === 'pending' || order.status === 'preparing'
+        ).map(order => ({
+          _id: order._id,
+          kotNumber: `KOT${order._id?.slice(-4) || '001'}`,
+          tableNumber: order.tableNo || order.tableNumber || 'Table N/A',
+          items: order.items || [],
+          status: order.status || 'pending'
+        }));
       }
+      setKotOrders(kotData.slice(0, 5));
       
       // Calculate stats
       const today = new Date().toDateString();
@@ -136,46 +123,41 @@ const RestaurantDashboard = () => {
         kotCount: kotData.length
       });
       
-      const recentOrdersData = orders.slice(0, 5).map(order => ({
-        id: order._id,
-        table: order.tableNumber || 'Table ' + (order.tableId || 'N/A'),
-        items: order.items?.map(item => item.name || item.itemName).join(', ') || 'No items',
-        amount: order.totalAmount || 0,
-        status: order.status || 'pending'
-      }));
+      const recentOrdersData = orders.slice(0, 5).map(order => {
+        console.log('Processing order:', order);
+        
+        // Handle table number from different possible fields
+        const tableNumber = order.tableNo || order.tableNumber || order.table || 
+                           (order.tableId ? `Table ${order.tableId}` : null);
+        
+        // Handle items from different possible structures
+        let itemsText = 'No items';
+        if (order.items && Array.isArray(order.items)) {
+          if (order.items.length > 0) {
+            // Try different item name fields
+            itemsText = order.items.map(item => {
+              if (typeof item === 'string') return item;
+              return item.name || item.itemName || item.itemId?.name || 'Item';
+            }).join(', ');
+          }
+        }
+        
+        // Handle amount from different possible fields
+        const amount = order.amount || order.totalAmount || order.total || 0;
+        
+        return {
+          id: order._id,
+          table: tableNumber || 'Table N/A',
+          items: itemsText,
+          amount: amount,
+          status: order.status || 'pending'
+        };
+      });
       
       console.log('Recent Orders Data:', recentOrdersData);
       setRecentOrders(recentOrdersData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Fallback to mock data
-      setStats({
-        todayOrders: 45,
-        totalRevenue: 12500,
-        activeOrders: 8,
-        totalCustomers: 156,
-        totalTables: 12,
-        availableTables: 8,
-        kotCount: 5
-      });
-      
-      setRecentOrders([
-        { id: 1, table: 'Table 5', items: 'Butter Chicken, Naan', amount: 850, status: 'preparing' },
-        { id: 2, table: 'Table 2', items: 'Biryani, Raita', amount: 650, status: 'served' },
-        { id: 3, table: 'Table 8', items: 'Dal Makhani, Roti', amount: 450, status: 'pending' }
-      ]);
-      
-      setKotOrders([
-        { _id: '1', kotNumber: 'KOT001', tableNumber: 'Table 3', items: [{name: 'Biryani'}, {name: 'Raita'}], status: 'preparing' },
-        { _id: '2', kotNumber: 'KOT002', tableNumber: 'Table 7', items: [{name: 'Dal Makhani'}], status: 'pending' }
-      ]);
-      
-      setTables([
-        { _id: '1', tableNumber: 'Table 1', name: 'Table 1', status: 'available', capacity: 4 },
-        { _id: '2', tableNumber: 'Table 2', name: 'Table 2', status: 'occupied', capacity: 2 },
-        { _id: '3', tableNumber: 'Table 3', name: 'Table 3', status: 'available', capacity: 6 },
-        { _id: '4', tableNumber: 'Table 4', name: 'Table 4', status: 'reserved', capacity: 4 }
-      ]);
     } finally {
       setLoading(false);
     }
@@ -341,12 +323,19 @@ const RestaurantDashboard = () => {
               ))
             ) : tables.length > 0 ? (
               tables.slice(0, 8).map((table) => (
-                <div key={table._id} className={`p-3 rounded-lg border ${
-                  table.status === 'available' ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300' : 
-                  table.status === 'occupied' ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-300' : 
-                  table.status === 'reserved' ? 'bg-gradient-to-br from-[#fefcf7] to-[#fcf9f0] border-[#c2ab65]/40' :
-                  'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300'
-                }`}>
+                <div 
+                  key={table._id} 
+                  className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all ${
+                    table.status === 'available' ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300 hover:border-green-400' : 
+                    table.status === 'occupied' ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-300 hover:border-red-400' : 
+                    table.status === 'reserved' ? 'bg-gradient-to-br from-[#fefcf7] to-[#fcf9f0] border-[#c2ab65]/40 hover:border-[#c2ab65]/60' :
+                    'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300 hover:border-gray-400'
+                  }`}
+                  onClick={() => {
+                    setSelectedTable(table);
+                    setShowTableModal(true);
+                  }}
+                >
                   <p className="font-semibold text-sm">{table.tableNumber || table.name}</p>
                   <p className={`text-xs ${
                     table.status === 'available' ? 'text-green-600' : 
@@ -437,6 +426,88 @@ const RestaurantDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Table Details Modal */}
+      {showTableModal && selectedTable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-[#1f2937]">
+                {selectedTable.tableNumber || selectedTable.name} Details
+              </h3>
+              <button 
+                onClick={() => setShowTableModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">Table Number:</span>
+                <span className="text-[#1f2937]">{selectedTable.tableNumber || selectedTable.name}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">Status:</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  selectedTable.status === 'available' ? 'bg-green-100 text-green-800' :
+                  selectedTable.status === 'occupied' ? 'bg-red-100 text-red-800' :
+                  selectedTable.status === 'reserved' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {selectedTable.status}
+                </span>
+              </div>
+              
+              {selectedTable.capacity && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Capacity:</span>
+                  <span className="text-[#1f2937]">{selectedTable.capacity} people</span>
+                </div>
+              )}
+              
+              {selectedTable.location && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Location:</span>
+                  <span className="text-[#1f2937]">{selectedTable.location}</span>
+                </div>
+              )}
+              
+              {selectedTable.description && (
+                <div>
+                  <span className="font-medium text-gray-700">Description:</span>
+                  <p className="text-[#1f2937] mt-1">{selectedTable.description}</p>
+                </div>
+              )}
+              
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">Table ID:</span>
+                <span className="text-gray-500 text-sm">{selectedTable._id}</span>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex gap-3">
+              <button 
+                onClick={() => setShowTableModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => {
+                  setShowTableModal(false);
+                  navigate('/resturant/order-table');
+                }}
+                className="flex-1 px-4 py-2 bg-[#c2ab65] text-white rounded-lg hover:bg-[#b8a055] transition-colors"
+              >
+                Create Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
