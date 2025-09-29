@@ -49,7 +49,18 @@ const Sidebar = () => {
   useEffect(() => {
     const role = localStorage.getItem("role");
     const restRole = localStorage.getItem("restaurantRole");
-    console.log('Debug 2 - role:', role, 'restaurantRole:', restRole);
+    const departments = localStorage.getItem("departments");
+    const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
+    
+    console.log('=== USER DATA ===');
+    console.log('Role:', role);
+    console.log('Restaurant Role:', restRole);
+    console.log('Departments:', departments);
+    console.log('User ID:', userId);
+    console.log('Token:', token);
+    console.log('================');
+    
     setUserRole(role ? role.toUpperCase() : "");
     setRestaurantRole(restRole ? restRole.toUpperCase() : "");
 
@@ -118,13 +129,24 @@ const Sidebar = () => {
 
   const getAuthorizedNavItems = () => {
     const role = localStorage.getItem("role");
-    const userDepartments = JSON.parse(localStorage.getItem("departments") || "[]");
+    const userDepartments = JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]");
+    const hasHousekeeping = userDepartments.some(dept => dept.name === "housekeeping");
+    
+    console.log('=== DEPARTMENT CHECK ===');
+    console.log('User Departments:', userDepartments);
+    console.log('Has Housekeeping:', hasHousekeeping);
+    console.log('=======================');
+    
     const items = [];
 
     // Dashboard - accessible to all
     items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
     items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
-    items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
+    
+    // Cash Management - not accessible to staff
+    if (role !== "staff") {
+      items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
+    }
 
     // Admin only items
     if (role === "admin") {
@@ -133,11 +155,13 @@ const Sidebar = () => {
       items.push({ icon: FileText, label: "Booking", path: "/booking" });
       items.push({ icon: FileText, label: "Room Inspection", path: "/room-inspection" });
       items.push({ icon: FileText, label: "Reservation", path: "/reservation" });
-      items.push({ icon: UserCheck, label: "Task Assigned", path: "/tasks" });
     }
 
-    // Staff with housekeeping department can see tasks
-    if (role === "staff" && userDepartments.some(dept => dept.name === "housekeeping")) {
+    // Task management - admin and housekeeping staff
+    if (role === "admin" || (role === "staff" && hasHousekeeping)) {
+      items.push({ icon: UserCheck, label: "Task Assigned", path: "/tasks" });
+    }
+    if (role === "staff" && hasHousekeeping) {
       items.push({ icon: Bell, label: "My Task", path: "/staff-work", count: taskCount });
     }
 
@@ -157,7 +181,7 @@ const Sidebar = () => {
       ],
     }] : []),
     ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("departments") || "[]").some(dept => dept.name === "laundry")) ? [{
+         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "laundry")) ? [{
       icon: UserRound,
       label: "Laundry",
       path: "/laundry",
@@ -171,7 +195,7 @@ const Sidebar = () => {
       ],
     }] : []),
     ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("departments") || "[]").some(dept => dept.name === "kitchen")) ? [{
+         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "kitchen")) ? [{
       icon: UserRound,
       label: "Pantry",
       path: "/pantry",
@@ -182,7 +206,7 @@ const Sidebar = () => {
       ],
     }] : []),
     ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("departments") || "[]").some(dept => dept.name === "reception")) ? [{
+         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "reception")) ? [{
       icon: UserRound,
       label: "Cab",
       path: "/cab",
