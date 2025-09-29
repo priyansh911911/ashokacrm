@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { showToast } from '../../utils/toaster';
+import { toast } from 'react-hot-toast';
 
 const CheckoutPage = () => {
   const { axios } = useAppContext();
@@ -186,7 +187,9 @@ const CheckoutPage = () => {
         });
       }
       
-      showToast.success('🧹 Housekeeping task assigned successfully!');
+      const assignedStaffMember = staff.find(s => s._id === selectedStaff);
+      const staffName = assignedStaffMember?.username || assignedStaffMember?.name || 'staff member';
+      toast.success(`🧹 Checkout cleaning task assigned to ${staffName} successfully!`);
       setShowHousekeepingForm(false);
       setSelectedStaff('');
       

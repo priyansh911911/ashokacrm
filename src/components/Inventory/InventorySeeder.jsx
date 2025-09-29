@@ -8,27 +8,38 @@ const InventorySeeder = ({ onSeedComplete }) => {
   const seedInventory = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to continue.');
+        localStorage.clear();
+        window.location.reload();
+        return;
+      }
+
       const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/seed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
       if (response.ok) {
         toast.success('Room inventory items added successfully!');
         if (onSeedComplete) onSeedComplete();
+      } else if (response.status === 403) {
+        toast.error('Session expired. Please login again.');
+        localStorage.clear();
+        window.location.reload();
       } else {
         const errorData = await response.text();
-        console.error('API Error:', errorData);
         toast.error(`Failed to add inventory items: ${response.status}`);
       }
     } catch (error) {
-      console.error('Network Error:', error);
       toast.error('Network error: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

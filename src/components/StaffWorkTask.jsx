@@ -58,7 +58,11 @@ const StaffWorkTask = () => {
       }
     } catch (err) {
       console.error('Fetch error:', err);
-      setError("Failed to load your tasks");
+      if (err.response?.data?.message?.includes('Access denied')) {
+        setError('Access denied: You do not have permission to view tasks');
+      } else {
+        setError("Failed to load your tasks");
+      }
     } finally {
       setLoading(false);
     }

@@ -100,7 +100,11 @@ const TaskList = () => {
         await fetchTasks(bookingsData);
       } catch (error) {
         console.error('Error loading data:', error);
-        setError('Failed to load data');
+        if (error.response?.data?.message?.includes('Access denied: department')) {
+          setError('Access denied: You do not have permission to view tasks for this department');
+        } else {
+          setError('Failed to load data');
+        }
       } finally {
         setLoading(false);
       }

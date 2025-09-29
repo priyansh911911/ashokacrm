@@ -116,17 +116,36 @@ const Sidebar = () => {
   }, [isSidebarOpen]);
 
 
+  const getAuthorizedNavItems = () => {
+    const role = localStorage.getItem("role");
+    const userDepartments = JSON.parse(localStorage.getItem("departments") || "[]");
+    const items = [];
+
+    // Dashboard - accessible to all
+    items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
+    items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
+
+    // Admin only items
+    if (role === "admin") {
+      items.push({ icon: ChartBarStacked, label: "Category", path: "/category" });
+      items.push({ icon: BedDouble, label: "Room", path: "/room" });
+      items.push({ icon: FileText, label: "Booking", path: "/booking" });
+      items.push({ icon: FileText, label: "Room Inspection", path: "/room-inspection" });
+      items.push({ icon: FileText, label: "Reservation", path: "/reservation" });
+      items.push({ icon: UserCheck, label: "Task Assigned", path: "/tasks" });
+    }
+
+    // Staff with housekeeping department can see tasks
+    if (role === "staff" && userDepartments.some(dept => dept.name === "housekeeping")) {
+      items.push({ icon: Bell, label: "My Task", path: "/staff-work", count: taskCount });
+    }
+
+    return items;
+  };
+
   const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: UserCheck, label: "Task Assigned", path: "/tasks" },
-    { icon: ChartBarStacked, label: "Category", path: "/category" },
-    { icon: BedDouble, label: "Room", path: "/room" },
-    { icon: FileText, label: "Booking", path: "/booking" },
-    { icon: FileText, label: "Room Inspection", path: "/room-inspection" },
-    // { icon: FileText, label: "Checkout", path: "/checkout" },
-    { icon: FileText, label: "Reservation", path: "/reservation" },
-    { icon: Bell, label: "My Task", path: "/staff-work", count: taskCount },
-    {
+    ...getAuthorizedNavItems(),
+    ...(localStorage.getItem("role") === "admin" ? [{
       icon: UserRound,
       label: "Staff Management",
       path: "/staff",
@@ -134,11 +153,10 @@ const Sidebar = () => {
       children: [
         { label: "Staff List", path: "/staff", icon: Users },
         { label: "Staff Dashboard", path: "/staff-dashboard", icon: LayoutDashboard },
-        // { label: "Attendance", path: "/staff/attendance", icon: UserCheck },
-        // { label: "Payroll", path: "/staff/payroll", icon: BarChart2 },
       ],
-    },
-    {
+    }] : []),
+    ...((localStorage.getItem("role") === "admin" || 
+         JSON.parse(localStorage.getItem("departments") || "[]").some(dept => dept.name === "laundry")) ? [{
       icon: UserRound,
       label: "Laundry",
       path: "/laundry",
@@ -149,14 +167,10 @@ const Sidebar = () => {
           path: "/laundry/ordermanagement",
           icon: ListChecks,
         },
-        // {
-        //   label: "Inventory Management",
-        //   path: "/laundry/inventorymanagement",
-        //   icon: Package,
-        // },
       ],
-    },
-    {
+    }] : []),
+    ...((localStorage.getItem("role") === "admin" || 
+         JSON.parse(localStorage.getItem("departments") || "[]").some(dept => dept.name === "kitchen")) ? [{
       icon: UserRound,
       label: "Pantry",
       path: "/pantry",
@@ -165,8 +179,9 @@ const Sidebar = () => {
         { label: "Item", path: "/pantry/item", icon: ListChecks },
         { label: "Orders", path: "/pantry/orders", icon: Package },
       ],
-    },
-    {
+    }] : []),
+    ...((localStorage.getItem("role") === "admin" || 
+         JSON.parse(localStorage.getItem("departments") || "[]").some(dept => dept.name === "reception")) ? [{
       icon: UserRound,
       label: "Cab",
       path: "/cab",
@@ -175,7 +190,7 @@ const Sidebar = () => {
         { label: "Driver Management", path: "/cab/driver", icon: ListChecks },
         { label: "Vehicle Management", path: "/cab/vehicle", icon: Package },
       ],
-    },
+    }] : []),
     {
       icon: UserRound,
       label: "Restaurant",
@@ -222,7 +237,7 @@ const Sidebar = () => {
         ];
       })(),
     },
-    {
+    ...(localStorage.getItem("role") === "admin" ? [{
       icon: UserRound,
       label: "Banquet",
       path: "/banquet",
@@ -232,10 +247,12 @@ const Sidebar = () => {
         { label: "List Bookings", path: "/banquet/list-booking", icon: Package },
         { label: "Menu & Plans", path: "/banquet/menu-plan-manager", icon: Settings },
       ],
-    },
-    { icon: Users, label: "Customers", path: "/customers" },
-    { icon: Users, label: "All Users", path: "/users" },
-    { icon: Warehouse, label: "Inventory", path: "/inventory" }
+    }] : []),
+    ...(localStorage.getItem("role") === "admin" ? [
+      { icon: Users, label: "Customers", path: "/customers" },
+      { icon: Users, label: "All Users", path: "/users" },
+      { icon: Warehouse, label: "Inventory", path: "/inventory" }
+    ] : [])
     // { icon: Users, label: "Payment", path: "/payment" },
     // { icon: FileText, label: "Invoice", path: "/invoice" },
   ];
@@ -295,7 +312,6 @@ const Sidebar = () => {
                   onClick={() => toggleDropdown(item.label)}
                   className={`flex items-center justify-between w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors duration-200 focus:outline-none text-sm sm:text-base
                     ${
-                      location.pathname.startsWith(item.path) ||
                       item.children.some(
                         (child) => location.pathname === child.path
                       )

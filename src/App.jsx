@@ -70,6 +70,7 @@ import AttendanceForm from "./components/staff/AttendanceForm.jsx";
 import PayrollForm from "./components/staff/PayrollForm.jsx";
 import AttendanceTable from "./components/staff/AttendanceTable.jsx";
 import RestaurantDashboard from "./components/restaurant/RestaurantDashboard.jsx";
+import EasyDashboard from "./components/easy dashboard/easydashboard.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -195,6 +196,7 @@ const App = () => {
                       <Route path="/staff/payroll" element={<PayrollForm />} />
                       <Route path="/staff/attendance-table" element={<AttendanceTable />} />
                       <Route path="/resturant/dashboard" element={<RestaurantDashboard />} />
+                      <Route path="/easy-dashboard" element={<EasyDashboard />} />
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>
                   </main>

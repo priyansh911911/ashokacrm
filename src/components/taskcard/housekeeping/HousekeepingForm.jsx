@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../../context/AppContext";
+import { toast } from 'react-hot-toast';
 
 const HousekeepingForm = ({
   onClose,
@@ -162,6 +163,7 @@ const HousekeepingForm = ({
           }
         );
         onTaskAdded(data);
+        toast.success('Task updated successfully!');
       } else {
         const { data } = await axios.post(
           "/api/housekeeping/tasks",
@@ -173,6 +175,8 @@ const HousekeepingForm = ({
           }
         );
         onTaskAdded(data);
+        const assignedStaff = staff.find(s => s._id === housekeepingTask.assignedTo);
+        toast.success(`Task assigned to ${assignedStaff?.username || 'staff member'} successfully!`);
       }
       onClose();
     } catch (error) {

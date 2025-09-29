@@ -54,6 +54,14 @@ const App = () => {
   const [orders, setOrders] = useState([]);
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showRateForm, setShowRateForm] = useState(false);
+  const [rateFormData, setRateFormData] = useState({
+    category: 'gentlemen',
+    serviceType: 'wash',
+    itemName: '',
+    rate: '',
+    unit: 'piece'
+  });
   const [editingOrder, setEditingOrder] = useState(null);
   const [filterStatus, setFilterStatus] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -157,6 +165,7 @@ const App = () => {
       }
       setShowOrderForm(false);
       setEditingOrder(null);
+      fetchOrders();
     } catch (error) {
       console.error("=== ERROR DETAILS ===");
       console.error("Error saving order:", error);
@@ -244,6 +253,35 @@ const App = () => {
   };
 
   // Report loss
+  const handleSaveRate = async (e) => {
+    e.preventDefault();
+    const token = getAuthToken();
+    if (!token) {
+      toast.error('Authentication token not found');
+      return;
+    }
+
+    const loadingToast = toast.loading('Adding laundry rate...');
+    try {
+      await axios.post('/api/laundry-rates/add', rateFormData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Laundry rate added successfully!', { id: loadingToast });
+      setShowRateForm(false);
+      setRateFormData({
+        category: 'gentlemen',
+        serviceType: 'wash',
+        itemName: '',
+        rate: '',
+        unit: 'piece'
+      });
+      fetchLaundryRates();
+    } catch (error) {
+      console.error('Error adding laundry rate:', error);
+      toast.error(`Error adding rate: ${error.response?.data?.message || error.message}`, { id: loadingToast });
+    }
+  };
+
   const handleReportLoss = async (id, lossNote) => {
     const token = getAuthToken();
     if (!token) {
@@ -491,14 +529,24 @@ const App = () => {
         <h1 className="text-3xl font-extrabold text-text mb-4 sm:mb-0">
           Laundry Order Management
         </h1>
-        <button
-          onClick={handleAddOrder}
-          className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-full shadow-lg text-white bg-primary hover:bg-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 transform hover:scale-105"
-        >
-          <Plus size={18} className="mr-1 sm:mr-2" /> 
-          <span className="hidden sm:inline">Add New Order</span>
-          <span className="sm:hidden">Add Order</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handleAddOrder}
+            className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-full shadow-lg text-white bg-primary hover:bg-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 transform hover:scale-105"
+          >
+            <Plus size={18} className="mr-1 sm:mr-2" /> 
+            <span className="hidden sm:inline">Add New Order</span>
+            <span className="sm:hidden">Add Order</span>
+          </button>
+          <button
+            onClick={() => setShowRateForm(true)}
+            className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-full shadow-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105"
+          >
+            <Plus size={18} className="mr-1 sm:mr-2" /> 
+            <span className="hidden sm:inline">Add Laundry Rate</span>
+            <span className="sm:hidden">Add Rate</span>
+          </button>
+        </div>
       </header>
 
       <div className="bg-white p-4 rounded-xl shadow-md mb-6 border border-border">
@@ -566,25 +614,27 @@ const App = () => {
           </div>
           
           {/* Date Filter */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center space-y-3 lg:space-y-0 lg:space-x-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-4 py-2 border border-border rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm text-text"
-            />
-            <span className="text-sm text-text">to</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-4 py-2 border border-border rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm text-text"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-4 py-2 border border-border rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm text-text"
+              />
+              <span className="text-sm text-text text-center sm:text-left">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-4 py-2 border border-border rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm text-text"
+              />
+            </div>
             
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
               <button
                 onClick={handleDateFilter}
-                className="flex-1 lg:flex-none px-4 py-2 bg-primary text-white rounded-md hover:bg-hover transition-colors text-sm"
+                className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-md hover:bg-hover transition-colors text-sm"
               >
                 Filter by Date
               </button>
@@ -595,7 +645,7 @@ const App = () => {
                   setEndDate('');
                   fetchOrders();
                 }}
-                className="flex-1 lg:flex-none px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
+                className="w-full sm:w-auto px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
               >
                 Clear Dates
               </button>
@@ -926,6 +976,93 @@ const App = () => {
           }}
           onClose={() => setShowAddForm(false)}
         />
+      )}
+
+      {showRateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add Laundry Rate</h2>
+            <form onSubmit={handleSaveRate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={rateFormData.category}
+                  onChange={(e) => setRateFormData({...rateFormData, category: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                >
+                  <option value="gentlemen">Gentlemen</option>
+                  <option value="ladies">Ladies</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+                <select
+                  value={rateFormData.serviceType}
+                  onChange={(e) => setRateFormData({...rateFormData, serviceType: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                >
+                  <option value="wash">Wash</option>
+                  <option value="dry_clean">Dry Clean</option>
+                  <option value="press">Press</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                <input
+                  type="text"
+                  value={rateFormData.itemName}
+                  onChange={(e) => setRateFormData({...rateFormData, itemName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Enter item name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rate</label>
+                <input
+                  type="number"
+                  value={rateFormData.rate}
+                  onChange={(e) => setRateFormData({...rateFormData, rate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Enter rate"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                <select
+                  value={rateFormData.unit}
+                  onChange={(e) => setRateFormData({...rateFormData, unit: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                >
+                  <option value="piece">Piece</option>
+                  <option value="pair">Pair</option>
+                  <option value="set">Set</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Add Rate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRateForm(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
       
       <Toaster

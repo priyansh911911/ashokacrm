@@ -16,21 +16,30 @@ const InventoryTable = ({ onEdit, refreshTable }) => {
   const fetchInventoryData = async () => {
     try {
       setError(null);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please login to continue.');
+        localStorage.clear();
+        window.location.reload();
+        return;
+      }
+
       const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/items', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
-      console.log('Get all inventory API response:', response);
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('Get all inventory API data:', data);
-        // Handle different response structures
         const inventoryArray = data.items || data.inventory || data.data || data || [];
         setInventoryData(Array.isArray(inventoryArray) ? inventoryArray : []);
+      } else if (response.status === 403) {
+        setError('Session expired. Please login again.');
+        localStorage.clear();
+        window.location.reload();
       } else {
         const errorText = await response.text();
-        console.log('Get all inventory API failed with status:', response.status, 'Error:', errorText);
         if (errorText.includes('buffering timed out') || errorText.includes('timeout')) {
           setError('Database connection timeout. Please try again in a moment.');
         } else {
@@ -55,15 +64,20 @@ const InventoryTable = ({ onEdit, refreshTable }) => {
 
   const fetchDebugStats = async () => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
       const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/debug/count', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Debug stats:', data);
         setDebugStats(data);
+      } else if (response.status === 403) {
+        localStorage.clear();
+        window.location.reload();
       }
     } catch (error) {
       console.error('Error fetching debug stats:', error);
@@ -73,16 +87,28 @@ const InventoryTable = ({ onEdit, refreshTable }) => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this inventory item?')) {
       try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error('Please login to continue.');
+          localStorage.clear();
+          window.location.reload();
+          return;
+        }
+
         const response = await fetch(`https://ashoka-backend.vercel.app/api/inventory/${id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         
         if (response.ok) {
           toast.success('Inventory item deleted successfully!');
           fetchInventoryData();
+        } else if (response.status === 403) {
+          toast.error('Session expired. Please login again.');
+          localStorage.clear();
+          window.location.reload();
         } else {
           toast.error('Failed to delete inventory item');
         }
@@ -137,7 +163,7 @@ const InventoryTable = ({ onEdit, refreshTable }) => {
         
         {inventoryData.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            {error ? (
+            {error && !error.includes('403') && !error.includes('Invalid token') ? (
               <div>
                 <p className="text-red-600 mb-2">Error loading inventory data</p>
                 <p className="text-sm text-gray-600 mb-4">{error}</p>

@@ -248,14 +248,7 @@ function Customer() {
           </div>
         )}
         
-        <div className="flex justify-end mb-6">
-          <button 
-            onClick={() => setShowForm(true)}
-            className="font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 bg-primary text-text hover:bg-hover"
-          >
-            Add New Customer
-          </button>
-        </div>
+
 
         {loading && (
           <div className="flex items-center justify-center py-4">
@@ -264,7 +257,8 @@ function Customer() {
           </div>
         )}
 
-        {showForm && (
+        {/* Form removed */}
+        {false && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: 'hsl(45, 100%, 20%)' }}>

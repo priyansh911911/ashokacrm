@@ -186,7 +186,7 @@ const AddOrderForm = ({ onSave, onClose }) => {
           </div>
 
           {/* Guest Info (Read-only) */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <input
               type="text"
               value={formData.grcNo}
@@ -211,7 +211,7 @@ const AddOrderForm = ({ onSave, onClose }) => {
           </div>
 
           {/* Schedule */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1">Pickup Time</label>
               <input
@@ -235,7 +235,7 @@ const AddOrderForm = ({ onSave, onClose }) => {
           </div>
 
           {/* Order Status & Received By */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1">Order Status</label>
               <select
@@ -265,7 +265,7 @@ const AddOrderForm = ({ onSave, onClose }) => {
           </div>
 
           {/* Flags */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -349,8 +349,9 @@ const AddOrderForm = ({ onSave, onClose }) => {
             </div>
             
             {formData.items.map((item, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 mb-2 items-end">
-                <div className="col-span-5">
+              <div key={index} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 mb-4 sm:mb-2 sm:items-end p-3 sm:p-0 border sm:border-0 rounded sm:rounded-none">
+                <div className="sm:col-span-5">
+                  <label className="block text-xs font-medium mb-1 sm:hidden">Item</label>
                   <select
                     value={item.rateId}
                     onChange={(e) => handleItemChange(index, 'rateId', e.target.value)}
@@ -365,7 +366,8 @@ const AddOrderForm = ({ onSave, onClose }) => {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium mb-1 sm:hidden">Quantity</label>
                   <input
                     type="number"
                     value={item.quantity}
@@ -376,7 +378,8 @@ const AddOrderForm = ({ onSave, onClose }) => {
                     required
                   />
                 </div>
-                <div className="col-span-3">
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-medium mb-1 sm:hidden">Status</label>
                   <select
                     value={item.status || 'pending'}
                     onChange={(e) => handleItemChange(index, 'status', e.target.value)}
@@ -389,12 +392,12 @@ const AddOrderForm = ({ onSave, onClose }) => {
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
-                <div className="col-span-1">
+                <div className="sm:col-span-1 flex justify-center">
                   {formData.items.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeItem(index)}
-                      className="p-2 text-red-600 hover:bg-red-100 rounded w-full"
+                      className="p-2 text-red-600 hover:bg-red-100 rounded w-full sm:w-auto"
                     >
                       <Trash2 size={16} />
                     </button>
