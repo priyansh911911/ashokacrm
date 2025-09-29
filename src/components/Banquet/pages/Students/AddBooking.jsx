@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useAppContext } from "../../../../context/AppContext";
+import axios from "axios";
 import MenuSelector from "../Menu/MenuSelector";
 import {
   FaUser,
@@ -21,11 +21,11 @@ import {
 const RATE_CONFIG = {
   Veg: {
     Silver: {
-      basePrice: 1299,
+      basePrice: 1050,
       taxPercent: 18,
     },
     Gold: {
-      basePrice: 1499,
+      basePrice: 1250,
       taxPercent: 18,
     },
     Platinum: {
@@ -35,11 +35,11 @@ const RATE_CONFIG = {
   },
   "Non-Veg": {
     Silver: {
-      basePrice: 1599,
+      basePrice: 1050,
       taxPercent: 18,
     },
     Gold: {
-      basePrice: 1899,
+      basePrice: 1250,
       taxPercent: 18,
     },
     Platinum: {
@@ -59,7 +59,6 @@ const requiredFields = [
 ];
 
 const AddBooking = () => {
-  const { axios } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
   const selectedDateFromCalendar = location.state?.selectedDate || "";
@@ -104,10 +103,14 @@ const AddBooking = () => {
     isConfirmed: false,
     categorizedMenu: {},
     discount: "",
+    decorationCharge: "",
+    musicCharge: "",
+    hasDecoration: false,
+    hasMusic: false,
     staffEditCount: 0, // Add this field for new bookings
   });
 
-  // Calculate total when pax, ratePlan, foodType, gst, or discount changes (GST as percentage)
+  // Calculate total when pax, ratePlan, foodType, gst, discount, decoration, or music charges change
   useEffect(() => {
     if (form.pax && form.ratePlan && form.foodType && form.gst) {
       const rateInfo = RATE_CONFIG[form.foodType][form.ratePlan];
@@ -120,7 +123,13 @@ const AddBooking = () => {
         const discountedBase = basePrice - discount;
         const gstAmount = (discountedBase * gstPercent) / 100;
         const rateWithGST = discountedBase + gstAmount;
-        const total = rateWithGST * paxNum;
+        const foodTotal = rateWithGST * paxNum;
+        
+        // Add decoration and music charges
+        const decorationCharge = form.hasDecoration ? (parseFloat(form.decorationCharge) || 0) : 0;
+        const musicCharge = form.hasMusic ? (parseFloat(form.musicCharge) || 0) : 0;
+        const total = foodTotal + decorationCharge + musicCharge;
+        
         setForm((prev) => ({
           ...prev,
           total: total ? total.toFixed(2) : "",
@@ -135,7 +144,7 @@ const AddBooking = () => {
         ratePerPax: "",
       }));
     }
-  }, [form.pax, form.ratePlan, form.foodType, form.gst, form.discount]);
+  }, [form.pax, form.ratePlan, form.foodType, form.gst, form.discount, form.decorationCharge, form.musicCharge]);
 
   // Remove this useEffect for balance calculation
   useEffect(() => {
@@ -172,6 +181,28 @@ const AddBooking = () => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     let val = type === "checkbox" ? checked : value;
+    
+    // Reset charges when unchecking
+    if (name === "hasDecoration" && !checked) {
+      setForm(prev => ({ ...prev, hasDecoration: false, decorationCharge: "" }));
+      return;
+    }
+    if (name === "hasMusic" && !checked) {
+      setForm(prev => ({ ...prev, hasMusic: false, musicCharge: "" }));
+      return;
+    }
+    
+    // Handle rate plan change - auto set food type for Silver
+    if (name === "ratePlan") {
+      if (val === "Silver") {
+        setForm(prev => ({ ...prev, [name]: val, foodType: "Veg" }));
+        return;
+      } else if (form.ratePlan === "Silver" && val !== "Silver") {
+        // Reset food type when switching away from Silver
+        setForm(prev => ({ ...prev, [name]: val, foodType: "" }));
+        return;
+      }
+    }
     // Discount validation
     if (name === "discount") {
       let maxDiscount = Infinity;
@@ -217,13 +248,18 @@ const AddBooking = () => {
     }
   };
 
-  const handleSaveMenu = (selectedItems, categorizedMenu) => {
-    setForm((prev) => ({
-      ...prev,
-      menuItems: selectedItems.join(", "),
-      categorizedMenu: categorizedMenu || {}
-    }));
-    setShowMenuSelector(false);
+  const handleSaveMenu = async (selectedItems, categorizedMenu) => {
+    try {
+      // Direct mapping - MenuSelector already sends correct format
+      setForm((prev) => ({
+        ...prev,
+        menuItems: selectedItems.join(", "),
+        categorizedMenu: categorizedMenu,
+      }));
+    } catch (error) {
+      toast.error("Error processing menu selection");
+      console.error("Menu save error:", error);
+    }
   };
 
   const validateForm = () => {
@@ -268,6 +304,8 @@ const AddBooking = () => {
         ...form,
         complimentaryRooms:
           form.complimentaryRooms === "" ? 0 : Number(form.complimentaryRooms),
+        decorationCharge: form.hasDecoration ? (parseFloat(form.decorationCharge) || 0) : 0,
+        musicCharge: form.hasMusic ? (parseFloat(form.musicCharge) || 0) : 0,
         statusHistory: [
           {
             status: form.bookingStatus,
@@ -285,12 +323,19 @@ const AddBooking = () => {
       Object.assign(payload, statusBooleans);
 
       const response = await axios.post(
-        "/api/banquet-bookings/create",
+        "https://ashoka-b.vercel.app/api/bookings/create",
         payload
       );
 
       toast.success("Booking created successfully!");
-      setTimeout(() => navigate("/banquet/list-booking"), 600);
+      const bookingId = response.data._id || response.data.id;
+      setTimeout(() => {
+        if (bookingId) {
+          navigate(`/invoice/${bookingId}`);
+        } else {
+          navigate("/list-booking");
+        }
+      }, 600);
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 1200);
     } catch (err) {
@@ -318,7 +363,7 @@ const AddBooking = () => {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link
-            to="/banquet/list-booking"
+            to="/list-booking"
             className="flex items-center text-[#c3ad6b] hover:text-[#b39b5a]"
           >
             <FaArrowLeft className="mr-2" /> Back
@@ -543,14 +588,14 @@ const AddBooking = () => {
                       errors.hall ? "border-red-500" : "border-gray-300"
                     } focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3`}
                     onChange={handleChange}
-                    value={form.hall}
+                    value={form.hall || ""}
                     required
                   >
                     <option value="">Select Hall Type</option>
-                    <option value="Nirvana">Nirvana</option>
-                    <option value="Mandala">Mandala</option>
-                    <option value="Conference">Conference</option>
-                    <option value="Lawn">Lawn</option>
+                    <option value="Kitty Hall">Kitty Hall</option>
+                    <option value="Banquet Hall">Banquet Hall</option>
+                    <option value="Rooftop Hall">Rooftop Hall</option>
+                    <option value="Flamingo Rooftop">Flamingo Rooftop</option>
                   </select>
                   {errors.hall && (
                     <p className="text-red-500 text-xs mt-1">{errors.hall}</p>
@@ -724,13 +769,13 @@ const AddBooking = () => {
                       errors.ratePlan ? "border-red-500" : "border-gray-300"
                     } focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3`}
                     onChange={handleChange}
-                    value={form.ratePlan}
+                    value={form.ratePlan || ""}
                     required
                   >
                     <option value="">Select Rate Plan</option>
                     <option value="Silver">Silver</option>
                     <option value="Gold">Gold</option>
-                    <option value="Platinum">Platinum</option>
+                    {/* <option value="Platinum">Platinum</option> */}
                   </select>
                   {errors.ratePlan && (
                     <p className="text-red-500 text-xs mt-1">
@@ -750,12 +795,14 @@ const AddBooking = () => {
                       errors.foodType ? "border-red-500" : "border-gray-300"
                     } focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3`}
                     onChange={handleChange}
-                    value={form.foodType}
+                    value={form.foodType || ""}
                     required
                   >
                     <option value="">Select Food Type</option>
                     <option value="Veg">Veg</option>
-                    <option value="Non-Veg">Non-Veg</option>
+                    {form.ratePlan !== "Silver" && (
+                      <option value="Non-Veg">Non-Veg</option>
+                    )}
                   </select>
                   {errors.foodType && (
                     <p className="text-red-500 text-xs mt-1">
@@ -779,22 +826,63 @@ const AddBooking = () => {
                 </h2>
               </div>
 
-              <div className="grid md:grid-cols-4 gap-6">
-                {/* Advance */}
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Advance Payment
-                  </label>
-                  <div className="relative">
-                    <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Decoration */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                     <input
-                      type="number"
-                      name="advance"
-                      className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                      type="checkbox"
+                      name="hasDecoration"
+                      checked={form.hasDecoration}
                       onChange={handleChange}
-                      value={form.advance}
+                      className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
                     />
+                    <label className="text-sm font-medium text-gray-700">
+                      Decoration Charge
+                    </label>
                   </div>
+                  {form.hasDecoration && (
+                    <div className="relative">
+                      <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="number"
+                        name="decorationCharge"
+                        className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                        onChange={handleChange}
+                        value={form.decorationCharge}
+                        placeholder="Enter amount"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Music */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      name="hasMusic"
+                      checked={form.hasMusic}
+                      onChange={handleChange}
+                      className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
+                    />
+                    <label className="text-sm font-medium text-gray-700">
+                      Music Charge
+                    </label>
+                  </div>
+                  {form.hasMusic && (
+                    <div className="relative">
+                      <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="number"
+                        name="musicCharge"
+                        className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                        onChange={handleChange}
+                        value={form.musicCharge}
+                        placeholder="Enter amount"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* GST (manual input) */}
@@ -810,6 +898,25 @@ const AddBooking = () => {
                       onChange={handleChange}
                       value={form.gst}
                       placeholder="Enter GST manually"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6 mt-4">
+                {/* Advance */}
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Advance Payment
+                  </label>
+                  <div className="relative">
+                    <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="number"
+                      name="advance"
+                      className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                      onChange={handleChange}
+                      value={form.advance}
                     />
                   </div>
                 </div>
@@ -937,16 +1044,28 @@ const AddBooking = () => {
                         const gstAmount = (discountedBase * gstPercent) / 100;
                         const rateWithGST = discountedBase + gstAmount;
                         const pax = parseInt(form.pax) || 0;
-                        const total = (rateWithGST * pax).toFixed(2);
+                        const foodTotal = (rateWithGST * pax);
+                        const decorationCharge = form.hasDecoration ? (parseFloat(form.decorationCharge) || 0) : 0;
+                        const musicCharge = form.hasMusic ? (parseFloat(form.musicCharge) || 0) : 0;
+                        const grandTotal = foodTotal + decorationCharge + musicCharge;
                         return (
                           <>
-                            <span className="text-lg font-bold text-[#c3ad6b]">
-                              ₹{rateWithGST.toFixed(2)}
-                            </span>
-                            <span className="text-gray-700"> x {pax} = </span>
-                            <span className="text-lg font-bold text-[#c3ad6b]">
-                              ₹{total}
-                            </span>
+                            <div className="text-sm text-gray-600">
+                              Food: ₹{rateWithGST.toFixed(2)} x {pax} = ₹{foodTotal.toFixed(2)}
+                            </div>
+                            {decorationCharge > 0 && (
+                              <div className="text-sm text-gray-600">
+                                Decoration: ₹{decorationCharge}
+                              </div>
+                            )}
+                            {musicCharge > 0 && (
+                              <div className="text-sm text-gray-600">
+                                Music: ₹{musicCharge}
+                              </div>
+                            )}
+                            <div className="text-lg font-bold text-[#c3ad6b] mt-1">
+                              Total: ₹{grandTotal.toFixed(2)}
+                            </div>
                             <div className="text-xs text-gray-500 mt-1">
                               Rate per pax: ₹{discountedBase} + ₹
                               {gstAmount.toFixed(2)} (GST) = ₹

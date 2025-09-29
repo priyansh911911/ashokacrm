@@ -1,178 +1,144 @@
 {
-  "hotel_name": "HOTEL BUDDHA AVENUE",
+  "hotel_name": "ASHOKA HOTEL",
   "menu_name": "ROYAL VEG MENU",
   "categories": [
     {
-      "name": "BEVERAGES",
+      "name": "WELCOME_DRINKS",
       "items": [
-        "WATER BOTTLES",
-        "FILTER COFFEE/TEA",
-        "ASSORTED COLD DRINK",
-        "VIRGIN MOJITO",
-        "GREEN APPLE MOJITO",
-        "THANDAI",
-        "WATERMELON MOJITO"
+        "SOFT DRINK",
+        "FRUIT PUNCH",
+        "COLD COFFEE",
+        "JALJEERA",
+        "LASSI",
+        "TEA",
+        "COFFEE",
+        "TOMATO SOUP",
+        "HOT & SOUR",
+        "SWEET CORN",
+        "MANCHOW",
+        "VEG-CLEAR"
       ]
     },
     {
-      "name": "SOUP_VEG",
-      "items": [
-        "SWEET CORN SOUP",
-        "HOT & SOUR SOUP",
-        "CREAM OF SOUP",
-        "VEG MANCHOW",
-        "TAMATAR AUR DHANIYA KA SHORBA"
-      ]
-    },
-    {
-      "name": "YEH_V_JARURI_HAI",
-      "items": [
-        "CORN SEEKH KABAB",
-        "HARA BHARA KABAB",
-        "HARA MOTI KI TIKKI",
-        "VEG SEEKH KABAB",
-        "SOYA TIKKA",
-        "VEG SPRING ROLL",
-        "CRISPY HONEY CHILLI POTATO",
-        "CORN SALT AND PEPPER",
-        "POTLI SAMOSA",
-        "CHANA DAL KE KABAB",
-        "CHEESE BALL",
-        "CHILLI POTATO"
-      ]
-    },
-    {
-      "name": "DESI CHEESE KE KHAZANE",
+      "name": "STARTER_VEG",
       "items": [
         "PANEER TIKKA",
-        "PANEER MALAI TIKKA",
-        "CHILLI PANEER DRY",
-        "PANEER PAPDI",
-        "ACHARI PANEER TIKKA"
+        "CHILLY PANEER",
+        "SPRING ROLL",
+        "VEG PAKODA",
+        "PANNER PAKODA",
+        "CRISPY VEG",
+        "HARA BHARA KABAB",
+        "CHIILY MUSHROOM",
+        "FRENCH FRIES",
+        "VEG SEEKH KABAB"
       ]
     },
     {
-      "name": "CHINESE_WOK_SE",
+      "name": "SALAD",
       "items": [
-        "VEG MANCHURIAN GRAVY",
-        "VEG HAKKA NOODLES",
-        "CHILLI GARLIC NOODLES",
-        "MIX VEG IN HOT GARLIC SAUCE"
-      ]
-    },
-    {
-      "name": "ITALIAN",
-      "items": [
-        "PASTA ARRABBIATA RED SAUCE",
-        "PASTA MAMAROSA PINK SAUCE",
-        "PASTA WHITE SAUCE"
-      ]
-    },
-    {
-      "name": "SALAD BAR",
-      "items": [
-        "VEG CAESAR SALAD",
-        "GARDEN GREEN SALAD",
-        "KIMCHI SALAD",
-        "KACHUMBER SALAD",
-        "FINGER SALAD",
+        "GREEN SALAD",
         "RUSSIAN SALAD",
-        "ALOO CHANA CHAT",
-        "MACARONI SALAD"
+        "PASTA SALAD",
+        "SPOURT SALAD",
+        "AALOO CHAT",
+        "MACARONI SALAD",
+        "KACHUMBER SALAD",
+        "KIMCHI SALAD"
       ]
     },
     {
-      "name": "CURD AND RAITA",
+      "name": "RAITA",
       "items": [
-        "DAHI BHALLA",
         "BOONDI RAITA",
         "MIX RAITA",
         "PINEAPPLE RAITA",
-        "CUCUMBER & MINT RAITA"
+        "CUCUMBER RAITA",
+        "DAHIVADA"
       ]
+    
     },
     {
-      "name": "MAIN_COURSE_GHAR_KA_SWAD",
+      "name": "MAIN_COURSE_PANEER",
       "items": [
-        "YELLOW DAL TADKA",
-        "DAL MAKHANI",
-        "DAL PACHRANGI",
-        "PUNJABI DAL TADKA"
+        "PANEER KADHAI",
+        "CHEESE BUTTER MASALA",
+        "PANEER LABABDAR",
+        "PALAK PANEER",
+        "SHAHI PANEER",
+        "PANEER DO PYAZA",
+        " HANDI PANEER",
+        "PANEER PUNJABI",
+        "PANEER MATAR"
       ]
     },
     {
       "name": "VEGETABLES",
       "items": [
-        "MUSHROOM MUTTER",
-        "PALAK KOFTA",
-        "METHI MALAI MUTTER",
-        "RAMAA MASALA",
-        "DUM ALOO KASHMIRI",
-        "SOYA TIKKA MASALA",
-        "ALOO GOBHI ADRAKI",
+        "MATAR MUSHROOM",
+        "MUSHROOM DO PYAZA",
+        "ALOO GOBHI MATAR",
         "MIX VEG",
-        "VEG JALFREZI"
+        "SEASONAL-VEG",
+        "ALOO JEERA",
+        "VEG KOFTA",
+        "MALAI KOFTA ",
+        "KHOWA MUTTOR",
+        "MAKHANA",
+        "DUM ALOO"
       ]
     },
     {
-      "name": "MAIN_COURSE_PANEER",
+      "name": "DAL",
       "items": [
-        "KADAI PANEER",
-        "MUTTER PANEER",
-        "PANEER HANDI",
-        "PANEER DO PYAZA",
-        "PANEER TIKKA MASALA",
-        "PALAK PANEER"
+        "DAL FRY",
+        "YELLOW DAL TADKA",
+        "DAL MAKHANI",
+        "DAL PUNCHMEL",
+        "CHANA MASALA",
+        "PINDI CHANA"
       ]
+       
     },
     {
       "name": "RICE",
       "items": [
-        "VEG PULAO",
+        "VEG DUM BIRYANI",
         "PEAS PULAO",
         "JEERA RICE",
-        "STEAMED RICE"
+        "VEG PULAO",
+        "PLAIN RICE",
+        "KASHMIRI PULAO",
+        "ONION MINT PULAO"
       ]
     },
     {
-      "name": "INDIAN BREADS",
+      "name": "BREADS",
       "items": [
-        "TANDOORI ROTI",
-        "BUTTER ROTI",
-        "PUDINA PARATHA",
-        "LACHA PARATHA",
-        "MISSI ROTI",
-        "STUFFED KULCHA",
-        "BUTTER NAAN",
+        "BUTTER NAAN ",
         "PLAIN NAAN",
-        "ONION KULCHA"
+        "MISSI ROTI",
+        "LACHHA PARATHA",
+        "PUDEENA PARATHA",
+        "TANDOORI ROTI"
+        
       ]
     },
     {
       "name": "DESSERTS",
       "items": [
-        "RASMALAI",
-        "GULAB JAMUN",
+        "ICE CREAM",
+        "FRUIT CREAM",
+        "SHAHI TUKDA",
+        "KESARI KHEER",
+        "GULABJAMUN",
         "MOONG DAL HALWA",
         "GAJAR KA HALWA (Seasonal)",
-        "JALEBI RABRI",
-        "KESARI PHIRNI"
-      ]
-    },
-    {
-      "name": "ICE CREAM",
-      "items": [
-        "VANILLA",
-        "STRAWBERRY",
-        "BUTTER SCOTCH"
-      ]
-    },
-    {
-      "name": "ADDITIONAL",
-      "items": [
-        "CHAAT COUNTER INR150-4 ITEMS",
-        "FALUDA KULFI INR 120"
+        "TRIFFLE PUDING",
+        "BROWNIE WITH CHOCLATE SAUCE"
       ]
     }
+    
+  
   ]
 }

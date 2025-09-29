@@ -1,292 +1,169 @@
-import { useState, useEffect, useMemo } from "react";
-import { useMenuData, usePlanLimits } from "../../hooks/useMenuData";
-import { useAppContext } from "../../../../context/AppContext";
+import { useState } from "react";
+import Veg from "../json/Veg.json";
+import NonVeg from "../json/Non_veg.json";
+import RatePlanLimits from "../json/RatePlanLimits.json";
 
-const MenuSelector = ({
-  onSave,
-  onSaveCategory,
-  onClose,
-  initialItems,
-  foodType,
-  ratePlan
-}) => {
-  const isAdmin = (localStorage.getItem('role') === 'Admin');
-  const { axios } = useAppContext();
+const MenuSelector = ({ onSave, onClose, initialItems = [], foodType = "Veg", ratePlan = "Silver" }) => {
+  const [selectedItems, setSelectedItems] = useState(initialItems);
+  const menuData = foodType === "Non-Veg" ? NonVeg : Veg;
+  const [activeCategory, setActiveCategory] = useState(menuData.categories[0]?.name || "");
   
-  const [categories, setCategories] = useState([]);
-  const [menuItems, setMenuItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedItems, setSelectedItems] = useState(initialItems || []);
-  const [currentCategory, setCurrentCategory] = useState("");
-  const [planLimits, setPlanLimits] = useState({});
+  const isAdmin = localStorage.getItem('role') === 'Admin';
+  const limits = RatePlanLimits[ratePlan]?.[foodType] || {};
 
-  // Fetch menu items, categories and plan limits
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [menuRes, categoriesRes, limitsRes] = await Promise.all([
-          axios.get('/api/menu-items'),
-          axios.get('https://ashoka-backend.vercel.app/api/banquet-categories/all'),
-          axios.get('https://ashoka-backend.vercel.app/api/plan-limits/get')
-        ]);
-        
-        const menuData = menuRes.data.success ? menuRes.data.data : menuRes.data;
-        const categoriesData = categoriesRes.data;
-        const limitsData = limitsRes.data;
-        
-        if (Array.isArray(categoriesData)) {
-          setCategories(categoriesData);
-          if (categoriesData.length > 0) {
-            setCurrentCategory(categoriesData[0].cateName || categoriesData[0].name);
-          }
-        }
-        
-        if (Array.isArray(menuData)) {
-          setMenuItems(menuData);
-        }
-        
-        if (limitsData) {
-          console.log('Plan Limits Data:', limitsData);
-          const limits = limitsData.success ? limitsData.data : limitsData;
-          setPlanLimits(limits);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [axios]);
-
-  // Get items for current category filtered by foodType
-  const currentCategoryItems = useMemo(() => {
-    if (!menuItems.length || !currentCategory) return [];
-    
-    return menuItems
-      .filter(item => {
-        // Filter by category
-        if (item.category && typeof item.category === 'string') {
-          const match = item.category.match(/cateName:\s*['"]([^'"]+)['"]/);
-          if (!match || match[1] !== currentCategory) return false;
-        } else {
-          return false;
-        }
-        
-        // Filter by foodType - exact match only
-        if (foodType && item.foodType) {
-          return item.foodType === foodType;
-        }
-        
-        return true;
-      })
-      .map(item => item.name);
-  }, [menuItems, currentCategory, foodType]);
-
-  const handleSelectItem = (item) => {
-    setSelectedItems(prev => {
-      const isSelected = prev.includes(item);
-      if (isSelected) {
-        return prev.filter(i => i !== item);
-      }
-      
-      // Find matching plan limit based on foodType and ratePlan
-      const matchingPlan = Array.isArray(planLimits) 
-        ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
-        : null;
-      
-      const categoryLimit = matchingPlan?.limits?.[currentCategory];
-      
-      console.log('Matching Plan:', matchingPlan);
-      console.log('Current Category:', currentCategory);
-      console.log('Category Limit:', categoryLimit);
-      
-      if (categoryLimit) {
-        const currentCategorySelectedCount = prev.filter(selectedItem => {
-          const selectedItemData = menuItems.find(mi => mi.name === selectedItem);
-          if (selectedItemData?.category && typeof selectedItemData.category === 'string') {
-            const match = selectedItemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
-            return match && match[1] === currentCategory;
-          }
-          return false;
-        }).length;
-        
-        console.log('Current selected count for category:', currentCategorySelectedCount);
-        
-        if (currentCategorySelectedCount >= categoryLimit) {
-          return prev;
-        }
-      }
-      
-      return [...prev, item];
-    });
+  const getCategoryCount = (categoryName) => {
+    return selectedItems.filter(item => {
+      const category = menuData.categories.find(cat => cat.items.includes(item));
+      return category?.name === categoryName;
+    }).length;
   };
 
-  if (loading) {
-    return (
-      <div className="modal modal-open">
-        <div className="modal-box max-w-6xl h-[92vh] flex items-center justify-center">
-          <div className="loading loading-spinner loading-lg"></div>
-        </div>
-      </div>
-    );
-  }
+  const canSelectMore = (categoryName) => {
+    if (isAdmin) return true;
+    const currentCount = getCategoryCount(categoryName);
+    const limit = limits[categoryName] || 0;
+    return currentCount < limit;
+  };
+
+  const handleItemToggle = (item) => {
+    const category = menuData.categories.find(cat => cat.items.includes(item));
+    if (!category) return;
+
+    const isSelected = selectedItems.includes(item);
+    
+    if (!isSelected && !canSelectMore(category.name)) {
+      return;
+    }
+
+    const newItems = isSelected 
+      ? selectedItems.filter(i => i !== item)
+      : [...selectedItems, item];
+    
+    setSelectedItems(newItems);
+    
+    // Convert to category format matching your database schema
+    const categorizedMenu = {
+      WELCOME_DRINKS: [],
+      STARTER_VEG: [],
+      SALAD: [],
+      RAITA: [],
+      MAIN_COURSE_PANEER: [],
+      MAIN_COURSE: [],
+      VEGETABLES: [],
+      DAL: [],
+      RICE: [],
+      BREADS: [],
+      DESSERTS: []
+    };
+    
+    newItems.forEach(item => {
+      const cat = menuData.categories.find(c => c.items.includes(item));
+      if (cat) {
+        // Direct mapping - category names in JSON match database schema
+        if (categorizedMenu[cat.name] !== undefined) {
+          categorizedMenu[cat.name].push(item);
+        }
+      }
+    });
+    
+    onSave?.(newItems, categorizedMenu);
+  };
+
+  const activeItems = menuData.categories.find(cat => cat.name === activeCategory)?.items || [];
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-6xl h-[92vh] flex flex-col">
-        <button className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4" onClick={onClose}>✕</button>
-        
+      <div className="modal-box max-w-6xl h-[92vh] flex flex-col relative shadow-2xl border border-white/20 bg-white dark:bg-base-200 !p-0 overflow-hidden">
+        <button
+          className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4 z-20 bg-white/70 hover:bg-white/90 shadow"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+
         <div className="flex flex-1 h-full">
-          {/* Categories Sidebar */}
-          <aside className="w-[300px] bg-base-200 p-4 overflow-y-auto">
-            <h4 className="font-bold text-lg mb-4">Categories</h4>
-            {categories.length === 0 ? (
-              <div className="text-center text-gray-500">No categories found</div>
-            ) : (
-              categories.map((category) => (
+          <aside className="w-80 bg-white/40 dark:bg-base-200/60 border-r border-white/20 flex flex-col gap-1 py-6 px-2 overflow-y-auto">
+            <h4 className="font-bold text-lg mb-2 text-center">Categories</h4>
+            {menuData.categories.map((category) => {
+              const count = getCategoryCount(category.name);
+              const limit = limits[category.name] || 0;
+              const icons = {
+                WELCOME_DRINKS: "🥤", STARTER_VEG: "🥗", SALAD: "🥗", RAITA: "🥛",
+                MAIN_COURSE_PANEER: "🧀", MAIN_COURSE: "🍖", VEGETABLES: "🥦", 
+                DAL: "🍛", RICE: "🍚", BREADS: "🥖", DESSERTS: "🍰"
+              };
+              const icon = icons[category.name] || "🍽️";
+              
+              return (
                 <button
-                  key={category.cateName || category.name}
-                  className={`w-full p-3 mb-2 rounded-lg text-left ${
-                    currentCategory === (category.cateName || category.name)
-                      ? "bg-primary text-primary-content" 
-                      : "bg-base-100 hover:bg-base-300"
+                  key={category.name}
+                  className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-all text-left font-medium shadow-sm border border-transparent hover:bg-primary/10 focus:bg-primary/20 focus:outline-none ${
+                    activeCategory === category.name ? "bg-primary text-primary-content border-primary" : "bg-white/60 dark:bg-base-100/60"
                   }`}
-                  onClick={() => setCurrentCategory(category.cateName || category.name)}
+                  onClick={() => setActiveCategory(category.name)}
                 >
-                  <div>{category.cateName || category.name}</div>
-                  {(() => {
-                    const matchingPlan = Array.isArray(planLimits) 
-                      ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
-                      : null;
-                    const categoryName = category.cateName || category.name;
-                    const limit = matchingPlan?.limits?.[categoryName];
-                    return limit ? (
-                      <div className="text-xs opacity-75">
-                        Limit: {limit}
-                      </div>
-                    ) : null;
-                  })()}
+                  <span className="text-xl">{icon}</span>
+                  <span className="flex-1 truncate">{category.name}</span>
+                  <span className="badge badge-info badge-sm font-bold">
+                    {isAdmin ? `${count}` : `${count}/${limit}`}
+                  </span>
                 </button>
-              ))
-            )}
+              );
+            })}
           </aside>
 
-          {/* Items Content */}
-          <main className="flex-1 p-6">
-            <h3 className="font-bold text-2xl mb-4">{ratePlan} {foodType} Menu Selection</h3>
+          <main className="flex-1 flex flex-col h-full">
+            <div className="px-6 pt-8 pb-2">
+              <h3 className="font-bold text-2xl text-center mb-2 tracking-tight drop-shadow">
+                {ratePlan ? `${ratePlan} ${foodType} Menu Selection` : 'Menu Selection'}
+              </h3>
+            </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {currentCategoryItems.length === 0 ? (
-                <div className="text-center text-gray-500 col-span-full">
-                  {foodType ? `No ${foodType} items found for this category` : 'No items found for this category'}
-                </div>
-              ) : (
-                currentCategoryItems.map(item => {
+            <div className="flex-1 overflow-y-auto px-6 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {activeItems.map(item => {
                   const isSelected = selectedItems.includes(item);
-                  
-                  // Check if limit reached for this category
-                  const matchingPlan = Array.isArray(planLimits) 
-                    ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
-                    : null;
-                  const categoryLimit = matchingPlan?.limits?.[currentCategory];
-                  const currentCategorySelectedCount = selectedItems.filter(selectedItem => {
-                    const selectedItemData = menuItems.find(mi => mi.name === selectedItem);
-                    if (selectedItemData?.category && typeof selectedItemData.category === 'string') {
-                      const match = selectedItemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
-                      return match && match[1] === currentCategory;
-                    }
-                    return false;
-                  }).length;
-                  
-                  const isLimitReached = categoryLimit && currentCategorySelectedCount >= categoryLimit && !isSelected;
+                  const category = menuData.categories.find(cat => cat.items.includes(item));
+                  const canSelect = isSelected || canSelectMore(category?.name);
                   
                   return (
                     <div
                       key={item}
-                      className={`p-3 rounded-lg transition-colors ${
-                        isLimitReached 
-                          ? "bg-gray-300 cursor-not-allowed opacity-50" 
-                          : isSelected 
-                          ? "bg-primary text-primary-content cursor-pointer" 
-                          : "bg-base-200 hover:bg-base-300 cursor-pointer"
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-primary text-primary-content"
+                          : canSelect
+                          ? "bg-base-200 hover:bg-base-300"
+                          : "bg-base-200 opacity-50 cursor-not-allowed"
                       }`}
-                      onClick={() => !isLimitReached && handleSelectItem(item)}
+                      onClick={() => canSelect && handleItemToggle(item)}
                     >
                       <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          disabled={isLimitReached}
-                          className="checkbox checkbox-sm"
+                          className="checkbox checkbox-sm checkbox-primary"
+                          disabled={!canSelect}
                         />
-                        <span className={isLimitReached ? "text-gray-500" : ""}>{item}</span>
+                        <span>{item}</span>
                       </div>
                     </div>
                   );
-                })
-              )}
+                })}
+              </div>
             </div>
+            
+            <footer className="sticky bottom-0 left-0 w-full bg-white/80 dark:bg-base-200/90 border-t border-white/20 px-6 py-4 flex justify-center items-center z-10 shadow-lg backdrop-blur">
+              <button
+                className="btn btn-ghost"
+                onClick={onClose}
+              >
+                Close Menu Selector
+              </button>
+            </footer>
           </main>
         </div>
-        
-        <footer className="p-4 border-t flex justify-between items-center">
-          <div className="text-sm text-gray-600">
-            Selected: {selectedItems.length} items
-            {(() => {
-              const matchingPlan = Array.isArray(planLimits) 
-                ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
-                : null;
-              const limit = matchingPlan?.limits?.[currentCategory];
-              if (limit) {
-                const currentCount = selectedItems.filter(item => {
-                  const itemData = menuItems.find(mi => mi.name === item);
-                  if (itemData?.category && typeof itemData.category === 'string') {
-                    const match = itemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
-                    return match && match[1] === currentCategory;
-                  }
-                  return false;
-                }).length;
-                return (
-                  <div className="text-xs">
-                    {currentCategory}: {currentCount}/{limit}
-                  </div>
-                );
-              }
-              return null;
-            })()}
-          </div>
-          <div className="flex gap-2">
-            <button className="btn btn-ghost" onClick={onClose}>Close</button>
-            <button 
-              className="btn btn-primary" 
-              onClick={() => {
-                if (onSave) {
-                  // Create categorized menu from selected items
-                  const categorizedMenu = {};
-                  selectedItems.forEach(item => {
-                    const itemData = menuItems.find(mi => mi.name === item);
-                    if (itemData?.category && typeof itemData.category === 'string') {
-                      const match = itemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
-                      if (match) {
-                        const categoryName = match[1];
-                        if (!categorizedMenu[categoryName]) {
-                          categorizedMenu[categoryName] = [];
-                        }
-                        categorizedMenu[categoryName].push(item);
-                      }
-                    }
-                  });
-                  onSave(selectedItems, categorizedMenu);
-                }
-              }}
-              disabled={selectedItems.length === 0}
-            >
-              Add Selected Items
-            </button>
-          </div>
-        </footer>
       </div>
     </div>
   );

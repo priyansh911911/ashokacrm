@@ -124,6 +124,7 @@ const Sidebar = () => {
     // Dashboard - accessible to all
     items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
     items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
+    items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
 
     // Admin only items
     if (role === "admin") {

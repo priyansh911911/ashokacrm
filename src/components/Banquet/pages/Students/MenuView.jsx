@@ -1,28 +1,35 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { useAppContext } from "../../../../context/AppContext";
+import axios from "axios";
 import { useReactToPrint } from "react-to-print";
-import Logo from "/src/assets/pcs.png";
+import Logo from "/src/assets/logo.png";
 import { useNavigate } from "react-router-dom";
 
 const MenuView = () => {
-  const { axios } = useAppContext();
-  const { bookingRef } = useParams();
+  const { id } = useParams();
   const [menu, setMenu] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const printRef = useRef();
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
-    documentTitle: `Menu_${bookingRef}`,
+    documentTitle: `Menu_${id}`,
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 0.5in;
+      }
+      @media print {
+        body { -webkit-print-color-adjust: exact; }
+      }
+    `
   });
   const navigate = useNavigate();
-
   useEffect(() => {
     const fetchMenu = async () => {
       try {
         const res = await axios.get(
-          `/api/menu/${bookingRef}`
+          `https://ashoka-b.vercel.app/api/menu/${id}`
         );
         setMenu(res.data.data);
       } catch (error) {
@@ -31,9 +38,8 @@ const MenuView = () => {
         setLoading(false);
       }
     };
-    if (bookingRef) fetchMenu();
-  }, [bookingRef]);
-
+    if (id) fetchMenu();
+  }, [id]);
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#f7f5ef] to-[#c3ad6b]/30">
@@ -43,7 +49,6 @@ const MenuView = () => {
         </div>
       </div>
     );
-
   if (error)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-100 to-[#c3ad6b]/30">
@@ -53,8 +58,7 @@ const MenuView = () => {
         </div>
       </div>
     );
-
-  if (!menu || Object.keys(menu || {}).length === 0)
+  if (!menu)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-100 to-[#c3ad6b]/30">
         <div className="bg-yellow-100 border-l-4 border-[#c3ad6b] text-[#c3ad6b] p-4 max-w-md rounded shadow">
@@ -63,7 +67,6 @@ const MenuView = () => {
         </div>
       </div>
     );
-
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <button
@@ -76,12 +79,12 @@ const MenuView = () => {
         <div className="text-center mb-8">
           <img
             src={Logo}
-            alt="logo"
-            className="w-[130px] h-[130px] mx-auto mb-4"
+            alt="Hotel Logo"
+            className="w-[220px] h-[110px] mx-auto mb-4"
           />
-          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl drop-shadow">
-            BUDHHA AVENUE
-          </h2>
+          {/* <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl drop-shadow">
+            ASHOKA HOTEL
+          </h2> */}
         </div>
         <div className="flex justify-end mb-4">
           <button
@@ -98,19 +101,19 @@ const MenuView = () => {
           <div className="px-4 py-5 sm:px-4 bg-gradient-to-r from-[#f7f5ef] to-[#c3ad6b]/30 print:rounded-none print:flex print:items-center print:justify-between">
             <img
               src={Logo}
-              alt="Ashoka Logo"
+              alt="Hotel Logo"
               className="hidden print:block print:mr-4 print:w-12"
               style={{ maxWidth: "120px" }}
             />
             <h3 className="text-lg leading-6 font-bold text-gray-900 text-center flex-1 print:text-black print:text-center">
-              Ashoka
+              ASHOKA HOTEL
             </h3>
             <div className="hidden print:block print:w-24"></div>
           </div>
           <div className="h-3 print:h-2"></div>
           <div className="border-t border-gray-200 px-4 py-5 sm:p-0 print:px-2 print:py-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 print:grid print:grid-cols-2 print:gap-4 print:p-0">
-              {Object.entries(menu || {}).map(([category, items]) => {
+              {Object.entries(menu).map(([category, items]) => {
                 const skip = [
                   "_id",
                   "createdAt",
@@ -162,5 +165,4 @@ const MenuView = () => {
     </div>
   );
 };
-
 export default MenuView;

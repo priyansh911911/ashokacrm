@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAppContext } from "../../../../context/AppContext";
+import axios from "axios";
 import {
   FaUser,
   FaPhone,
@@ -22,7 +22,6 @@ import {
 import MenuSelector from "../Menu/MenuSelector"; // Import your MenuSelector component
 
 const UpdateBooking = () => {
-  const { axios } = useAppContext();
   const navigate = useNavigate();
   const params = useParams();
   const id = params.id;
@@ -56,6 +55,10 @@ const UpdateBooking = () => {
     menuItems: [],
     notes: "",
     discount: "",
+    decorationCharge: "",
+    musicCharge: "",
+    hasDecoration: false,
+    hasMusic: false,
     statusChangedAt: null, // Track when status changes
     staffEditCount: 0, // Added for staff edit limit logic
   });
@@ -72,11 +75,11 @@ const UpdateBooking = () => {
   const RATE_CONFIG = {
     Veg: {
       Silver: {
-        basePrice: 1299,
+        basePrice: 1050,
         taxPercent: 18,
       },
       Gold: {
-        basePrice: 1499,
+        basePrice: 1250,
         taxPercent: 18,
       },
       Platinum: {
@@ -132,8 +135,12 @@ const UpdateBooking = () => {
         // GST should be calculated as a percentage of the discounted base
         const gstAmount = (discountedBase * gstPercent) / 100;
         const rateWithGST = discountedBase + gstAmount;
-
-        const total = rateWithGST * paxNum; // Remove room price from calculation
+        const foodTotal = rateWithGST * paxNum;
+        
+        // Add decoration and music charges
+        const decorationCharge = booking.hasDecoration ? (parseFloat(booking.decorationCharge) || 0) : 0;
+        const musicCharge = booking.hasMusic ? (parseFloat(booking.musicCharge) || 0) : 0;
+        const total = foodTotal + decorationCharge + musicCharge;
 
         setBooking((prev) => ({
           ...prev,
@@ -154,6 +161,10 @@ const UpdateBooking = () => {
     booking.foodType,
     booking.gst,
     booking.discount,
+    booking.decorationCharge,
+    booking.musicCharge,
+    booking.hasDecoration,
+    booking.hasMusic,
   ]);
 
   // Calculate room price when rooms change
@@ -218,7 +229,7 @@ const UpdateBooking = () => {
 
   const fetchBookingDetail = () => {
     axios
-      .get(`/api/bookings/${id}`)
+      .get(`https://ashoka-b.vercel.app/api/bookings/${id}`)
       .then((res) => {
         if (res.data) {
           const bookingData = res.data.data || res.data;
@@ -314,6 +325,10 @@ const UpdateBooking = () => {
             extraRoomTotalPrice:
               bookingData.extraRoomTotalPrice || bookingData.roomPrice || 0,
             roomOption: bookingData.roomOption || "complimentary", // Add this line
+            decorationCharge: bookingData.decorationCharge || "",
+            musicCharge: bookingData.musicCharge || "",
+            hasDecoration: !!(bookingData.decorationCharge && bookingData.decorationCharge > 0),
+            hasMusic: !!(bookingData.musicCharge && bookingData.musicCharge > 0),
             // ... rest of the fields
           };
 
@@ -328,6 +343,16 @@ const UpdateBooking = () => {
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     let val = type === "checkbox" ? checked : value;
+    
+    // Reset charges when unchecking
+    if (name === "hasDecoration" && !checked) {
+      setBooking(prev => ({ ...prev, hasDecoration: false, decorationCharge: "" }));
+      return;
+    }
+    if (name === "hasMusic" && !checked) {
+      setBooking(prev => ({ ...prev, hasMusic: false, musicCharge: "" }));
+      return;
+    }
     setBooking((prev) => {
       let newStatus = prev.bookingStatus;
       let newStatusHistory = [
@@ -460,31 +485,13 @@ const UpdateBooking = () => {
     setBooking((prev) => ({ ...prev, menuItems: updatedMenuItems }));
   };
 
-  // Handle menu selection from modal
+  // Handle menu selection from modal - don't increment count here
   const handleMenuSelection = (selectedItems, categorizedMenu) => {
-    // Only increment staffEditCount if staff (not admin), menu is changed, and limit not reached
-    setBooking((prev) => {
-      const isMenuChanged =
-        JSON.stringify(prev.menuItems) !== JSON.stringify(selectedItems) ||
-        JSON.stringify(prev.categorizedMenu) !==
-          JSON.stringify(categorizedMenu);
-      let newCount = prev.staffEditCount;
-      // Only increment if staff, menu changed, and staffEditCount < 2, and do NOT block the 2nd edit
-      if (role !== "Admin" && isMenuChanged && prev.staffEditCount >= 2) {
-        newCount = prev.staffEditCount + 1;
-      }
-      // Only allow menu change if staffEditCount < 2 for staff, unlimited for admin
-      if (role !== "Admin" && prev.staffEditCount >= 2) {
-        // Do not update menu or categorizedMenu, just return previous state
-        return prev;
-      }
-      return {
-        ...prev,
-        menuItems: selectedItems,
-        categorizedMenu,
-        staffEditCount: newCount,
-      };
-    });
+    setBooking((prev) => ({
+      ...prev,
+      menuItems: selectedItems,
+      categorizedMenu,
+    }));
   };
 
   const updateBooking = () => {
@@ -502,14 +509,47 @@ const UpdateBooking = () => {
       return;
     }
 
+    // Check if menu was changed and increment staff edit count
+    let updatedStaffEditCount = booking.staffEditCount;
+    if (role !== "Admin") {
+      // Get original menu from server to compare
+      axios
+        .get(`https://ashoka-b.vercel.app/api/bookings/${id}`)
+        .then((res) => {
+          const originalMenu = res.data.categorizedMenu;
+          const isMenuChanged =
+            JSON.stringify(originalMenu) !==
+            JSON.stringify(booking.categorizedMenu);
+
+          if (isMenuChanged) {
+            updatedStaffEditCount = booking.staffEditCount + 1;
+          }
+
+          // Continue with update
+          performUpdate(updatedStaffEditCount);
+        })
+        .catch(() => {
+          // If can't fetch original, proceed without incrementing
+          performUpdate(updatedStaffEditCount);
+        });
+    } else {
+      // Admin - proceed without checking
+      performUpdate(updatedStaffEditCount);
+    }
+  };
+
+  const performUpdate = (staffEditCount) => {
     // Build payload with customerRef and categorizedMenu as requested
     const categorizedMenu = booking.categorizedMenu;
     const payload = {
       ...booking,
+      staffEditCount,
       complimentaryRooms:
         booking.complimentaryRooms === ""
           ? 0
           : Number(booking.complimentaryRooms),
+      decorationCharge: booking.hasDecoration ? (parseFloat(booking.decorationCharge) || 0) : 0,
+      musicCharge: booking.hasMusic ? (parseFloat(booking.musicCharge) || 0) : 0,
       customerRef: String(
         booking.customerRef || booking.customerref || booking.number
       ),
@@ -543,10 +583,10 @@ const UpdateBooking = () => {
     // Send the user's role
     payload.role = localStorage.getItem("role") || "Staff";
 
-    // Only include categorizedMenu if staff is allowed to edit menu, or if admin
+    // Only include categorizedMenu if staff hasn't exceeded limit
     const isStaff = payload.role !== "Admin";
-    if (isStaff && booking.staffEditCount >= 2) {
-      // Staff cannot update menu anymore, so remove categorizedMenu from payload
+    if (isStaff && staffEditCount > 2) {
+      // Staff exceeded limit, remove categorizedMenu from payload
       delete payload.categorizedMenu;
     } else if (payload.categorizedMenu && payload.categorizedMenu.customerRef) {
       // Remove customerRef from categorizedMenu if present
@@ -554,16 +594,16 @@ const UpdateBooking = () => {
       payload.categorizedMenu = rest;
     }
 
-    console.log("Updating booking with data:", payload);
+
 
     axios
-      .put(`/api/bookings/${id}`, payload)
+      .put(`https://ashoka-b.vercel.app/api/bookings/${id}`, payload)
       .then((res) => {
         if (res.data) {
           toast.success("Booking updated successfully!");
           setLoading(false);
           setTimeout(() => {
-            navigate("/list-booking");
+            navigate("/banquet/list-booking");
           }, 600);
         }
       })
@@ -581,7 +621,7 @@ const UpdateBooking = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Link
-          to="/list-booking"
+          to="/banquet/list-booking"
           className="flex items-center text-[#c3ad6b] hover:text-[#b39b5a]"
         >
           <FaArrowLeft className="mr-2" /> Back
@@ -929,10 +969,10 @@ const UpdateBooking = () => {
                     onChange={handleInputChange}
                     value={booking.hall}
                   >
-                    <option value="Nirvana">Nirvana</option>
-                    <option value="Mandala">Mandala</option>
-                    <option value="Conference">Conference</option>
-                    <option value="Lawn">Lawn</option>
+                    <option value="Kitty Hall">Kitty Hall</option>
+                    <option value="Banquet Hall">Banquet Hall</option>
+                    <option value="Rooftop Hall">Rooftop Hall</option>
+                    <option value="Flamingo Rooftop">Flamingo Rooftop </option>
                   </select>
                 </div>
               </div>
@@ -1093,9 +1133,10 @@ const UpdateBooking = () => {
                     onChange={handleInputChange}
                     value={booking.hall}
                   >
-                    <option value="Nirvana">Nirvana</option>
-                    <option value="Mandala">Mandala</option>
-                    <option value="Conference">Conference</option>
+                    <option value="Kitty Hall">Kitty Hall</option>
+                    <option value="Banquet Hall">Banquet Hall</option>
+                    <option value="Rooftop Hall">Rooftop Hall</option>
+                    <option value="Flamingo Rooftop">Flamingo Rooftop </option>
                   </select>
                 </div>
               </div>
@@ -1292,7 +1333,13 @@ const UpdateBooking = () => {
                   </button>
                 </div>
                 <MenuSelector
-                  initialItems={booking.menuItems}
+                  initialItems={
+                    booking.categorizedMenu
+                      ? Object.values(booking.categorizedMenu)
+                          .flat()
+                          .filter((item) => typeof item === "string")
+                      : []
+                  }
                   foodType={booking.foodType}
                   ratePlan={booking.ratePlan}
                   onSave={handleMenuSelection}
@@ -1316,6 +1363,64 @@ const UpdateBooking = () => {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
+              {/* Decoration */}
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="hasDecoration"
+                    checked={booking.hasDecoration}
+                    onChange={handleInputChange}
+                    className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
+                  />
+                  <label className="text-sm font-medium text-gray-700">
+                    Decoration Charge
+                  </label>
+                </div>
+                {booking.hasDecoration && (
+                  <div className="relative">
+                    <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="number"
+                      name="decorationCharge"
+                      className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                      onChange={handleInputChange}
+                      value={booking.decorationCharge}
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Music */}
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="hasMusic"
+                    checked={booking.hasMusic}
+                    onChange={handleInputChange}
+                    className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
+                  />
+                  <label className="text-sm font-medium text-gray-700">
+                    Music Charge
+                  </label>
+                </div>
+                {booking.hasMusic && (
+                  <div className="relative">
+                    <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="number"
+                      name="musicCharge"
+                      className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                      onChange={handleInputChange}
+                      value={booking.musicCharge}
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Rate Per Pax */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">

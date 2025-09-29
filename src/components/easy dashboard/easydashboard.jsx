@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import CashTransactionCard from '../CashTransaction/CashTransactionCard';
+
 import {
   Home,
   Users,
@@ -212,29 +212,9 @@ const EasyDashboard = () => {
 
 
 
-      {/* Cash Management */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Today's Revenue</h3>
-          <div className="text-3xl font-bold text-green-600">₹45,000</div>
-          <div className="text-sm text-gray-500">+12% from yesterday</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Cash In Hand</h3>
-          <div className="text-3xl font-bold text-purple-600">₹25,000</div>
-          <div className="text-sm text-gray-500">Available cash</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Card Payments</h3>
-          <div className="text-3xl font-bold text-blue-600">₹15,000</div>
-          <div className="text-sm text-gray-500">Digital transactions</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">UPI Payments</h3>
-          <div className="text-3xl font-bold text-orange-600">₹5,000</div>
-          <div className="text-sm text-gray-500">Online payments</div>
-        </div>
-      </div>
+
+
+
 
       {/* Room Cards Grid */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -338,8 +318,7 @@ const EasyDashboard = () => {
         )}
       </div>
 
-      {/* Cash Management - Same as Dashboard */}
-      <CashTransactionCard />
+
 
       {/* Bookings Container - Show only when clicked */}
       {showBookings && (

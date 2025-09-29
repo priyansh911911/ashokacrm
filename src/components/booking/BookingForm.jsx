@@ -110,7 +110,7 @@ const Input = ({
   <input
     type={type}
     placeholder={placeholder}
-    value={value}
+    value={value || ""}
     onChange={onChange}
     className={`flex h-9 w-full rounded-md border border-gray-300 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50 min-w-0 ${className}`}
     {...props}
@@ -337,14 +337,14 @@ export const AppProvider = ({ children }) => {
     }
     
     const filtered = allRooms.filter(room => {
-      // Get the room's category ID from various possible fields
-      const roomCategoryId = room.category?._id || room.category || room.categoryId;
+      // Get the room's category ID from the nested category object
+      const roomCategoryId = room.category?._id;
       
       // Match with selected category
       const categoryMatch = roomCategoryId === formData.categoryId;
       
-      // Additional safety check for room status
-      const isAvailable = ['available', 'clean'].includes(room.status) || !room.status;
+      // Check room availability - only show available rooms
+      const isAvailable = room.status === 'available';
       const notReserved = !room.is_reserved;
       
       return categoryMatch && isAvailable && notReserved;
@@ -392,12 +392,13 @@ export const AppProvider = ({ children }) => {
       const categoriesWithCounts = categories.map(category => ({
         ...category,
         totalRooms: rooms.filter(room => {
-          if (!room.category) return false;
-          return room.category._id === category._id || 
-                 room.category === category._id || 
-                 room.categoryId === category._id;
+          return room.category?._id === category._id;
         }).length,
-        availableRoomsCount: 0,
+        availableRoomsCount: rooms.filter(room => {
+          return room.category?._id === category._id && 
+                 room.status === 'available' && 
+                 !room.is_reserved;
+        }).length,
       }));
       setAllCategories(categoriesWithCounts);
 

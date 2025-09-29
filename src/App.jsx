@@ -47,6 +47,8 @@ import Users from "./components/Users/Users.jsx";
 import AddBooking from "./components/Banquet/pages/Students/AddBooking.jsx";
 import ListBooking from "./components/Banquet/pages/Students/ListBooking.jsx";
 import UpdateBooking from "./components/Banquet/pages/Students/UpdateBooking.jsx";
+import BanquetInvoice from "./components/Banquet/pages/Students/Invoice.jsx";
+import SharedInvoice from "./components/Banquet/pages/Students/SharedInvoice.jsx";
 import MenuItemManager from "./components/Banquet/components/MenuItemManager.jsx";
 import PlanLimitManager from "./components/Banquet/components/PlanLimitManager.jsx";
 import MenuPlanManager from "./components/Banquet/components/MenuPlanManager.jsx";
@@ -71,6 +73,7 @@ import PayrollForm from "./components/staff/PayrollForm.jsx";
 import AttendanceTable from "./components/staff/AttendanceTable.jsx";
 import RestaurantDashboard from "./components/restaurant/RestaurantDashboard.jsx";
 import EasyDashboard from "./components/easy dashboard/easydashboard.jsx";
+import CashManagement from "./components/CashManagement/CashManagement.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -173,6 +176,8 @@ const App = () => {
                       <Route path="/banquet/add-booking" element={<AddBooking />} />
                       <Route path="/banquet/list-booking" element={<ListBooking />} />
                       <Route path="/banquet/update-booking/:id" element={<UpdateBooking />} />
+                      <Route path="/banquet/invoice/:id" element={<BanquetInvoice />} />
+                      <Route path="/shared-invoice/:id" element={<SharedInvoice />} />
                       <Route path="/banquet/menu-manager" element={<MenuItemManager />} />
                       <Route path="/banquet/plan-limit" element={<PlanLimitManager />} />
                       <Route path="/banquet/menu-plan-manager" element={<MenuPlanManager />} />
@@ -197,6 +202,7 @@ const App = () => {
                       <Route path="/staff/attendance-table" element={<AttendanceTable />} />
                       <Route path="/resturant/dashboard" element={<RestaurantDashboard />} />
                       <Route path="/easy-dashboard" element={<EasyDashboard />} />
+                      <Route path="/cash-management" element={<CashManagement />} />
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>
                   </main>

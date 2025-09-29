@@ -1,248 +1,161 @@
 {
-  "hotelName": "HOTEL BUDDHA AVENUE",
-  "menuTitle": "ROYAL NON VEG MENU",
+  "hotel_name": "ASHOKA HOTEL",
+  "menu_name": "ROYAL VEG MENU",
   "categories": [
     {
-      "name": "BEVERAGES",
+      "name": "WELCOME_DRINKS",
       "items": [
-        "WATER BOTTLES",
-        "FILTER COFFEE",
-        "ASSORTED COLD DRINK",
-        "VIRGIN MOJITO",
-        "GREEN APPLE MOJITO",
-        "THANDAI",
-        "WATERMELON MOJITO"
-      ]
-    },
-{
-  "name": "SOUP_VEG",
-  "items": [
-    "SWEET CORN SOUP",
-    "HOT & SOUR SOUP",
-    "CREAM OF TOMATO SOUP",
-    "VEG MANCHOW",
-    "TOMATO & CORIANDER SHORBA"
-  ]
-},
-{
-  "name": "SOUP_NON_VEG",
-  "items": [
-    "CHICKEN SWEET CORN SOUP",
-    "CHICKEN HOT & SOUR SOUP",
-    "CHICKEN CLEAR SOUP",
-    "CHICKEN MANCHOW",
-    "MUTTON SHORBA"
-  ]
-},
-
-    {
-      "name": "YEH_V_JARURI_HAI",
-      "items": [
-        "CORN SHEEK KABAB",
-        "HARA BHARA KABAB",
-        "HARA MOTI KI TIKKI",
-        "VEG SHEEK KABAB",
-        "SOYA TIKKA",
-        "VEG SPRING ROLL",
-        "CRISPY HONEY CHILLI POTATO",
-        "CORN SALT AND PEPPER",
-        "POTLI SAMOSA",
-        "CHANA DAL KE KABAB",
-        "CHEESE BALL",
-        "CHILLI POTATO"
+        "SOFT DRINK",
+        "FRUIT PUNCH",
+        "COLD COFFEE",
+        "JALJEERA",
+        "LASSI",
+        "TEA",
+        "COFFEE",
+        "TOMATO SOUP",
+        "HOT & SOUR",
+        "SWEET CORN",
+        "MANCHOW",
+        "VEG-CLEAR"
       ]
     },
     {
-      "name": "DESI_CHEESE_KE_KHAZANE",
+      "name": "STARTER_VEG",
       "items": [
         "PANEER TIKKA",
-        "PANEER MALAI TIKKA",
-        "CHILLI PANEER DRY",
-        "PANEER PAPDI",
-        "ACHARI PANEER TIKKA"
+        "CHILLY PANEER",
+        "SPRING ROLL",
+        "VEG PAKODA",
+        "PANNER PAKODA",
+        "CRISPY VEG",
+        "HARA BHARA KABAB",
+        "CHIILY MUSHROOM",
+        "FRENCH FRIES",
+        "VEG SEEKH KABAB"
       ]
     },
     {
-      "name": "CHINESE WOK SE",
+      "name": "SALAD",
       "items": [
-        "VEG MANCHURIAN GRAVY",
-        "VEG HAKKA NOODLES",
-        "CHILLI GARLIC NOODLES",
-        "MIX VEG IN HOT GARLIC SAUCE"
-      ]
-    },
-    {
-      "name": "ITALIAN",
-      "items": [
-        "PASTA ARRABBIATA RED SAUCE",
-        "PASTA MAMAROSA PINK SAUCE",
-        "PASTA WHITE SAUCE"
-      ]
-    },
-    {
-      "name": "FISH SNACKS",
-      "items": [
-        "FISH AWAAN TIKKA",
-        "FISH AMRITSARI",
-        "FISH FINGER",
-        "FISH TIKKA"
-      ]
-    },
-    {
-      "name": "CHICKEN SNACKS",
-      "items": [
-        "CHICKEN MALAI TIKKA",
-        "CHICKEN TIKKA",
-        "CHICKEN BASIL TIKKA",
-        "CHILLI CHICKEN DRY",
-        "CHICKEN MANCHURIAN DRY",
-        "CRISPY CHICKEN CHILLI HONEY"
-      ]
-    },
-    {
-      "name": "MUTTON STARTERS",
-      "items": [
-        "KAKORI KABAB",
-        "MUTTON SHEEK KABAB",
-        "MUTTON GALOUTI"
-      ]
-    },
-    {
-      "name": "SALAD BAR",
-      "items": [
-        "VEG CAESAR SALAD",
-        "GARDEN GREEN SALAD",
-        "KIMCHI SALAD",
-        "KACHUMBER SALAD",
-        "FINGER SALAD",
+        "GREEN SALAD",
         "RUSSIAN SALAD",
-        "ALOO CHANA CHAT",
-        "MACARONI SALAD"
+        "PASTA SALAD",
+        "SPOURT SALAD",
+        "AALOO CHAT",
+        "MACARONI SALAD",
+        "KACHUMBER SALAD",
+        "KIMCHI SALAD"
       ]
     },
     {
-      "name": "CURD AND RAITA",
+      "name": "RAITA",
       "items": [
-        "DAHI BHALLA",
         "BOONDI RAITA",
         "MIX RAITA",
         "PINEAPPLE RAITA",
-        "CUCUMBER & MINT RAITA"
+        "CUCUMBER RAITA",
+        "DAHIVADA"
       ]
-    },
-     {
-      "name": "MAIN_COURSE_GHAR_KA_SWAD",
-      "items": [
-        "YELLOW DAL TADKA",
-        "DAL MAKHANI",
-        "DAL PACHRANGI",
-        "PUNJABI DAL TADKA"
-      ]
+    
     },
     {
-      "name": "VEGETABLES",
+      "name": "MAIN_COURSE",
       "items": [
-        "MUSHROOM MATAR",
-        "PALAK KOFTA",
-        "METHI MALAI MATAR",
-        "BHARWA MASALA",
-        "DUM ALOO KASHMIRI",
-        "SOYA TIKKA MASALA",
-        "ALOO GOBI ADRAKI",
-        "MIX VEG",
-        "VEG JALFREZI"
+        "BUTTER CHICKEN",
+        "CHICKEN DO PYAZA",
+        "CHILLY CHICKEN GRAVY",
+        "KADHAI CHICKEN",
+        "CHICKEN TIKKA MASALA",
+        "MUTTON ROGHAN JOSH",
+        "RARA MUTTON",
+        "MUTTON CURRY",
+        "BHUNA GHOST",
+        "FISH TOMATO",
+        "BENGALI FISH CURRY",
+        "SARSON WALI MACHHALI"
       ]
     },
     {
       "name": "MAIN_COURSE_PANEER",
       "items": [
-        "KADAI PANEER",
-        "MATAR PANEER",
-        "PANEER HANDI",
+        "PANEER KADHAI",
+        "CHEESE BUTTER MASALA",
+        "PANEER LABABDAR",
+        "PALAK PANEER",
+        "SHAHI PANEER",
         "PANEER DO PYAZA",
-        "PANEER TIKKA MASALA",
-        "PALAK PANEER"
+        " HANDI PANEER",
+        "PANEER PUNJABI",
+        "PANEER MATAR"
       ]
     },
     {
-      "name": "MAIN_COURSE_CHICKEN",
+      "name": "VEGETABLES",
       "items": [
-        "KADAI CHICKEN",
-        "CHICKEN CURRY",
-        "CHICKEN MASALA",
-        "HANDI CHICKEN"
+        "MATAR MUSHROOM",
+        "MUSHROOM DO PYAZA",
+        "ALOO GOBHI MATAR",
+        "MIX VEG",
+        "SEASONAL-VEG",
+        "ALOO JEERA",
+        "VEG KOFTA",
+        "MALAI KOFTA ",
+        "KHOWA MUTTOR",
+        "MAKHANA",
+        "DUM ALOO"
       ]
     },
-
     {
-      "name": "MAIN_COURSE_MUTTON",
+      "name": "DAL",
       "items": [
-        "ROGAN JOSH",
-        "LAL MAAS",
-        "SAG MEAT",
-        "MUTTON CURRY HOME STYLE"
+        "DAL FRY",
+        "YELLOW DAL TADKA",
+        "DAL MAKHANI",
+        "DAL PUNCHMEL",
+        "CHANA MASALA",
+        "PINDI CHANA"
       ]
+       
     },
-    {
-  "name": "MAIN_COURSE_FISH_WITH_BONE",
-  "items": [
-    "FISH CURRY BENGALI STYLE",
-    "FISH MASALA",
-    "FISH AMRITSARI CURRY",
-    "GOAN FISH CURRY",
-    "FISH KOLIWADA CURRY",
-    "MACHER JHOL (TRADITIONAL BENGALI FISH CURRY)"
-  ]
-},
-
     {
       "name": "RICE",
       "items": [
-        "VEG PULAO",
+        "VEG DUM BIRYANI",
         "PEAS PULAO",
         "JEERA RICE",
-        "STEAMED RICE"
+        "VEG PULAO",
+        "PLAIN RICE",
+        "KASHMIRI PULAO",
+        "ONION MINT PULAO"
       ]
     },
     {
-      "name": "INDIAN BREADS",
+      "name": "BREADS",
       "items": [
-        "TANDOORI ROTI",
-        "BUTTER ROTI",
-        "PUDINA PARATHA",
-        "LACHA PARATHA",
-        "MISSI ROTI",
-        "STUFFED KULCHA",
-        "BUTTER NAAN",
+        "BUTTER NAAN ",
         "PLAIN NAAN",
-        "ONION KULCHA"
+        "MISSI ROTI",
+        "LACHHA PARATHA",
+        "PUDEENA PARATHA",
+        "TANDOORI ROTI"
+        
       ]
     },
     {
       "name": "DESSERTS",
       "items": [
-        "RASMALAI",
-        "GULAB JAMUN",
+        "ICE CREAM",
+        "FRUIT CREAM",
+        "SHAHI TUKDA",
+        "KESARI KHEER",
+        "GULABJAMUN",
         "MOONG DAL HALWA",
         "GAJAR KA HALWA (Seasonal)",
-        "JALEBI RABRI",
-        "KESAR PHIRNI"
-      ]
-    },
-    {
-      "name": "ICE CREAM",
-      "items": [
-        "VANILLA",
-        "STRAWBERRY",
-        "BUTTER SCOTCH"
-      ]
-    },
-    {
-      "name": "ADDITIONAL",
-      "items": [
-        "CHAAT COUNTER INR150-4 ITEMS",
-        "FALOODA KULFI INR 120"
+        "TRIFFLE PUDING",
+        "BROWNIE WITH CHOCLATE SAUCE"
       ]
     }
+    
+  
   ]
 }

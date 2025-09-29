@@ -1,230 +1,15 @@
 import toast, { Toaster } from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { useAppContext } from "../../../../context/AppContext";
+import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 
 import { AiFillFileExcel } from "react-icons/ai";
 import { CSVLink } from "react-csv";
-import { FiSearch, FiX, FiPlus, FiEdit, FiEye, FiTrash2 } from "react-icons/fi";
+import { FiSearch, FiX, FiPlus, FiEdit, FiEye, FiFileText } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 // import noimg from "../../assets/noimg.png";
 import SlideToggle from "../toggle/SlideToggle";
-
-const MenuViewModal = ({ booking, onClose }) => {
-  const { axios } = useAppContext();
-  const [menu, setMenu] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchMenu = async () => {
-      try {
-        const response = await axios.get(`/api/banquet-menus/${booking._id}`);
-        console.log('Menu API Response:', response.data);
-        
-        if (response.data && response.data.categories) {
-          setMenu(response.data.categories);
-        } else {
-          setMenu({ message: 'No menu items selected for this booking' });
-        }
-      } catch (error) {
-        console.error('Error fetching menu:', error);
-        setError("Failed to load menu.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMenu();
-  }, [booking, axios]);
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-800">Menu for {booking.name}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <FiX size={24} />
-          </button>
-        </div>
-        
-        {loading ? (
-          <div className="flex items-center justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#c3ad6b]"></div>
-            <span className="ml-2">Loading menu...</span>
-          </div>
-        ) : error ? (
-          <div className="p-6 text-center text-red-600">{error}</div>
-        ) : (
-          <div className="p-6">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-50 p-3 rounded">
-                <span className="font-medium">Rate Plan:</span> {booking.ratePlan}
-              </div>
-              <div className="bg-gray-50 p-3 rounded">
-                <span className="font-medium">Food Type:</span> {booking.foodType}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {menu && menu.message ? (
-                <div className="col-span-full text-center text-gray-500 py-8">
-                  {menu.message}
-                </div>
-              ) : menu && Object.entries(menu).map(([category, items]) => {
-                const skip = ["_id", "createdAt", "updatedAt", "__v", "bookingRef", "customerRef", "message"];
-                if (skip.includes(category)) return null;
-                if (Array.isArray(items) && items.length > 0) {
-                  return (
-                    <div key={category} className="border rounded-lg p-4">
-                      <h4 className="font-semibold text-gray-800 mb-3">
-                        {category.replaceAll("_", " ").split(" ").map(word => 
-                          word.charAt(0).toUpperCase() + word.slice(1)
-                        ).join(" ")}
-                      </h4>
-                      <ul className="space-y-1 text-sm text-gray-600">
-                        {items.map((item, i) => (
-                          <li key={i}>• {item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                }
-                return null;
-              })}
-              {(!menu || (Object.keys(menu || {}).length === 0)) && (
-                <div className="col-span-full text-center text-gray-500 py-8">
-                  No menu items found for this booking.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const EditBookingModal = ({ booking, onClose, onSave }) => {
-  const [formData, setFormData] = useState({
-    name: booking.name || '',
-    number: booking.number || '',
-    ratePlan: booking.ratePlan || 'Silver',
-    foodType: booking.foodType || 'Veg',
-    pax: booking.pax || 1,
-    hall: booking.hall || ''
-  });
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await onSave(formData);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Edit Booking</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <FiX size={24} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input 
-                type="text" 
-                value={formData.name} 
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="w-full p-2 border rounded-lg" 
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input 
-                type="text" 
-                value={formData.number} 
-                onChange={(e) => setFormData({...formData, number: e.target.value})}
-                className="w-full p-2 border rounded-lg" 
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rate Plan</label>
-              <select 
-                value={formData.ratePlan} 
-                onChange={(e) => setFormData({...formData, ratePlan: e.target.value})}
-                className="w-full p-2 border rounded-lg"
-              >
-                <option value="Silver">Silver</option>
-                <option value="Gold">Gold</option>
-                <option value="Platinum">Platinum</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Food Type</label>
-              <select 
-                value={formData.foodType} 
-                onChange={(e) => setFormData({...formData, foodType: e.target.value})}
-                className="w-full p-2 border rounded-lg"
-              >
-                <option value="Veg">Veg</option>
-                <option value="Non-Veg">Non-Veg</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pax</label>
-              <input 
-                type="number" 
-                value={formData.pax} 
-                onChange={(e) => setFormData({...formData, pax: parseInt(e.target.value) || 1})}
-                className="w-full p-2 border rounded-lg" 
-                min="1"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hall</label>
-              <input 
-                type="text" 
-                value={formData.hall} 
-                onChange={(e) => setFormData({...formData, hall: e.target.value})}
-                className="w-full p-2 border rounded-lg" 
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 pt-4">
-            <button 
-              type="submit"
-              disabled={saving}
-              className="text-white px-4 py-2 rounded transition-colors disabled:opacity-50" 
-              style={{backgroundColor: 'hsl(45, 43%, 58%)'}} 
-              onMouseEnter={(e) => !saving && (e.target.style.backgroundColor = 'hsl(45, 32%, 46%)')}
-              onMouseLeave={(e) => !saving && (e.target.style.backgroundColor = 'hsl(45, 43%, 58%)')}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button 
-              type="button"
-              onClick={onClose} 
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
+import ChefPDFPreview from "../ChefPDFPreview";
 const debounce = (func, delay) => {
   let timeoutId;
   return function (...args) {
@@ -233,7 +18,6 @@ const debounce = (func, delay) => {
   };
 };
 const ListBooking = () => {
-  const { axios } = useAppContext();
   const tableRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
   const [userData, setUserData] = useState([]);
@@ -244,8 +28,6 @@ const ListBooking = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [productToDelete, setProductToDelete] = useState(null);
   const [allData, setAllData] = useState([]);
-  const [editingBooking, setEditingBooking] = useState(null);
-  const [viewingMenu, setViewingMenu] = useState(null);
   // Detect mobile view
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth <= 600 : false
@@ -258,51 +40,52 @@ const ListBooking = () => {
   // Get user role from localStorage
   const userRole = localStorage.getItem("role") || "Staff";
 
-  const fetchUsers = async () => {
+  const fetchUsers = () => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/banquet-bookings`);
-      
-      if (res.data) {
-        const dataArray = Array.isArray(res.data) ? res.data : res.data.bookings || [];
-        const processedData = dataArray.map((item) => ({
-          ...item,
-          _id: item._id || item.id,
-          number: item.phoneNo || item.number || item.phone || '',
-          advance: item.advance ?? 0,
-          total: item.total ?? 0,
-          balance: item.balance ?? 0,
-          ratePlan: item.ratePlan || 'Standard',
-          foodType: item.foodType || 'Veg',
-          hall: item.hall || 'Main Hall',
-          bookingStatus: item.bookingStatus || item.status || 'Confirmed',
-          startDate: item.checkInDate || new Date().toISOString(),
-          pax: item.noOfAdults || 1
-        }));
+      axios
+        .get(
+          `https://ashoka-b.vercel.app/api/bookings/pg?page=${currentPage}`
+        )
+        .then((res) => {
+          if (res.data) {
+            const processedData = res.data.data.map((item) => ({
+              ...item,
+              advance: item.advance ?? 0,
+              total: item.total ?? 0,
+              balance: item.balance ?? 0,
+            }));
 
-        console.table(processedData);
-        setUserData(processedData);
-        setTotalPages(processedData.length);
-      }
+            console.log(processedData);
+            setUserData(processedData);
+            setTotalPages(res.data.total);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          setLoading(false);
+        });
     } catch (error) {
-      console.error('Failed to fetch bookings:', error);
-      toast.error('Failed to fetch bookings');
-      setUserData([]);
-    } finally {
+      console.log(error);
       setLoading(false);
     }
   };
-  const fetchAllData = async () => {
+  const fetchAllData = () => {
     try {
-      const res = await axios.get('/api/banquet-bookings');
-      
-      if (res.data) {
-        const dataArray = Array.isArray(res.data) ? res.data : (res.data.bookings || []);
-        setAllData(dataArray);
-      }
+      axios
+        .get(`https://ashoka-b.vercel.app/api/bookings`)
+        .then((res) => {
+          if (res.data) {
+            console.log("All Data:", res.data);
+            setAllData(res.data); // All record
+          }
+        })
+        .catch((err) => {
+          console.log("All Data Error:", err);
+        });
     } catch (error) {
-      console.error("Failed to fetch all bookings:", error);
-      setAllData([]);
+      console.log("All Data Try-Catch Error:", error);
     }
   };
 
@@ -315,13 +98,24 @@ const ListBooking = () => {
   const handleDelete = async (id) => {
     setLoading(true);
     try {
-      await axios.delete(`/api/banquet-bookings/${id}`);
-      toast.success('Booking deleted successfully');
-      fetchUsers();
+      axios
+        .delete(`https://ashoka-b.vercel.app/little/achiver/${id}`)
+        .then((res) => {
+          console.log(res);
+          if (res.data) {
+            fetchUsers();
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+          toast.error(error.response.data.message);
+          setLoading(false);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to delete booking');
-    } finally {
+      console.log(error);
       setLoading(false);
     }
   };
@@ -366,7 +160,7 @@ const ListBooking = () => {
     // Send API request to update status in backend
     axios
       .put(
-        `/little/achiver/update-status/${id}`,
+        `https://ashoka-b.vercel.app/little/achiver/update-status/${id}`,
         {
           status: updatedStatus, // Boolean status value
         }
@@ -394,20 +188,16 @@ const ListBooking = () => {
     setCurrentPage(page);
   };
   const renderPagination = () => {
-    const itemsPerPage = 10;
-    const totalItems = userData.length;
-    const maxPage = Math.ceil(totalItems / itemsPerPage);
-    
-    if (maxPage <= 1) return null;
-
     const pageNumbers = [];
-    const maxPagesToShow = 5;
+    const maxPagesToShow = 5; // Adjust this value to change the number of visible pages
+    const maxPage = Math.ceil(totalPages / 10);
 
     for (let i = 1; i <= maxPage; i++) {
       pageNumbers.push(i);
     }
 
-    let startPage, endPage;
+    let startPage;
+    let endPage;
 
     if (maxPage <= maxPagesToShow) {
       startPage = 1;
@@ -420,8 +210,8 @@ const ListBooking = () => {
         startPage = maxPage - maxPagesToShow + 1;
         endPage = maxPage;
       } else {
-        startPage = currentPage - 2;
-        endPage = currentPage + 2;
+        startPage = currentPage - 2; // Adjust the number of pages to show before and after the current page
+        endPage = currentPage + 2; // Adjust the number of pages to show before and after the current page
       }
     }
 
@@ -430,46 +220,43 @@ const ListBooking = () => {
     const isLastPage = currentPage === maxPage;
 
     return (
-      <nav className="mt-8 flex justify-center">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            className={`px-4 py-2 rounded-lg border transition-colors ${
-              isFirstPage 
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
-                : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
-            }`}
-            disabled={isFirstPage}
-          >
-            Previous
-          </button>
-          
-          {visiblePages.map((number) => (
+      <nav className="mt-12 flex justify-center">
+        <ul className="join ">
+          <li className="page-item">
             <button
-              key={number}
-              onClick={() => handlePageChange(number)}
-              className={`px-4 py-2 rounded-lg border transition-colors ${
-                currentPage === number
-                  ? "bg-[#c3ad6b] text-white border-[#c3ad6b]"
-                  : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
+              onClick={() => handlePageChange(currentPage - 1)}
+              className={`px-4 py-2 cursor-pointer rounded-md  mx-1 ${
+                isFirstPage ? "disabled" : ""
               }`}
+              disabled={isFirstPage}
             >
-              {number}
+              Previous
             </button>
+          </li>
+          {visiblePages?.map((number) => (
+            <li key={number} className="page-item">
+              <button
+                onClick={() => handlePageChange(number)}
+                className={`${
+                  currentPage === number ? "bg-gray-400 text-white" : ""
+                } px-4 py-2 mx-1 rounded-md`}
+              >
+                {number}
+              </button>
+            </li>
           ))}
-          
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            className={`px-4 py-2 rounded-lg border transition-colors ${
-              isLastPage
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
-            }`}
-            disabled={isLastPage}
-          >
-            Next
-          </button>
-        </div>
+          <li className="page-item">
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              className={`px-4 py-2 cursor-pointer mx-1 bg-black rounded-md text-white ${
+                isLastPage ? "disabled" : ""
+              }`}
+              disabled={isLastPage}
+            >
+              Next
+            </button>
+          </li>
+        </ul>
       </nav>
     );
   };
@@ -479,7 +266,7 @@ const ListBooking = () => {
       try {
         axios
           .get(
-            `/api/bookings/search?q=${searchQuery}`
+            `https://ashoka-b.vercel.app/api/bookings/search?q=${searchQuery}`
           )
           .then((res) => {
             console.log(res);
@@ -591,47 +378,62 @@ const ListBooking = () => {
   }));
 
   return (
-    <>
-      {/* Show user role at top on mobile, above all content */}
-      {isMobile && (
-        <div className="w-full flex justify-center items-center mb-2 mt-2">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#c3ad6b]/10 text-[#c3ad6b] font-semibold text-sm shadow">
-            {userRole === "Admin" ? "👑 Admin" : "👤 Staff"}
-          </span>
-        </div>
-      )}
+    <div className="min-h-screen" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
       <Toaster />
-      <div className="flex items-end flex-col mb-4">
-        <Link
-          to={"/banquet/add-booking"}
-          className="inline-flex items-center gap-2 px-5 py-2 mb-2 text-white rounded-lg shadow transition-colors font-semibold"
-          style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-          onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
-        >
-          <FiPlus className="text-lg" />
-          Add Booking
-        </Link>
-        <CSVLink
-          data={csvData}
-          headers={csvHeaders}
-          filename="Booking_Customer_Details.csv"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-600 transition-colors font-semibold"
-        >
-          <AiFillFileExcel className="text-lg" />
-          Download CSV
-        </CSVLink>
-      </div>
+      
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>
+            Booking List
+          </h1>
+          {isMobile && (
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#c3ad6b]/10 text-[#c3ad6b] font-semibold text-sm shadow">
+              {userRole === "Admin" ? "👑 Admin" : "👤 Staff"}
+            </span>
+          )}
+        </div>
+      </header>
+      
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-6 space-y-6">
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="bg-[#c3ad6b]/20 p-2 rounded-full">
+                  <FiPlus className="text-[#c3ad6b] text-lg" />
+                </div>
+                <h2 className="text-xl font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>
+                  Manage Bookings
+                </h2>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Link
+                  to={"/add-booking"}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow transition-colors font-semibold"
+                  style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
+                >
+                  <FiPlus className="text-lg" />
+                  Add Booking
+                </Link>
+                <CSVLink
+                  data={csvData}
+                  headers={csvHeaders}
+                  filename="Booking_Customer_Details.csv"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-800 transition-colors font-semibold"
+                >
+                  <AiFillFileExcel className="text-lg" />
+                  Download CSV
+                </CSVLink>
+              </div>
+            </div>
       <div className="form-control relative flex items-center max-w-md mx-auto mb-6">
-        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-lg" style={{color: 'hsl(45, 43%, 58%)'}} />
+        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
         <input
-          className="pl-10 pr-10 py-3 rounded-lg w-full shadow-sm focus:outline-none focus:ring-2"
-          style={{
-            border: '1px solid hsl(45, 100%, 85%)',
-            backgroundColor: 'white'
-          }}
-          onFocus={(e) => e.target.style.borderColor = 'hsl(45, 43%, 58%)'}
-          onBlur={(e) => e.target.style.borderColor = 'hsl(45, 100%, 85%)'}
+          className="input input-bordered pl-10 pr-10 py-2 rounded-full w-full shadow-sm focus:ring-2 focus:ring-[#c3ad6b]"
           type="text"
           value={searchQuery}
           onChange={handleChange}
@@ -643,8 +445,7 @@ const ListBooking = () => {
               setSearchQuery("");
               fetchUsers();
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-lg hover:opacity-70 transition-opacity"
-            style={{color: 'hsl(0, 60%, 50%)'}}
+            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-red-500 hover:text-red-700 text-lg"
           >
             <FiX />
           </span>
@@ -653,7 +454,7 @@ const ListBooking = () => {
       {/* <div className="flex justify-end mb-4">
        
       </div> */}
-      <div className="mt-6 rounded-2xl overflow-x-auto p-2 sm:p-4" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
+      <div className="mt-6 bg-gold/10 shadow-xl rounded-2xl overflow-x-auto p-2 sm:p-4">
         {loading ? (
           <div className="flex items-center justify-center m-auto py-16">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#c3ad6b]"></div>
@@ -669,7 +470,7 @@ const ListBooking = () => {
                     className="bg-white rounded-xl shadow p-4 flex flex-col border border-gray-100"
                   >
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg" style={{backgroundColor: 'hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)'}}>
+                      <div className="w-10 h-10 bg-#c3ad6b rounded-full flex items-center justify-center text-black font-bold text-lg">
                         {item.name?.[0]?.toUpperCase() || "?"}
                       </div>
                       <div>
@@ -708,27 +509,30 @@ const ListBooking = () => {
                       </div>
                     </div>
                     <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => setEditingBooking(item)}
-                        className="flex-1 inline-flex items-center justify-center gap-1 text-white px-3 py-2 rounded shadow text-xs font-semibold transition-colors"
-                        style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
+                      <Link
+                        to={`/banquet/update-booking/${item._id}`}
+                        className="flex-1 inline-flex items-center justify-center gap-1 bg-[#c3ad6b] hover:bg-[#b39b5a] text-white px-3 py-2 rounded shadow text-xs font-semibold transition-colors"
                       >
                         <FiEdit /> Edit
-                      </button>
-                      <button
-                        onClick={() => setViewingMenu(item)}
-                        className="flex-1 inline-flex items-center justify-center gap-1 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-600 transition-colors font-semibold px-3 py-2 text-xs"
-                      >
-                        <FiEye /> View Menu
-                      </button>
-                      <button
-                        onClick={() => handleDeleteModal(item)}
-                        className="flex-1 inline-flex items-center justify-center gap-1 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition-colors font-semibold px-3 py-2 text-xs"
-                      >
-                        <FiTrash2 /> Delete
-                      </button>
+                      </Link>
+                      <Link to={`/banquet/menu-view/${item._id}`} className="flex-1">
+                        <button className="w-full inline-flex items-center justify-center gap-1 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-800 transition-colors font-semibold px-3 py-2 text-xs">
+                          <FiEye /> View Menu
+                        </button>
+                      </Link>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+
+                      <Link to={`/banquet/invoice/${item._id}`} className="flex-1">
+                        <button className="w-full inline-flex items-center justify-center gap-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-semibold px-3 py-2 text-xs">
+                          <FiFileText /> Invoice
+                        </button>
+                      </Link>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <div className="flex-1">
+                        <ChefPDFPreview booking={item} />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -740,7 +544,7 @@ const ListBooking = () => {
                 ref={tableRef}
                 className="w-full table-auto text-sm text-left border-separate border-spacing-y-2"
               >
-                <thead className="font-semibold sticky top-0 z-10" style={{backgroundColor: 'hsl(45, 43%, 58%)', color: 'white'}}>
+                <thead className="bg-gold text-black font-semibold sticky top-0 z-10">
                   <tr>
                     <th className="py-3 px-6 rounded-tl-xl">Name</th>
                     <th className="py-3 px-6">Number</th>
@@ -760,17 +564,12 @@ const ListBooking = () => {
                       key={item._id}
                       className={
                         idx % 2 === 0
-                          ? "bg-white hover:transition-colors"
-                          : "hover:transition-colors"
+                          ? "bg-gray-50 hover:bg-[#c3ad6b]/20 transition-colors"
+                          : "bg-white hover:bg-[#c3ad6b]/20 transition-colors"
                       }
-                      style={{
-                        backgroundColor: idx % 2 === 0 ? 'white' : 'hsl(45, 100%, 98%)'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 100%, 90%)'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = idx % 2 === 0 ? 'white' : 'hsl(45, 100%, 98%)'}
                     >
                       <td className="px-6 py-4 whitespace-nowrap font-bold flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-base" style={{backgroundColor: 'hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)'}}>
+                        <div className="w-8 h-8 bg-[#c3ad6b]/20 rounded-full flex items-center justify-center text-[#c3ad6b] font-bold text-base">
                           {item.name?.[0]?.toUpperCase() || "?"}
                         </div>
                         {item.name}
@@ -801,21 +600,24 @@ const ListBooking = () => {
                         {item.bookingStatus}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap flex gap-2">
-                        <button
-                          onClick={() => setEditingBooking(item)}
-                          className="inline-flex items-center gap-1 text-white px-3 py-1.5 rounded shadow text-xs font-semibold transition-colors"
-                          style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
+                        <Link
+                          to={`/banquet/update-booking/${item._id}`}
+                          className="inline-flex items-center gap-1 bg-[#c3ad6b] hover:bg-[#b39b5a] text-white px-3 py-1.5 rounded shadow text-xs font-semibold transition-colors"
                         >
                           <FiEdit /> Edit
-                        </button>
-                        <button
-                          onClick={() => setViewingMenu(item)}
-                          className="inline-flex items-center gap-1 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-600 transition-colors font-semibold px-3 py-1.5 text-xs"
-                        >
-                          <FiEye /> View Menu
-                        </button>
+                        </Link>
+                        <Link to={`/banquet/menu-view/${item._id}`}>
+                          <button className="inline-flex items-center gap-1 bg-gray-700 text-white rounded-lg shadow hover:bg-gray-800 transition-colors font-semibold px-3 py-1.5 text-xs">
+                            <FiEye /> View Menu
+                          </button>
+                        </Link>
+
+                        <Link to={`/banquet/invoice/${item._id}`}>
+                          <button className="inline-flex items-center gap-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-semibold px-3 py-1.5 text-xs">
+                            <FiFileText /> Invoice
+                          </button>
+                        </Link>
+                        <ChefPDFPreview booking={item} />
                         <button
                           onClick={() => {
                             let raw = String(item.number || "").replace(
@@ -838,7 +640,7 @@ const ListBooking = () => {
                               return;
                             }
                             const message =
-                              `🌟 *Welcome to Hotal Ashoka!* 🌟\n\n` +
+                              `🌟 *Welcome to Hotal ASHOKA HOTEL!* 🌟\n\n` +
                               `Here's your booking confirmation:\n\n` +
                               `📅 *Date:* ${new Date(
                                 item.startDate
@@ -885,13 +687,6 @@ const ListBooking = () => {
                         >
                           <FaWhatsapp />
                         </button>
-                        <button
-                          onClick={() => handleDeleteModal(item)}
-                          className="inline-flex items-center gap-1 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition-colors font-semibold px-3 py-1.5 text-xs"
-                          title="Delete Booking"
-                        >
-                          <FiTrash2 />
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -922,7 +717,62 @@ const ListBooking = () => {
           </div>
         )}
       </div>
-      {renderPagination()}
+            {/* Pagination */}
+            <div className="mt-6">
+              <nav className="flex justify-center">
+                <ul className="flex items-center space-x-2">
+                  <li>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      className={`px-4 py-2 rounded-md border transition-colors ${
+                        currentPage === 1 
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200" 
+                          : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
+                      }`}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </button>
+                  </li>
+                  
+                  {(() => {
+                    const maxPage = Math.ceil(totalPages / 10);
+                    const pages = [];
+                    for (let i = 1; i <= Math.min(maxPage, 5); i++) {
+                      pages.push(
+                        <li key={i}>
+                          <button
+                            onClick={() => handlePageChange(i)}
+                            className={`px-4 py-2 rounded-md border transition-colors ${
+                              currentPage === i
+                                ? "bg-[#c3ad6b] text-white border-[#c3ad6b]"
+                                : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        </li>
+                      );
+                    }
+                    return pages;
+                  })()}
+                  
+                  <li>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className={`px-4 py-2 rounded-md border transition-colors ${
+                        currentPage === Math.ceil(totalPages / 10)
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200"
+                          : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300"
+                      }`}
+                      disabled={currentPage === Math.ceil(totalPages / 10)}
+                    >
+                      Next
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
       {/* MODAL */}
       {isDeleteModalOpen && productToDelete && (
         <>
@@ -977,35 +827,10 @@ const ListBooking = () => {
           </div>
         </>
       )}
-
-      {/* Edit Booking Modal */}
-      {editingBooking && (
-        <EditBookingModal 
-          booking={editingBooking} 
-          onClose={() => setEditingBooking(null)}
-          onSave={async (updatedData) => {
-            try {
-              const token = localStorage.getItem('token');
-              await axios.put(`/api/bookings/update/${editingBooking._id}`, updatedData);
-              toast.success('Booking updated successfully');
-              setEditingBooking(null);
-              fetchUsers();
-            } catch (error) {
-              console.error('Error updating booking:', error);
-              toast.error('Failed to update booking');
-            }
-          }}
-        />
-      )}
-
-      {/* View Menu Modal */}
-      {viewingMenu && (
-        <MenuViewModal 
-          booking={viewingMenu} 
-          onClose={() => setViewingMenu(null)}
-        />
-      )}
-    </>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 };
 
