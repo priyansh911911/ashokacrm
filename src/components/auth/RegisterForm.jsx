@@ -1,153 +1,177 @@
 import React, { useState } from 'react';
+import Select from 'react-select';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { toast } from 'react-toastify';
 
-const RegisterForm = ({ onSuccess }) => {
-  const { axios } = useAppContext();
-  const [formData, setFormData] = useState({
+const DEPARTMENTS = [
+  { id: 1, name: 'kitchen' },
+  { id: 2, name: 'laundry' },
+  { id: 3, name: 'reception' },
+  { id: 4, name: 'maintenance' },
+  { id: 5, name: 'other' },
+  { id: 6, name: 'housekeeping' }
+];
+
+const departmentOptions = DEPARTMENTS.map(dep => ({ value: dep, label: `${dep.name} (${dep.id})` }));
+
+const Register = () => {
+  const [form, setForm] = useState({
     username: '',
     email: '',
     password: '',
-    role: 'staff',
-    department: []
+    role: '',
+    department: [],
+    restaurantRole: '',
   });
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const departments = [
-    { id: 1, name: 'housekeeping' },
-    { id: 2, name: 'laundry' },
-    { id: 3, name: 'kitchen' },
-    { id: 4, name: 'reception' }
-  ];
+  const navigate = useNavigate();
+  const { axios } = useAppContext();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleDepartmentChange = (e) => {
-    const { value, checked } = e.target;
-    const dept = departments.find(d => d.name === value);
-    
-    setFormData(prev => ({
-      ...prev,
-      department: checked 
-        ? [...prev.department, dept]
-        : prev.department.filter(d => d.name !== value)
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+    setError('');
     try {
-      const { data } = await axios.post('/api/auth/register', formData);
-      
-      if (data.success) {
-        toast.success('User registered successfully!');
-        setFormData({
-          username: '',
-          email: '',
-          password: '',
-          role: 'staff',
-          department: []
-        });
-        if (onSuccess) onSuccess();
+      const payload = { ...form };
+      if (form.role === 'admin') {
+        payload.department = DEPARTMENTS;
       }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      if (form.role === 'staff' && Array.isArray(form.department)) {
+        // Store as array of objects with id and name
+        payload.department = form.department.map(dep => dep.value);
+      }
+      await axios.post('/api/auth/register', payload);
+      navigate('/staff');
+    } catch (err) {
+      setError(
+        err.response?.data?.message || 'Registration failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Register User</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Username</label>
+    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <form
+        onSubmit={handleSubmit}
+        className="min-w-[320px] w-full max-w-md p-8 border border-gray-200 rounded-lg bg-white shadow-md"
+      >
+        <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Username</label>
           <input
             type="text"
             name="username"
-            value={formData.username}
+            value={form.username}
             onChange={handleChange}
             required
-            className="w-full p-2 border rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Email</label>
           <input
             type="email"
             name="email"
-            value={formData.email}
+            value={form.email}
             onChange={handleChange}
             required
-            className="w-full p-2 border rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Password</label>
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Password</label>
           <input
             type="password"
             name="password"
-            value={formData.password}
+            value={form.password}
             onChange={handleChange}
             required
-            className="w-full p-2 border rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Role</label>
+        <div className="mb-4">
+          <label className="block mb-1 font-medium">Role</label>
           <select
             name="role"
-            value={formData.role}
+            value={form.role}
             onChange={handleChange}
-            className="w-full p-2 border rounded-md"
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
-            <option value="staff">Staff</option>
+            <option value="">Select role</option>
             <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
+            <option value="staff">Staff</option>
+            <option value="restaurant">Restaurant</option>
           </select>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">Departments</label>
-          <div className="space-y-2">
-            {departments.map(dept => (
-              <label key={dept.id} className="flex items-center">
-                <input
-                  type="checkbox"
-                  value={dept.name}
-                  checked={formData.department.some(d => d.name === dept.name)}
-                  onChange={handleDepartmentChange}
-                  className="mr-2"
-                />
-                {dept.name}
-              </label>
-            ))}
+        {form.role === 'staff' && (
+          <div className="mb-4">
+            <label className="block mb-1 font-medium">Department(s)</label>
+            <Select
+              isMulti
+              name="department"
+              options={departmentOptions}
+              value={form.department}
+              onChange={selected => setForm(prev => ({
+                ...prev,
+                department: selected
+              }))}
+              className="basic-multi-select"
+              classNamePrefix="select"
+              required
+            />
+            <div className="text-xs text-gray-500 mt-1">Select one or more departments. (Number will be stored with department)</div>
           </div>
-        </div>
-
+        )}
+        {form.role === 'restaurant' && (
+          <div className="mb-4">
+            <label className="block mb-1 font-medium">Restaurant Role</label>
+            <select
+              name="restaurantRole"
+              value={form.restaurantRole}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="">Select restaurant role</option>
+              <option value="staff">Staff</option>
+              <option value="cashier">Cashier</option>
+              <option value="chef">Chef</option>
+            </select>
+          </div>
+        )}
+        {error && (
+          <div className="text-red-600 mb-4 text-sm text-center">{error}</div>
+        )}
         <button
           type="submit"
+          className="w-full py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors disabled:opacity-60"
           disabled={loading}
-          className="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading ? 'Registering...' : 'Register User'}
+          {loading ? 'Registering...' : 'Register'}
         </button>
+         <div className="mt-4 text-center text-sm">
+          Have an account?{' '}
+          <button
+            type="button"
+            className="text-blue-600 hover:underline font-medium"
+            onClick={() => navigate('/login')}
+          >
+            Login
+          </button>
+        </div>
       </form>
+
     </div>
   );
 };
 
-export default RegisterForm;
+export default Register;
