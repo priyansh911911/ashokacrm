@@ -130,10 +130,16 @@ const Sidebar = () => {
   const getAuthorizedNavItems = () => {
     const role = localStorage.getItem("role");
     const restaurantRole = localStorage.getItem("restaurantRole");
-    const userDepartments = JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]");
-    const hasHousekeeping = userDepartments.some(dept => dept.name === "housekeeping");
-    const hasReception = userDepartments.some(dept => dept.name === "reception");
-    const hasLaundry = userDepartments.some(dept => dept.name === "laundry");
+    let userDepartments = [];
+    try {
+      const departmentData = localStorage.getItem("department") || localStorage.getItem("departments");
+      userDepartments = departmentData && departmentData !== 'undefined' ? JSON.parse(departmentData) : [];
+    } catch (e) {
+      userDepartments = [];
+    }
+    const hasHousekeeping = userDepartments.some(dept => dept && dept.name === "housekeeping");
+    const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
+    const hasLaundry = userDepartments.some(dept => dept && dept.name === "laundry");
     
     console.log('=== DEPARTMENT CHECK ===');
     console.log('Role:', role);
@@ -203,8 +209,14 @@ const Sidebar = () => {
     }] : []),
     ...(() => {
       const role = localStorage.getItem("role");
-      const userDepartments = JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]");
-      const hasLaundry = userDepartments.some(dept => dept.name === "laundry");
+      let userDepartments = [];
+      try {
+        const departmentData = localStorage.getItem("department") || localStorage.getItem("departments");
+        userDepartments = departmentData && departmentData !== 'undefined' ? JSON.parse(departmentData) : [];
+      } catch (e) {
+        userDepartments = [];
+      }
+      const hasLaundry = userDepartments.some(dept => dept && dept.name === "laundry");
       
       if (role === "admin" || (role === "staff" && hasLaundry)) {
         return [{
@@ -224,7 +236,14 @@ const Sidebar = () => {
       return [];
     })(),
     ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "kitchen" || dept.name === "reception")) ? [{
+         (() => {
+           try {
+             const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+             return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && (dept.name === "kitchen" || dept.name === "reception")) : false;
+           } catch (e) {
+             return false;
+           }
+         })()) ? [{
       icon: UserRound,
       label: "Pantry",
       path: "/pantry",
@@ -235,7 +254,14 @@ const Sidebar = () => {
       ],
     }] : []),
     ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "reception")) ? [{
+         (() => {
+           try {
+             const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+             return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && dept.name === "reception") : false;
+           } catch (e) {
+             return false;
+           }
+         })()) ? [{
       icon: UserRound,
       label: "Cab",
       path: "/cab",
@@ -248,9 +274,15 @@ const Sidebar = () => {
     ...(() => {
       const mainRole = localStorage.getItem("role");
       const restRole = localStorage.getItem("restaurantRole");
-      const userDepartments = JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]");
-      const hasKitchen = userDepartments.some(dept => dept.name === "kitchen");
-      const hasReception = userDepartments.some(dept => dept.name === "reception");
+      let userDepartments = [];
+      try {
+        const departmentData = localStorage.getItem("department") || localStorage.getItem("departments");
+        userDepartments = departmentData && departmentData !== 'undefined' ? JSON.parse(departmentData) : [];
+      } catch (e) {
+        userDepartments = [];
+      }
+      const hasKitchen = userDepartments.some(dept => dept && dept.name === "kitchen");
+      const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
       
       // Show restaurant for admin, restaurant roles, or staff with kitchen/reception
       if (mainRole === "admin" || mainRole === "restaurant" || 
@@ -261,19 +293,26 @@ const Sidebar = () => {
           path: "/resturant",
           isDropdown: true,
           children: (() => {
+            console.log('=== RESTAURANT DROPDOWN DEBUG ===');
+            console.log('Main Role:', mainRole);
+            console.log('Restaurant Role:', restRole);
+            console.log('================================');
+            
             // Restaurant role specific menus
             if (restRole === 'chef') {
+              console.log('Chef menu selected - showing only KOT');
               return [
                 { label: "KOT", path: "/kot", icon: ListChecks },
-                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
               ];
             } else if (restRole === 'cashier') {
+              console.log('Cashier menu selected - showing Order, Billing, KOT');
               return [
                 { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
                 { label: "Billing", path: "/billing", icon: FileText },
                 { label: "KOT", path: "/kot", icon: ListChecks },
               ];
             } else if (restRole === 'staff') {
+              console.log('Restaurant staff menu selected');
               return [
                 { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
                 { label: "Reservation", path: "/resturant/reservation", icon: FileText },
@@ -283,14 +322,15 @@ const Sidebar = () => {
             
             // Staff with kitchen/reception
             if (mainRole === 'staff') {
+              console.log('Staff menu selected - showing Order, Reservation');
               return [
                 { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
                 { label: "Reservation", path: "/resturant/reservation", icon: FileText },
-                { label: "KOT", path: "/kot", icon: ListChecks },
               ];
             }
             
             // Default admin view
+            console.log('Admin/Default menu selected - showing all options');
             return [
               { label: "Dashboard", path: "/resturant/dashboard", icon: LayoutDashboard },
               { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
@@ -307,7 +347,14 @@ const Sidebar = () => {
       return [];
     })(),
     ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "reception")) ? [{
+         (() => {
+           try {
+             const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+             return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && dept.name === "reception") : false;
+           } catch (e) {
+             return false;
+           }
+         })()) ? [{
       icon: UserRound,
       label: "Banquet",
       path: "/banquet",
@@ -319,7 +366,14 @@ const Sidebar = () => {
       ],
     }] : []),
     ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "reception")) ? [
+         (() => {
+           try {
+             const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+             return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && dept.name === "reception") : false;
+           } catch (e) {
+             return false;
+           }
+         })()) ? [
       { icon: Users, label: "Customers", path: "/customers" }
     ] : []),
     ...(localStorage.getItem("role") === "admin" ? [
