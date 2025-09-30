@@ -202,7 +202,14 @@ const App = () => {
                       <Route path="/staff/attendance-table" element={<AttendanceTable />} />
                       <Route path="/resturant/dashboard" element={<RestaurantDashboard />} />
                       <Route path="/easy-dashboard" element={<EasyDashboard />} />
-                      <Route path="/cash-management" element={<CashManagement />} />
+                      <Route 
+                        path="/cash-management" 
+                        element={
+                          <ProtectedRoute allowedRoles={['admin', 'staff', 'manager', 'owner']}>
+                            <CashManagement />
+                          </ProtectedRoute>
+                        } 
+                      />
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>
                   </main>

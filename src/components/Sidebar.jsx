@@ -129,12 +129,19 @@ const Sidebar = () => {
 
   const getAuthorizedNavItems = () => {
     const role = localStorage.getItem("role");
+    const restaurantRole = localStorage.getItem("restaurantRole");
     const userDepartments = JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]");
     const hasHousekeeping = userDepartments.some(dept => dept.name === "housekeeping");
+    const hasReception = userDepartments.some(dept => dept.name === "reception");
+    const hasLaundry = userDepartments.some(dept => dept.name === "laundry");
     
     console.log('=== DEPARTMENT CHECK ===');
+    console.log('Role:', role);
+    console.log('Restaurant Role:', restaurantRole);
     console.log('User Departments:', userDepartments);
     console.log('Has Housekeeping:', hasHousekeeping);
+    console.log('Has Reception:', hasReception);
+    console.log('Has Laundry:', hasLaundry);
     console.log('=======================');
     
     const items = [];
@@ -143,17 +150,31 @@ const Sidebar = () => {
     items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
     items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
     
-    // Cash Management - not accessible to staff
-    if (role !== "staff") {
+    // If restaurant role (cashier, chef, waiter), return only dashboard items
+    if (role === "restaurant" && (restaurantRole === "cashier" || restaurantRole === "chef" || restaurantRole === "staff")) {
+      return items;
+    }
+    
+    // If staff has only laundry department, return only dashboard items
+    if (role === "staff" && userDepartments.length === 1 && hasLaundry) {
+      return items;
+    }
+    
+    // Cash Management - accessible to both admin and staff
+    if (role === "admin" || role === "staff") {
       items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
     }
 
     // Admin only items
     if (role === "admin") {
       items.push({ icon: ChartBarStacked, label: "Category", path: "/category" });
+      items.push({ icon: FileText, label: "Room Inspection", path: "/room-inspection" });
+    }
+
+    // Reception and Admin items
+    if (role === "admin" || (role === "staff" && hasReception)) {
       items.push({ icon: BedDouble, label: "Room", path: "/room" });
       items.push({ icon: FileText, label: "Booking", path: "/booking" });
-      items.push({ icon: FileText, label: "Room Inspection", path: "/room-inspection" });
       items.push({ icon: FileText, label: "Reservation", path: "/reservation" });
     }
 
@@ -180,22 +201,30 @@ const Sidebar = () => {
         { label: "Staff Dashboard", path: "/staff-dashboard", icon: LayoutDashboard },
       ],
     }] : []),
+    ...(() => {
+      const role = localStorage.getItem("role");
+      const userDepartments = JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]");
+      const hasLaundry = userDepartments.some(dept => dept.name === "laundry");
+      
+      if (role === "admin" || (role === "staff" && hasLaundry)) {
+        return [{
+          icon: UserRound,
+          label: "Laundry",
+          path: "/laundry",
+          isDropdown: true,
+          children: [
+            {
+              label: "Order Management",
+              path: "/laundry/ordermanagement",
+              icon: ListChecks,
+            },
+          ],
+        }];
+      }
+      return [];
+    })(),
     ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "laundry")) ? [{
-      icon: UserRound,
-      label: "Laundry",
-      path: "/laundry",
-      isDropdown: true,
-      children: [
-        {
-          label: "Order Management",
-          path: "/laundry/ordermanagement",
-          icon: ListChecks,
-        },
-      ],
-    }] : []),
-    ...((localStorage.getItem("role") === "admin" || 
-         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "kitchen")) ? [{
+         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "kitchen" || dept.name === "reception")) ? [{
       icon: UserRound,
       label: "Pantry",
       path: "/pantry",
@@ -216,53 +245,69 @@ const Sidebar = () => {
         { label: "Vehicle Management", path: "/cab/vehicle", icon: Package },
       ],
     }] : []),
-    {
-      icon: UserRound,
-      label: "Restaurant",
-      path: "/resturant",
-      isDropdown: true,
-      children: (() => {
-        const mainRole = localStorage.getItem("role");
-        const restRole = localStorage.getItem("restaurantRole");
-        
-        // If main role is staff, show staff menu
-        if (mainRole === 'staff') {
-          return [
-            { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
-            { label: "Reservation", path: "/resturant/reservation", icon: FileText },
-            { label: "KOT", path: "/kot", icon: ListChecks },
-          ];
-        }
-        
-        // Check restaurant specific roles
-        if (restRole === 'chef') {
-          return [
-            { label: "KOT", path: "/kot", icon: ListChecks },
-            { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
-          ];
-        } else if (restRole === 'cashier') {
-          return [
-            { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
-            { label: "Billing", path: "/billing", icon: FileText },
-            { label: "KOT", path: "/kot", icon: ListChecks },
-          ];
-        }
-        
-        // Default admin view
-        return [
-          { label: "Dashboard", path: "/resturant/dashboard", icon: LayoutDashboard },
-          { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
-          { label: "Reservation", path: "/resturant/reservation", icon: FileText },
-          { label: "KOT", path: "/kot", icon: ListChecks },
-          { label: "Billing", path: "/billing", icon: FileText },
-          { label: "Menu", path: "/menu", icon: UserRound },
-          { label: "Tables", path: "/table", icon: UserRound },
-          { label: "Wastage", path: "/wastage", icon: Package },
-
-        ];
-      })(),
-    },
-    ...(localStorage.getItem("role") === "admin" ? [{
+    ...(() => {
+      const mainRole = localStorage.getItem("role");
+      const restRole = localStorage.getItem("restaurantRole");
+      const userDepartments = JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]");
+      const hasKitchen = userDepartments.some(dept => dept.name === "kitchen");
+      const hasReception = userDepartments.some(dept => dept.name === "reception");
+      
+      // Show restaurant for admin, restaurant roles, or staff with kitchen/reception
+      if (mainRole === "admin" || mainRole === "restaurant" || 
+          (mainRole === "staff" && (hasKitchen || hasReception))) {
+        return [{
+          icon: UserRound,
+          label: "Restaurant",
+          path: "/resturant",
+          isDropdown: true,
+          children: (() => {
+            // Restaurant role specific menus
+            if (restRole === 'chef') {
+              return [
+                { label: "KOT", path: "/kot", icon: ListChecks },
+                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+              ];
+            } else if (restRole === 'cashier') {
+              return [
+                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                { label: "Billing", path: "/billing", icon: FileText },
+                { label: "KOT", path: "/kot", icon: ListChecks },
+              ];
+            } else if (restRole === 'staff') {
+              return [
+                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                { label: "Reservation", path: "/resturant/reservation", icon: FileText },
+                { label: "KOT", path: "/kot", icon: ListChecks },
+              ];
+            }
+            
+            // Staff with kitchen/reception
+            if (mainRole === 'staff') {
+              return [
+                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                { label: "Reservation", path: "/resturant/reservation", icon: FileText },
+                { label: "KOT", path: "/kot", icon: ListChecks },
+              ];
+            }
+            
+            // Default admin view
+            return [
+              { label: "Dashboard", path: "/resturant/dashboard", icon: LayoutDashboard },
+              { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+              { label: "Reservation", path: "/resturant/reservation", icon: FileText },
+              { label: "KOT", path: "/kot", icon: ListChecks },
+              { label: "Billing", path: "/billing", icon: FileText },
+              { label: "Menu", path: "/menu", icon: UserRound },
+              { label: "Tables", path: "/table", icon: UserRound },
+              { label: "Wastage", path: "/wastage", icon: Package },
+            ];
+          })(),
+        }];
+      }
+      return [];
+    })(),
+    ...((localStorage.getItem("role") === "admin" || 
+         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "reception")) ? [{
       icon: UserRound,
       label: "Banquet",
       path: "/banquet",
@@ -273,8 +318,11 @@ const Sidebar = () => {
         { label: "Menu & Plans", path: "/banquet/menu-plan-manager", icon: Settings },
       ],
     }] : []),
+    ...((localStorage.getItem("role") === "admin" || 
+         JSON.parse(localStorage.getItem("department") || localStorage.getItem("departments") || "[]").some(dept => dept.name === "reception")) ? [
+      { icon: Users, label: "Customers", path: "/customers" }
+    ] : []),
     ...(localStorage.getItem("role") === "admin" ? [
-      { icon: Users, label: "Customers", path: "/customers" },
       { icon: Users, label: "All Users", path: "/users" },
       { icon: Warehouse, label: "Inventory", path: "/inventory" }
     ] : [])
