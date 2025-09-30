@@ -11,7 +11,8 @@ const Resturantreservation = () => {
     email: '',
     partySize: 1,
     reservationDate: '',
-    reservationTime: '',
+    reservationTimeIn: '',
+    reservationTimeOut: '',
     tableNo: '',
     specialRequests: '',
     advancePayment: 0
@@ -73,7 +74,8 @@ const Resturantreservation = () => {
         email: '',
         partySize: 1,
         reservationDate: '',
-        reservationTime: '',
+        reservationTimeIn: '',
+        reservationTimeOut: '',
         tableNo: '',
         specialRequests: '',
         advancePayment: 0
@@ -195,11 +197,23 @@ const Resturantreservation = () => {
           </div>
           
           <div>
-            <label className="block text-text font-medium mb-2">Reservation Time *</label>
+            <label className="block text-text font-medium mb-2">Check-in Time *</label>
             <input
               type="time"
-              name="reservationTime"
-              value={formData.reservationTime}
+              name="reservationTimeIn"
+              value={formData.reservationTimeIn}
+              onChange={handleInputChange}
+              required
+              className="w-full border border-border rounded-md p-2 text-text focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-text font-medium mb-2">Check-out Time *</label>
+            <input
+              type="time"
+              name="reservationTimeOut"
+              value={formData.reservationTimeOut}
               onChange={handleInputChange}
               required
               className="w-full border border-border rounded-md p-2 text-text focus:ring-2 focus:ring-primary"
