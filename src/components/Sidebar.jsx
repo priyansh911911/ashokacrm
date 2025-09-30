@@ -332,10 +332,11 @@ const Sidebar = () => {
             
             // Staff with kitchen/reception
             if (mainRole === 'staff') {
-              console.log('Staff menu selected - showing Order, Reservation');
+              console.log('Staff menu selected - showing Order, Reservation, KOT');
               return [
                 { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
                 { label: "Reservation", path: "/resturant/reservation", icon: FileText },
+                { label: "KOT", path: "/kot", icon: ListChecks },
               ];
             }
             

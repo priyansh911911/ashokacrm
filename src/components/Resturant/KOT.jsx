@@ -80,52 +80,66 @@ const KOT = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Enhance KOTs with item names
-      const enhancedKots = response.data.map(kot => ({
-        ...kot,
-        items: kot.items?.map(item => {
-          
-          // Handle different item data structures
-          if (typeof item === 'string') {
-            return { name: item, quantity: 1 };
-          }
-          
-          if (typeof item === 'object') {
-            // Try to find menu item by ID
-            let itemName = item.name || item.itemName;
+      // Get all orders to check payment status
+      const ordersResponse = await axios.get('/api/restaurant-orders/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const allOrders = ordersResponse.data;
+      
+      // Enhance KOTs with item names and order status
+      const enhancedKots = response.data.map(kot => {
+        const relatedOrder = allOrders.find(order => order._id === kot.orderId);
+        return {
+          ...kot,
+          orderStatus: relatedOrder?.status || 'unknown',
+          items: kot.items?.map(item => {
             
-            if (item.itemId && menuItems.length > 0) {
-              const menuItem = menuItems.find(mi => mi._id === item.itemId || mi.id === item.itemId);
-              if (menuItem) {
-                itemName = menuItem.name || menuItem.itemName;
-              }
+            // Handle different item data structures
+            if (typeof item === 'string') {
+              return { name: item, quantity: 1 };
             }
             
-            // If still no name, try to match by other properties
-            if (!itemName && menuItems.length > 0) {
-              const menuItem = menuItems.find(mi => 
-                mi.name === item.name || 
-                mi.itemName === item.itemName ||
-                mi._id === item.id
-              );
-              if (menuItem) {
-                itemName = menuItem.name || menuItem.itemName;
+            if (typeof item === 'object') {
+              // Try to find menu item by ID
+              let itemName = item.name || item.itemName;
+              
+              if (item.itemId && menuItems.length > 0) {
+                const menuItem = menuItems.find(mi => mi._id === item.itemId || mi.id === item.itemId);
+                if (menuItem) {
+                  itemName = menuItem.name || menuItem.itemName;
+                }
               }
+              
+              // If still no name, try to match by other properties
+              if (!itemName && menuItems.length > 0) {
+                const menuItem = menuItems.find(mi => 
+                  mi.name === item.name || 
+                  mi.itemName === item.itemName ||
+                  mi._id === item.id
+                );
+                if (menuItem) {
+                  itemName = menuItem.name || menuItem.itemName;
+                }
+              }
+              
+              return {
+                ...item,
+                name: itemName || 'Unknown Item'
+              };
             }
             
-            return {
-              ...item,
-              name: itemName || 'Unknown Item'
-            };
-          }
-          
-          return item;
-        }) || []
-      }));
+            return item;
+          }) || []
+        };
+      });
       
 
-      // Filter out served KOTs
-      const activeKots = enhancedKots.filter(kot => kot.status !== 'served');
+      // Filter out served KOTs and KOTs for paid/completed orders
+      const activeKots = enhancedKots.filter(kot => 
+        kot.status !== 'served' && 
+        kot.orderStatus !== 'paid' && 
+        kot.orderStatus !== 'completed'
+      );
       
       // Check for new KOTs
       if (kots.length > 0 && activeKots.length > kots.length) {
@@ -271,12 +285,17 @@ const KOT = () => {
 
   const fetchUserRole = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/auth/profile', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUserRole(response.data.role);
-      setUserRestaurantRole(response.data.restaurantRole);
+      // Get roles directly from localStorage
+      const role = localStorage.getItem('role');
+      const restaurantRole = localStorage.getItem('restaurantRole');
+      
+      console.log('=== KOT ACCESS DEBUG ===');
+      console.log('Role from localStorage:', role);
+      console.log('Restaurant Role from localStorage:', restaurantRole);
+      console.log('=======================');
+      
+      setUserRole(role);
+      setUserRestaurantRole(restaurantRole);
     } catch (error) {
       console.error('Error fetching user role:', error);
     }
@@ -307,7 +326,23 @@ const KOT = () => {
   };
 
   const canMarkAsServed = () => {
-    return userRole === 'restaurant' && (userRestaurantRole === 'chef' || userRestaurantRole === 'manager');
+    // Allow restaurant roles (chef, manager) and staff with kitchen department
+    if (userRole === 'restaurant' && (userRestaurantRole === 'chef' || userRestaurantRole === 'manager')) {
+      return true;
+    }
+    
+    // Allow staff with kitchen department
+    if (userRole === 'staff') {
+      try {
+        const departmentData = localStorage.getItem('department') || localStorage.getItem('departments');
+        const userDepartments = departmentData && departmentData !== 'undefined' ? JSON.parse(departmentData) : [];
+        return userDepartments.some(dept => dept && dept.name === 'kitchen');
+      } catch (e) {
+        return false;
+      }
+    }
+    
+    return false;
   };
 
   const createKOT = async (e) => {
