@@ -154,7 +154,11 @@ const Sidebar = () => {
 
     // Dashboard - accessible to all
     items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
-    items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
+    
+    // Easy Dashboard - admin only
+    if (role === "admin") {
+      items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
+    }
     
     // If restaurant role (cashier, chef, waiter), return only dashboard items
     if (role === "restaurant" && (restaurantRole === "cashier" || restaurantRole === "chef" || restaurantRole === "staff")) {
@@ -274,6 +278,7 @@ const Sidebar = () => {
     ...(() => {
       const mainRole = localStorage.getItem("role");
       const restRole = localStorage.getItem("restaurantRole");
+      const username = localStorage.getItem("username");
       let userDepartments = [];
       try {
         const departmentData = localStorage.getItem("department") || localStorage.getItem("departments");
@@ -296,28 +301,33 @@ const Sidebar = () => {
             console.log('=== RESTAURANT DROPDOWN DEBUG ===');
             console.log('Main Role:', mainRole);
             console.log('Restaurant Role:', restRole);
+            console.log('Username:', username);
             console.log('================================');
             
-            // Restaurant role specific menus
-            if (restRole === 'chef') {
-              console.log('Chef menu selected - showing only KOT');
-              return [
-                { label: "KOT", path: "/kot", icon: ListChecks },
-              ];
-            } else if (restRole === 'cashier') {
-              console.log('Cashier menu selected - showing Order, Billing, KOT');
-              return [
-                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
-                { label: "Billing", path: "/billing", icon: FileText },
-                { label: "KOT", path: "/kot", icon: ListChecks },
-              ];
-            } else if (restRole === 'staff') {
-              console.log('Restaurant staff menu selected');
-              return [
-                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
-                { label: "Reservation", path: "/resturant/reservation", icon: FileText },
-                { label: "KOT", path: "/kot", icon: ListChecks },
-              ];
+            // For restaurant role users - use restaurantRole
+            if (mainRole === 'restaurant') {
+              if (restRole === 'chef') {
+                console.log('Chef menu selected - showing only KOT');
+                return [
+                  { label: "KOT", path: "/kot", icon: ListChecks },
+                ];
+              } else if (restRole === 'cashier') {
+                console.log('Cashier menu selected - showing Order, Billing, KOT');
+                return [
+                  { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                  { label: "Billing", path: "/billing", icon: FileText },
+                  { label: "KOT", path: "/kot", icon: ListChecks },
+                ];
+              } else if (restRole === 'staff') {
+                console.log('Restaurant staff menu selected');
+                return [
+                  { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                  { label: "Reservation", path: "/resturant/reservation", icon: FileText },
+                ];
+              }
+              // If restaurant role but no specific restaurantRole, return empty
+              console.log('Restaurant role but no specific restaurantRole found');
+              return [];
             }
             
             // Staff with kitchen/reception
@@ -329,18 +339,24 @@ const Sidebar = () => {
               ];
             }
             
-            // Default admin view
-            console.log('Admin/Default menu selected - showing all options');
-            return [
-              { label: "Dashboard", path: "/resturant/dashboard", icon: LayoutDashboard },
-              { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
-              { label: "Reservation", path: "/resturant/reservation", icon: FileText },
-              { label: "KOT", path: "/kot", icon: ListChecks },
-              { label: "Billing", path: "/billing", icon: FileText },
-              { label: "Menu", path: "/menu", icon: UserRound },
-              { label: "Tables", path: "/table", icon: UserRound },
-              { label: "Wastage", path: "/wastage", icon: Package },
-            ];
+            // Admin view only
+            if (mainRole === 'admin') {
+              console.log('Admin menu selected - showing all options');
+              return [
+                { label: "Dashboard", path: "/resturant/dashboard", icon: LayoutDashboard },
+                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                { label: "Reservation", path: "/resturant/reservation", icon: FileText },
+                { label: "KOT", path: "/kot", icon: ListChecks },
+                { label: "Billing", path: "/billing", icon: FileText },
+                { label: "Menu", path: "/menu", icon: UserRound },
+                { label: "Tables", path: "/table", icon: UserRound },
+                { label: "Wastage", path: "/wastage", icon: Package },
+              ];
+            }
+            
+            // Fallback - should not reach here
+            console.log('Fallback - no menu items');
+            return [];
           })(),
         }];
       }

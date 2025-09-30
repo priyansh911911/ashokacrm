@@ -428,12 +428,17 @@ const AllBookings = ({ setActiveTab }) => {
 
   const fetchUserRole = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/auth/profile', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUserRole(response.data.role);
-      setUserRestaurantRole(response.data.restaurantRole);
+      // Get roles directly from localStorage
+      const role = localStorage.getItem('role');
+      const restaurantRole = localStorage.getItem('restaurantRole');
+      
+      console.log('=== ORDER ACCESS DEBUG ===');
+      console.log('Role from localStorage:', role);
+      console.log('Restaurant Role from localStorage:', restaurantRole);
+      console.log('========================');
+      
+      setUserRole(role);
+      setUserRestaurantRole(restaurantRole);
     } catch (error) {
       console.error('Error fetching user role:', error);
     }

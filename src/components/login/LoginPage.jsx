@@ -54,11 +54,14 @@ const LoginPage = () => {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("role", response.data.role);
       localStorage.setItem("username", response.data.username);
-      localStorage.setItem("userId", response.data.userId); // Add this line
+      localStorage.setItem("userId", response.data.userId);
       localStorage.setItem(
         "department",
         JSON.stringify(response.data.department)
       );
+      if (response.data.restaurantRole) {
+        localStorage.setItem("restaurantRole", response.data.restaurantRole);
+      }
 
       // Always redirect to dashboard after login
       navigate("/dashboard");
