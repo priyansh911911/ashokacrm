@@ -74,6 +74,7 @@ import AttendanceTable from "./components/staff/AttendanceTable.jsx";
 import RestaurantDashboard from "./components/restaurant/RestaurantDashboard.jsx";
 import EasyDashboard from "./components/easy dashboard/easydashboard.jsx";
 import CashManagement from "./components/CashManagement/CashManagement.jsx";
+import RegisterForm from "./components/auth/RegisterForm.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -207,6 +208,14 @@ const App = () => {
                         element={
                           <ProtectedRoute allowedRoles={['admin', 'staff', 'manager', 'owner']}>
                             <CashManagement />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/register" 
+                        element={
+                          <ProtectedRoute allowedRoles={['admin']}>
+                            <RegisterForm />
                           </ProtectedRoute>
                         } 
                       />

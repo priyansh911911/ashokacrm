@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import Pagination from '../common/Pagination';
+import RegisterForm from '../auth/RegisterForm';
 
 const Users = () => {
   const { axios } = useAppContext();
@@ -15,6 +16,7 @@ const Users = () => {
   const [showDetails, setShowDetails] = useState(null);
   const [showEdit, setShowEdit] = useState(null);
   const [editUser, setEditUser] = useState({});
+  const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
     fetchUsers(currentPage);
@@ -177,7 +179,15 @@ const Users = () => {
   return (
     <div className="p-6 bg-background min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-text">All Users</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-text">All Users</h1>
+          <button
+            onClick={() => setShowRegister(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Add New User
+          </button>
+        </div>
         
 
         
@@ -469,6 +479,28 @@ const Users = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Register User Modal */}
+      {showRegister && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold">Add New User</h3>
+                <button
+                  onClick={() => setShowRegister(false)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              <RegisterForm onSuccess={() => { setShowRegister(false); fetchUsers(currentPage); }} />
+            </div>
           </div>
         </div>
       )}
