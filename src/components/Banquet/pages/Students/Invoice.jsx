@@ -45,7 +45,7 @@ const Invoice = () => {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const res = await axios.get(`https://ashoka-b.vercel.app/api/bookings/${id}`);
+        const res = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/${id}`);
         console.log('Booking data:', res.data);
         console.log('Categorized Menu:', res.data.categorizedMenu);
         console.log('Discount value:', res.data.discount);

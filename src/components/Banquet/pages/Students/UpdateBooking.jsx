@@ -229,7 +229,7 @@
 
 //   const fetchBookingDetail = () => {
 //     axios
-//       .get(`https://ashoka-b.vercel.app/api/bookings/${id}`)
+//       .get(`https://ashoka-backend.vercel.app//api/bookings/${id}`)
 //       .then((res) => {
 //         if (res.data) {
 //           const bookingData = res.data.data || res.data;
@@ -514,7 +514,7 @@
 //     if (role !== "Admin") {
 //       // Get original menu from server to compare
 //       axios
-//         .get(`https://ashoka-b.vercel.app/api/bookings/${id}`)
+//         .get(`https://ashoka-backend.vercel.app//api/bookings/${id}`)
 //         .then((res) => {
 //           const originalMenu = res.data.categorizedMenu;
 //           const isMenuChanged =
@@ -597,7 +597,7 @@
 
 
 //     axios
-//       .put(`https://ashoka-b.vercel.app/api/bookings/${id}`, payload)
+//       .put(`https://ashoka-backend.vercel.app//api/bookings/${id}`, payload)
 //       .then((res) => {
 //         if (res.data) {
 //           toast.success("Booking updated successfully!");
@@ -1821,7 +1821,7 @@ const UpdateBooking = () => {
 
   const fetchBookingDetail = () => {
     axios
-      .get(`https://ashoka-b.vercel.app/api/bookings/${id}`)
+      .get(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/get/${id}`)
       .then((res) => {
         if (res.data) {
           const bookingData = res.data.data || res.data;
@@ -2106,7 +2106,7 @@ const UpdateBooking = () => {
     if (role !== "Admin") {
       // Get original menu from server to compare
       axios
-        .get(`https://ashoka-b.vercel.app/api/bookings/${id}`)
+        .get(`https://ashoka-backend.vercel.app/api/banquet-bookings/${id}`)
         .then((res) => {
           const originalMenu = res.data.categorizedMenu;
           const isMenuChanged =
@@ -2189,7 +2189,7 @@ const UpdateBooking = () => {
 
 
     axios
-      .put(`https://ashoka-b.vercel.app/api/bookings/${id}`, payload)
+      .put(`https://ashoka-backend.vercel.app/api/banquet-bookings/update/${id}`, payload)
       .then((res) => {
         if (res.data) {
           toast.success("Booking updated successfully!");

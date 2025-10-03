@@ -29,7 +29,7 @@ const MenuView = () => {
     const fetchMenu = async () => {
       try {
         const res = await axios.get(
-          `https://ashoka-b.vercel.app/api/menu/${id}`
+          `https://ashoka-backend.vercel.app/api/menu/${id}`
         );
         setMenu(res.data.data);
       } catch (error) {

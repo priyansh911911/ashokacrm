@@ -12,7 +12,7 @@ const ChefPDFPreview = ({ booking }) => {
   const fetchMenuData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`https://ashoka-b.vercel.app/api/bookings/${booking._id}`);
+      const response = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/${booking._id}`);
       setMenuData(response.data.categorizedMenu || {});
     } catch (error) {
       console.error('Error fetching menu:', error);

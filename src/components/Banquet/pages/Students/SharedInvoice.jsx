@@ -16,7 +16,7 @@ const SharedInvoice = () => {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const res = await axios.get(`https://ashoka-b.vercel.app/api/bookings/${id}`);
+        const res = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/${id}`);
         setBooking(res.data);
       } catch (error) {
         setError("Failed to load booking details. Please try again later.");
