@@ -111,13 +111,13 @@ const RoomInspection = () => {
     }]);
   };
 
-  const updateChecklistItem = useCallback((index, field, value) => {
+  const updateChecklistItem = (index, field, value) => {
     setChecklist(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
-  }, []);
+  };
 
   const removeChecklistItem = (index) => {
     setChecklist(checklist.filter((_, i) => i !== index));
@@ -283,7 +283,7 @@ const RoomInspection = () => {
                 <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Item Name</label>
                 <input
                   type="text"
-                  placeholder="Towel, Pillow, etc."
+                  placeholder="Enter item name"
                   value={item.item || ''}
                   onChange={(e) => updateChecklistItem(index, 'item', e.target.value)}
                   className="w-full p-2 rounded border focus:outline-none focus:ring-2"
@@ -295,8 +295,8 @@ const RoomInspection = () => {
                 <input
                   type="number"
                   placeholder="1"
-                  value={item.quantity || ''}
-                  onChange={(e) => updateChecklistItem(index, 'quantity', e.target.value)}
+                  value={item.quantity || 1}
+                  onChange={(e) => updateChecklistItem(index, 'quantity', parseInt(e.target.value) || 1)}
                   className="w-full p-2 rounded border focus:outline-none focus:ring-2"
                   style={{border: '1px solid hsl(45, 100%, 85%)'}}
                 />
@@ -319,9 +319,9 @@ const RoomInspection = () => {
                 <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Cost/Unit</label>
                 <input
                   type="number"
-                  placeholder="150"
-                  value={item.costPerUnit || ''}
-                  onChange={(e) => updateChecklistItem(index, 'costPerUnit', e.target.value)}
+                  placeholder="0"
+                  value={item.costPerUnit || 0}
+                  onChange={(e) => updateChecklistItem(index, 'costPerUnit', parseFloat(e.target.value) || 0)}
                   className="w-full p-2 rounded border focus:outline-none focus:ring-2"
                   style={{border: '1px solid hsl(45, 100%, 85%)'}}
                 />
@@ -330,7 +330,7 @@ const RoomInspection = () => {
                 <label className="block text-xs font-medium mb-1" style={{color: 'hsl(45, 100%, 30%)'}}>Remarks</label>
                 <input
                   type="text"
-                  placeholder="Good condition"
+                  placeholder="Add remarks"
                   value={item.remarks || ''}
                   onChange={(e) => updateChecklistItem(index, 'remarks', e.target.value)}
                   className="w-full p-2 rounded border focus:outline-none focus:ring-2"

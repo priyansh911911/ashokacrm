@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DollarSign, Plus, Send, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-const CashTransactionCard = () => {
+const CashTransactionCard = ({ onTransactionAdded }) => {
   const [cashData, setCashData] = useState({
     cashInReception: 0,
     totalReceived: 0,
@@ -60,6 +60,20 @@ const CashTransactionCard = () => {
           const keepAmount = Number(formData.amount) * formData.keepPercentage / 100;
           const sendAmount = Number(formData.amount) * (100 - formData.keepPercentage) / 100;
           
+          // Add KEEP transaction for the amount kept at reception
+          if (keepAmount > 0) {
+            await fetch('https://ashoka-backend.vercel.app/api/cash-transactions/add-transaction', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                amount: keepAmount,
+                type: 'KEEP',
+                description: `Customer Payment - Kept at Reception (${formData.keepPercentage}%)`
+              })
+            });
+          }
+          
+          // Add SENT transaction for the amount sent to office
           if (sendAmount > 0) {
             await fetch('https://ashoka-backend.vercel.app/api/cash-transactions/add-transaction', {
               method: 'POST',
@@ -78,6 +92,7 @@ const CashTransactionCard = () => {
         setFormData({ amount: '', type: 'KEEP', description: '', isCustomerPayment: false, keepPercentage: 30 });
         setShowForm(false);
         fetchCashData();
+        if (onTransactionAdded) onTransactionAdded();
       } else {
         toast.error('Failed to add transaction');
       }

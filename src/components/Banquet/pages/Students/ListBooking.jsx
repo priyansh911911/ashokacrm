@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { AiFillFileExcel } from "react-icons/ai";
 import { CSVLink } from "react-csv";
-import { FiSearch, FiX, FiPlus, FiEdit, FiEye, FiFileText } from "react-icons/fi";
+import { FiSearch, FiX, FiPlus, FiEdit, FiEye, FiFileText, FiTrash2 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 // import noimg from "../../assets/noimg.png";
 import SlideToggle from "../toggle/SlideToggle";
@@ -99,16 +99,17 @@ const ListBooking = () => {
     setLoading(true);
     try {
       axios
-        .delete(`https://ashoka-b.vercel.app/little/achiver/${id}`)
+        .delete(`https://ashoka-b.vercel.app/api/bookings/${id}`)
         .then((res) => {
           console.log(res);
           if (res.data) {
+            toast.success('Booking deleted successfully');
             fetchUsers();
           }
         })
         .catch((error) => {
           console.log(error);
-          toast.error(error.response.data.message);
+          toast.error(error.response?.data?.message || 'Failed to delete booking');
           setLoading(false);
         })
         .finally(() => {
@@ -533,6 +534,12 @@ const ListBooking = () => {
                       <div className="flex-1">
                         <ChefPDFPreview booking={item} />
                       </div>
+                      <button
+                        onClick={() => handleDeleteModal(item)}
+                        className="flex-1 inline-flex items-center justify-center gap-1 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition-colors font-semibold px-3 py-2 text-xs"
+                      >
+                        <FiTrash2 /> Delete
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -687,6 +694,13 @@ const ListBooking = () => {
                         >
                           <FaWhatsapp />
                         </button>
+                        <button
+                          onClick={() => handleDeleteModal(item)}
+                          className="inline-flex items-center gap-1 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition-colors font-semibold px-3 py-1.5 text-xs"
+                          title="Delete Booking"
+                        >
+                          <FiTrash2 />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -775,57 +789,32 @@ const ListBooking = () => {
             </div>
       {/* MODAL */}
       {isDeleteModalOpen && productToDelete && (
-        <>
-          <div className="fixed z-50 inset-0 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div
-                className="fixed inset-0 transition-opacity"
-                aria-hidden="true"
-              >
-                <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-              </div>
-              <span
-                className="hidden sm:inline-block sm:align-middle sm:h-screen"
-                aria-hidden="true"
-              >
-                &#8203;
-              </span>
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  {productToDelete == "delete-all" ? (
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Delete All Ros
-                    </h3>
-                  ) : (
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Delete User
-                    </h3>
-                  )}
-
-                  {productToDelete == "delete-all" ? (
-                    <p>Are you sure you want to delete all ros ?</p>
-                  ) : (
-                    <p>Are you sure you want to delete the user?</p>
-                  )}
-                </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button
-                    onClick={confirmDelete}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    Yes, Delete
-                  </button>
-                  <button
-                    onClick={cancelDelete}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm"
-                  >
-                    No, Cancel
-                  </button>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Delete Booking
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this booking? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelDelete}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
           </div>
         </div>

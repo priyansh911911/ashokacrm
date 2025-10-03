@@ -206,7 +206,8 @@
 
 // export default PlanLimitManager;
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useAppContext } from '../../../context/AppContext';
+import { Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // const LIMIT_CATEGORIES = [
@@ -218,6 +219,7 @@ import toast from 'react-hot-toast';
 // ];
 
 const PlanLimitManager = () => {
+  const { axios } = useAppContext();
   const [limits, setLimits] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -258,7 +260,7 @@ const PlanLimitManager = () => {
     }
   };
 
-  const PlanEditor = ({ plan, onSave, onCancel }) => {
+  const PlanEditor = ({ plan, onSave, onCancel, onDelete }) => {
     const [categories, setCategories] = useState([]);
     const [showCategoryForm, setShowCategoryForm] = useState(false);
     const [formData, setFormData] = useState(() => {
@@ -303,6 +305,28 @@ const PlanLimitManager = () => {
         }
       } catch (error) {
         toast.error('Failed to create category');
+      }
+    };
+
+    const handleDeleteCategory = async (categoryId) => {
+      if (window.confirm('Are you sure you want to delete this category?')) {
+        try {
+          const response = await axios.delete(`/api/banquet-categories/delete/${categoryId}`);
+          if (response.status === 200) {
+            toast.success('Category deleted successfully');
+            // Refresh categories
+            const categoriesResponse = await axios.get('https://ashoka-backend.vercel.app/api/banquet-categories/all');
+            setCategories(categoriesResponse.data || []);
+            // Remove from form limits
+            setFormData(prev => {
+              const newLimits = { ...prev.limits };
+              delete newLimits[categoryId];
+              return { ...prev, limits: newLimits };
+            });
+          }
+        } catch (error) {
+          toast.error('Failed to delete category');
+        }
       }
     };
 
@@ -396,10 +420,20 @@ const PlanLimitManager = () => {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {categories.filter(cat => cat.status === 'active').map(category => (
-                <div key={category._id}>
-                  <label className="block text-sm font-medium mb-1">
-                    {category.cateName}
-                  </label>
+                <div key={category._id} className="relative">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium">
+                      {category.cateName}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCategory(category._id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                      title="Delete category"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                   <input
                     type="number"
                     min="0"
@@ -419,6 +453,18 @@ const PlanLimitManager = () => {
             >
               Save
             </button>
+            {plan && plan._id && (
+              <button
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete ${formData.ratePlan} - ${formData.foodType} plan?`)) {
+                    onDelete(plan);
+                  }
+                }}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              >
+                Delete
+              </button>
+            )}
             <button
               onClick={onCancel}
               className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
@@ -492,6 +538,10 @@ const PlanLimitManager = () => {
           plan={editingPlan}
           onSave={handleSave}
           onCancel={() => setEditingPlan(null)}
+          onDelete={(planToDelete) => {
+            handleDelete(planToDelete);
+            setEditingPlan(null);
+          }}
         />
       )}
     </div>

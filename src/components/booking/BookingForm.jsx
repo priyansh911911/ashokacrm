@@ -1006,11 +1006,21 @@ const App = () => {
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const { name, files } = e.target;
     if (files && files[0]) {
-      const imageUrl = URL.createObjectURL(files[0]);
-      setFormData(prev => ({ ...prev, [name]: imageUrl }));
+      const file = files[0];
+      
+      // Convert file to base64 for storage
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, [name]: reader.result }));
+        showToast.success(`${name === 'idProofImageUrl' ? 'ID Proof Image 1' : 'ID Proof Image 2'} uploaded successfully`);
+      };
+      reader.onerror = () => {
+        showToast.error('Failed to upload image');
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -1482,11 +1492,43 @@ const App = () => {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="idProofImageUrl">ID Proof Image 1</Label>
-                <Input id="idProofImageUrl" name="idProofImageUrl" type="file" onChange={handleImageUpload} />
+                <Input 
+                  id="idProofImageUrl" 
+                  name="idProofImageUrl" 
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleImageUpload} 
+                />
+                {formData.idProofImageUrl && (
+                  <div className="mt-2">
+                    <img 
+                      src={formData.idProofImageUrl} 
+                      alt="ID Proof 1" 
+                      className="w-20 h-20 object-cover rounded border"
+                    />
+                    <p className="text-xs text-green-600 mt-1">✓ Image uploaded</p>
+                  </div>
+                )}
             </div>
             <div className="space-y-2">
                 <Label htmlFor="idProofImageUrl2">ID Proof Image 2</Label>
-                <Input id="idProofImageUrl2" name="idProofImageUrl2" type="file" onChange={handleImageUpload} />
+                <Input 
+                  id="idProofImageUrl2" 
+                  name="idProofImageUrl2" 
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleImageUpload} 
+                />
+                {formData.idProofImageUrl2 && (
+                  <div className="mt-2">
+                    <img 
+                      src={formData.idProofImageUrl2} 
+                      alt="ID Proof 2" 
+                      className="w-20 h-20 object-cover rounded border"
+                    />
+                    <p className="text-xs text-green-600 mt-1">✓ Image uploaded</p>
+                  </div>
+                )}
             </div>
             <div className="space-y-2 flex items-center gap-2">
               <Checkbox
