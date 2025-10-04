@@ -475,7 +475,6 @@ const Order = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
@@ -486,11 +485,11 @@ const Order = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-4 text-center">Loading...</td>
+                  <td colSpan="8" className="px-6 py-4 text-center">Loading...</td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-4 text-center text-gray-500">No orders found</td>
+                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No orders found</td>
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
@@ -503,9 +502,6 @@ const Order = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {order.guestName || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {order.roomNumber || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getVendorName(order.vendorId)}
@@ -592,10 +588,6 @@ const Order = () => {
                 <div>
                   <span className="text-gray-500">Guest:</span>
                   <p className="font-medium">{order.guestName || 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Room:</span>
-                  <p className="font-medium">{order.roomNumber || 'N/A'}</p>
                 </div>
                 <div>
                   <span className="text-gray-500">Vendor:</span>
