@@ -45,12 +45,12 @@ const Invoice = () => {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const res = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/${id}`);
-        console.log('Booking data:', res.data);
-        console.log('Categorized Menu:', res.data.categorizedMenu);
-        console.log('Discount value:', res.data.discount);
-        console.log('Pax:', res.data.pax);
-        setBooking(res.data);
+        const res = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`);
+        console.log('API Response:', res.data);
+        if (res.data.error) {
+          throw new Error(res.data.error);
+        }
+        setBooking(res.data.data || res.data);
       } catch (error) {
         setError("Failed to load booking details. Please try again later.");
       } finally {

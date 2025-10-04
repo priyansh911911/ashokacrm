@@ -327,7 +327,7 @@ function Item() {
                       <tr key={item._id} className="hover:bg-gray-50">
                         <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.name}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">{item.category}</td>
-                        <td className="px-6 py-3 text-sm text-gray-500">${item.price}</td>
+                        <td className="px-6 py-3 text-sm text-gray-500">₹{item.price}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">
                           <span className={item.stockQuantity <= item.minStockLevel ? 'text-red-600 font-semibold' : ''}>
                             {item.stockQuantity}

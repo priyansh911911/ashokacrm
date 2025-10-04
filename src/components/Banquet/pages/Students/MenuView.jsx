@@ -29,9 +29,9 @@ const MenuView = () => {
     const fetchMenu = async () => {
       try {
         const res = await axios.get(
-          `https://ashoka-backend.vercel.app/api/menu/${id}`
+          `https://ashoka-backend.vercel.app/api/banquet-menus/all/${customerRef}`
         );
-        setMenu(res.data.data);
+        setMenu(res.data.data?.categories || res.data.data);
       } catch (error) {
         setError("Failed to load menu. Please try again later.");
       } finally {
@@ -120,6 +120,7 @@ const MenuView = () => {
                   "updatedAt",
                   "__v",
                   "bookingRef",
+                  "customerRef",
                 ];
                 if (skip.includes(category)) return null;
                 if (Array.isArray(items) && items.length > 0) {
