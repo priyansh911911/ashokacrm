@@ -14,6 +14,9 @@ const Order = () => {
   const [editingOrder, setEditingOrder] = useState(null);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [filterVendor, setFilterVendor] = useState('');
+  const [vendorAnalytics, setVendorAnalytics] = useState(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -21,10 +24,9 @@ const Order = () => {
     selectedItems: [],
     priority: 'medium',
     notes: '',
-    guestName: '',
-    roomNumber: '',
     totalAmount: 0,
-    vendor: ''
+    vendor: '',
+    guestName: ''
   });
   
 
@@ -109,6 +111,7 @@ const Order = () => {
     try {
       const orderData = {
         orderType: formData.orderType,
+        guestName: formData.guestName || 'Guest',
         items: formData.selectedItems.map(item => ({
           itemId: item.pantryItemId,
           pantryItemId: item.pantryItemId,
@@ -120,12 +123,11 @@ const Order = () => {
         })),
         priority: formData.priority,
         notes: formData.notes,
-        guestName: formData.guestName,
-        roomNumber: formData.roomNumber,
         totalAmount: formData.totalAmount,
-        vendorId: formData.vendor,
-        orderNumber: `ORD-${Date.now()}`
+        vendorId: formData.vendor || null
       };
+      
+      console.log('Submitting order data:', orderData);
 
       if (editingOrder) {
         await axios.put(`/api/pantry/orders/${editingOrder._id}`, orderData, {
@@ -142,6 +144,7 @@ const Order = () => {
       resetForm();
       fetchOrders();
     } catch (error) {
+      console.error('Order submission error:', error.response?.data);
       showToast.error(error.response?.data?.message || 'Failed to save order');
     } finally {
       setLoading(false);
@@ -184,16 +187,24 @@ const Order = () => {
     const firstItem = pantryItems[0];
     console.log('Adding item:', firstItem);
     setFormData(prev => {
+      const newItem = {
+        pantryItemId: firstItem._id,
+        name: firstItem.name,
+        quantity: 1,
+        unit: firstItem.unit || 'pcs',
+        unitPrice: firstItem.price || 0,
+        notes: ''
+      };
+      
+      const updatedItems = [...prev.selectedItems, newItem];
+      const totalAmount = updatedItems.reduce((sum, item) => {
+        return sum + (item.quantity * item.unitPrice);
+      }, 0);
+      
       const newFormData = {
         ...prev,
-        selectedItems: [...prev.selectedItems, {
-          pantryItemId: firstItem._id,
-          name: firstItem.name,
-          quantity: 1,
-          unit: firstItem.unit || 'pcs',
-          unitPrice: firstItem.price || 0,
-          notes: ''
-        }]
+        selectedItems: updatedItems,
+        totalAmount: totalAmount
       };
       console.log('Updated formData:', newFormData);
       return newFormData;
@@ -201,10 +212,18 @@ const Order = () => {
   };
 
   const removeItem = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedItems: prev.selectedItems.filter((_, i) => i !== index)
-    }));
+    setFormData(prev => {
+      const updatedItems = prev.selectedItems.filter((_, i) => i !== index);
+      const totalAmount = updatedItems.reduce((sum, item) => {
+        return sum + (item.quantity * item.unitPrice);
+      }, 0);
+      
+      return {
+        ...prev,
+        selectedItems: updatedItems,
+        totalAmount: totalAmount
+      };
+    });
   };
 
   const updateItem = (index, field, value) => {
@@ -217,16 +236,27 @@ const Order = () => {
             ...updatedItems[index],
             pantryItemId: value,
             name: selectedItem.name,
-            unit: selectedItem.unit
+            unit: selectedItem.unit,
+            unitPrice: selectedItem.price || 0
           };
         }
       } else {
         updatedItems[index] = {
           ...updatedItems[index],
-          [field]: field === 'quantity' ? Number(value) : value
+          [field]: field === 'quantity' || field === 'unitPrice' ? Number(value) : value
         };
       }
-      return { ...prev, selectedItems: updatedItems };
+      
+      // Calculate total amount
+      const totalAmount = updatedItems.reduce((sum, item) => {
+        return sum + (item.quantity * item.unitPrice);
+      }, 0);
+      
+      return { 
+        ...prev, 
+        selectedItems: updatedItems,
+        totalAmount: totalAmount
+      };
     });
   };
 
@@ -236,10 +266,9 @@ const Order = () => {
       selectedItems: [],
       priority: 'medium',
       notes: '',
-      guestName: '',
-      roomNumber: '',
       totalAmount: 0,
-      vendor: ''
+      vendor: '',
+      guestName: ''
     });
     setEditingOrder(null);
     setShowOrderForm(false);
@@ -266,9 +295,8 @@ const Order = () => {
       selectedItems: order.items || [],
       priority: order.priority || 'medium',
       notes: order.notes || '',
-      guestName: order.guestName || '',
-      roomNumber: order.roomNumber || '',
-      totalAmount: order.totalAmount || 0
+      totalAmount: order.totalAmount || 0,
+      guestName: order.guestName || ''
     });
     setShowOrderForm(true);
   };
@@ -301,9 +329,60 @@ const Order = () => {
     );
   };
 
+  const getVendorAnalytics = (vendorId) => {
+    const vendorOrders = orders.filter(order => {
+      const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+      return id === vendorId;
+    });
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    const pastOrders = vendorOrders.filter(order => new Date(order.createdAt) < thirtyDaysAgo);
+    const presentOrders = vendorOrders.filter(order => new Date(order.createdAt) >= thirtyDaysAgo);
+    
+    return {
+      vendor: vendors.find(v => v._id === vendorId),
+      total: {
+        orders: vendorOrders.length,
+        amount: vendorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+        items: vendorOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
+      },
+      past: {
+        orders: pastOrders.length,
+        amount: pastOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+        items: pastOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
+      },
+      present: {
+        orders: presentOrders.length,
+        amount: presentOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+        items: presentOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
+      },
+      statusBreakdown: {
+        pending: vendorOrders.filter(o => o.status === 'pending').length,
+        approved: vendorOrders.filter(o => o.status === 'approved').length,
+        fulfilled: vendorOrders.filter(o => o.status === 'fulfilled').length,
+        cancelled: vendorOrders.filter(o => o.status === 'cancelled').length
+      }
+    };
+  };
+
+  const handleVendorSelect = (vendorId) => {
+    setFilterVendor(vendorId);
+    if (vendorId) {
+      const analytics = getVendorAnalytics(vendorId);
+      setVendorAnalytics(analytics);
+      setShowAnalytics(true);
+    } else {
+      setVendorAnalytics(null);
+      setShowAnalytics(false);
+    }
+  };
+
   const filteredOrders = orders.filter(order => {
     if (filterStatus && order.status !== filterStatus) return false;
     if (filterType && order.orderType !== filterType) return false;
+    if (filterVendor && order.vendorId !== filterVendor) return false;
     return true;
   });
 
@@ -344,9 +423,120 @@ const Order = () => {
             <option value="">All Types</option>
             <option value="Kitchen to Pantry">Kitchen to Pantry</option>
             <option value="Pantry to Reception">Pantry to Reception</option>
+            <option value="Reception to Vendor">Reception to Vendor</option>
+          </select>
+
+          <select
+            value={filterVendor}
+            onChange={(e) => handleVendorSelect(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          >
+            <option value="">All Vendors</option>
+            {vendors.map(vendor => (
+              <option key={vendor._id} value={vendor._id}>{vendor.name}</option>
+            ))}
           </select>
         </div>
       </div>
+
+      {/* Vendor Analytics */}
+      {showAnalytics && vendorAnalytics && (
+        <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+              Analytics: {vendorAnalytics.vendor?.name}
+            </h2>
+            <button
+              onClick={() => setShowAnalytics(false)}
+              className="text-gray-500 hover:text-gray-700 text-lg sm:text-base self-end sm:self-auto"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+            {/* Total Stats */}
+            <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2 sm:mb-3 text-sm sm:text-base">Total (All Time)</h3>
+              <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                <div className="flex justify-between">
+                  <span>Orders:</span>
+                  <span className="font-medium">{vendorAnalytics.total.orders}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Amount:</span>
+                  <span className="font-medium">₹{vendorAnalytics.total.amount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Items:</span>
+                  <span className="font-medium">{vendorAnalytics.total.items}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Past Stats (30+ days ago) */}
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+              <h3 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-sm sm:text-base">Past (30+ days ago)</h3>
+              <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                <div className="flex justify-between">
+                  <span>Orders:</span>
+                  <span className="font-medium">{vendorAnalytics.past.orders}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Amount:</span>
+                  <span className="font-medium">₹{vendorAnalytics.past.amount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Items:</span>
+                  <span className="font-medium">{vendorAnalytics.past.items}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Present Stats (Last 30 days) */}
+            <div className="bg-green-50 p-3 sm:p-4 rounded-lg sm:col-span-2 lg:col-span-1">
+              <h3 className="font-semibold text-green-800 mb-2 sm:mb-3 text-sm sm:text-base">Present (Last 30 days)</h3>
+              <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
+                <div className="flex justify-between">
+                  <span>Orders:</span>
+                  <span className="font-medium">{vendorAnalytics.present.orders}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Amount:</span>
+                  <span className="font-medium">₹{vendorAnalytics.present.amount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Items:</span>
+                  <span className="font-medium">{vendorAnalytics.present.items}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Breakdown */}
+          <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
+            <h3 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-sm sm:text-base">Order Status Breakdown</h3>
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-400 rounded-full"></span>
+                <span className="text-xs sm:text-sm">Pending: {vendorAnalytics.statusBreakdown.pending}</span>
+              </div>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="w-2 h-2 sm:w-3 sm:h-3 bg-blue-400 rounded-full"></span>
+                <span className="text-xs sm:text-sm">Approved: {vendorAnalytics.statusBreakdown.approved}</span>
+              </div>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full"></span>
+                <span className="text-xs sm:text-sm">Fulfilled: {vendorAnalytics.statusBreakdown.fulfilled}</span>
+              </div>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="w-2 h-2 sm:w-3 sm:h-3 bg-red-400 rounded-full"></span>
+                <span className="text-xs sm:text-sm">Cancelled: {vendorAnalytics.statusBreakdown.cancelled}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Orders List - Desktop Table */}
       <div className="hidden lg:block bg-white rounded-lg shadow-md overflow-hidden">
@@ -356,7 +546,6 @@ const Order = () => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
@@ -367,11 +556,11 @@ const Order = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center">Loading...</td>
+                  <td colSpan="7" className="px-6 py-4 text-center">Loading...</td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No orders found</td>
+                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500">No orders found</td>
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
@@ -381,9 +570,6 @@ const Order = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {order.orderType === 'kitchen-to-pantry' ? 'Kitchen → Pantry' : 'Pantry → Reception'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {order.guestName || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getVendorName(order.vendorId)}
@@ -468,10 +654,6 @@ const Order = () => {
               
               <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Guest:</span>
-                  <p className="font-medium">{order.guestName || 'N/A'}</p>
-                </div>
-                <div>
                   <span className="text-gray-500">Vendor:</span>
                   <p className="font-medium">{getVendorName(order.vendorId)}</p>
                 </div>
@@ -540,6 +722,7 @@ const Order = () => {
                     >
                       <option value="Kitchen to Pantry">Kitchen to Pantry</option>
                       <option value="Pantry to Reception">Pantry to Reception</option>
+                      <option value="Reception to Vendor">Reception to Vendor</option>
                     </select>
                   </div>
                   
@@ -558,43 +741,24 @@ const Order = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                  <select
-                    value={formData.vendor}
-                    onChange={(e) => setFormData(prev => ({ ...prev, vendor: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Select Vendor ({vendors.length} available)</option>
-                    {vendors.map(vendor => (
-                      <option key={vendor._id} value={vendor._id}>{vendor.name}</option>
-                    ))}
-                  </select>
-                </div>
+                {formData.orderType === 'Reception to Vendor' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                    <select
+                      value={formData.vendor}
+                      onChange={(e) => setFormData(prev => ({ ...prev, vendor: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    >
+                      <option value="">Select Vendor ({vendors.length} available)</option>
+                      {vendors.map(vendor => (
+                        <option key={vendor._id} value={vendor._id}>{vendor.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Guest Name</label>
-                    <input
-                      type="text"
-                      value={formData.guestName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, guestName: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
-                    <input
-                      type="text"
-                      value={formData.roomNumber}
-                      onChange={(e) => setFormData(prev => ({ ...prev, roomNumber: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                  </div>
-                </div>
+
 
                 {formData.orderType === 'Pantry to Reception' && (
                   <div>
@@ -635,41 +799,79 @@ const Order = () => {
                   ) : (
                     <div className="space-y-3">
                       {formData.selectedItems.map((item, index) => (
-                        <div key={index} className="flex items-center space-x-3 p-3 border rounded">
-                          <select
-                            value={item.pantryItemId}
-                            onChange={(e) => updateItem(index, 'pantryItemId', e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                          >
-                            {pantryItems.map(pantryItem => (
-                              <option key={pantryItem._id} value={pantryItem._id}>
-                                {pantryItem.name}
-                              </option>
-                            ))}
-                          </select>
+                        <div key={index} className="p-3 border rounded space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <select
+                              value={item.pantryItemId}
+                              onChange={(e) => updateItem(index, 'pantryItemId', e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                            >
+                              {pantryItems.map(pantryItem => (
+                                <option key={pantryItem._id} value={pantryItem._id}>
+                                  {pantryItem.name}
+                                </option>
+                              ))}
+                            </select>
+                            
+                            <button
+                              type="button"
+                              onClick={() => removeItem(index)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                           
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                            className="w-20 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                          />
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Quantity</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Unit Price (₹)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.unitPrice}
+                                onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Total</label>
+                              <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm font-medium">
+                                ₹{(item.quantity * item.unitPrice).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
                           
-                          <span className="text-sm text-gray-600">{item.unit}</span>
-                          
-                          <button
-                            type="button"
-                            onClick={() => removeItem(index)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="text-xs text-gray-500">
+                            Unit: {item.unit}
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
+
+                {/* Total Amount Display */}
+                {formData.selectedItems.length > 0 && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold text-gray-700">Total Amount:</span>
+                      <span className="text-xl font-bold text-green-600">₹{formData.totalAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
