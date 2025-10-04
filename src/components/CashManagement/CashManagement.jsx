@@ -208,10 +208,10 @@ const CashManagement = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, hsl(45, 100%, 95%), hsl(45, 100%, 90%)'}}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Loading Cash Management...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 mx-auto mb-4" style={{borderColor: 'hsl(45, 43%, 58%)'}}></div>
+          <p className="text-lg font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>Loading Cash Management...</p>
         </div>
       </div>
     );
