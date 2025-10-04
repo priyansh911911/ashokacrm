@@ -63,7 +63,8 @@ const ListBooking = () => {
           }
         })
         .catch((err) => {
-          console.log(err);
+          console.error('Fetch Users Error:', err);
+          toast.error('Failed to load bookings. Please try again later.');
           setLoading(false);
         });
     } catch (error) {
@@ -82,7 +83,8 @@ const ListBooking = () => {
           }
         })
         .catch((err) => {
-          console.log("All Data Error:", err);
+          console.error("All Data Error:", err);
+          toast.error('Failed to load all data. Please try again later.');
         });
     } catch (error) {
       console.log("All Data Try-Catch Error:", error);
@@ -90,6 +92,10 @@ const ListBooking = () => {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
     fetchAllData();
     fetchUsers();
   }, [currentPage]);
@@ -278,9 +284,9 @@ const ListBooking = () => {
             }
           })
           .catch((error) => {
-            console.log(error);
-            toast.error(error.response?.data?.message || "Error fetching data");
-            setUserData([]); // Reset to an empty array on error
+            console.error('Search Error:', error);
+            toast.error('Search failed. Please try again later.');
+            setUserData([]);
             setLoading(false);
             setTotalPages(1);
           })

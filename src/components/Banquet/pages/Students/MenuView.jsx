@@ -28,11 +28,17 @@ const MenuView = () => {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
+        const token = localStorage.getItem('token');
         const res = await axios.get(
-          `https://ashoka-backend.vercel.app/api/banquet-menus/all/${customerRef}`
+          `https://ashoka-backend.vercel.app/api/banquet-menus/${id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
         );
-        setMenu(res.data.data?.categories || res.data.data);
+        console.log('Menu API Response:', res.data);
+        setMenu(res.data.data?.categories || res.data.data || res.data || {});
       } catch (error) {
+        console.error('Menu fetch error:', error);
         setError("Failed to load menu. Please try again later.");
       } finally {
         setLoading(false);
