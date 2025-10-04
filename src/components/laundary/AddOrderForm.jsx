@@ -8,7 +8,6 @@ const AddOrderForm = ({ onSave, onClose }) => {
   
   const [formData, setFormData] = useState({
     bookingId: "",
-    grcNo: "",
     roomNumber: "",
     requestedByName: "",
     items: [{ rateId: "", quantity: 1, status: "pending" }],
@@ -68,7 +67,6 @@ const AddOrderForm = ({ onSave, onClose }) => {
       setFormData({
         ...formData,
         bookingId: "",
-        grcNo: "",
         roomNumber: "",
         requestedByName: ""
       });
@@ -81,7 +79,6 @@ const AddOrderForm = ({ onSave, onClose }) => {
       setFormData({
         ...formData,
         bookingId,
-        grcNo: selectedBooking.grcNo || "",
         roomNumber: selectedBooking.roomNumber || "",
         requestedByName: selectedBooking.guestName || selectedBooking.name || ""
       });
@@ -179,21 +176,14 @@ const AddOrderForm = ({ onSave, onClose }) => {
               <option value="">Select a booking...</option>
               {bookings.map(booking => (
                 <option key={booking._id} value={booking._id}>
-                  {booking.guestName || booking.name || 'Unknown Guest'} - Room {booking.roomNumber || 'N/A'} {booking.grcNo ? `(GRC: ${booking.grcNo})` : ''}
+                  {booking.guestName || booking.name || 'Unknown Guest'} - Room {booking.roomNumber || 'N/A'}
                 </option>
               ))}
             </select>
           </div>
 
           {/* Guest Info (Read-only) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input
-              type="text"
-              value={formData.grcNo}
-              placeholder="GRC No"
-              className="p-2 border rounded bg-gray-100"
-              readOnly
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               type="text"
               value={formData.roomNumber}
@@ -348,8 +338,15 @@ const AddOrderForm = ({ onSave, onClose }) => {
               </button>
             </div>
             
+            <div className="hidden sm:grid sm:grid-cols-10 sm:gap-2 mb-2 text-xs font-medium text-gray-600">
+              <div className="sm:col-span-5">Item</div>
+              <div className="sm:col-span-2">Quantity</div>
+              <div className="sm:col-span-2">Status</div>
+              <div className="sm:col-span-1">Action</div>
+            </div>
+            
             {formData.items.map((item, index) => (
-              <div key={index} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 mb-4 sm:mb-2 sm:items-end p-3 sm:p-0 border sm:border-0 rounded sm:rounded-none">
+              <div key={index} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-10 sm:gap-2 mb-4 sm:mb-2 sm:items-end p-3 sm:p-0 border sm:border-0 rounded sm:rounded-none">
                 <div className="sm:col-span-5">
                   <label className="block text-xs font-medium mb-1 sm:hidden">Item</label>
                   <select
@@ -370,15 +367,30 @@ const AddOrderForm = ({ onSave, onClose }) => {
                   <label className="block text-xs font-medium mb-1 sm:hidden">Quantity</label>
                   <input
                     type="number"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 1)}
+                    value={item.quantity || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || value === '0') {
+                        handleItemChange(index, 'quantity', '');
+                      } else {
+                        const numValue = parseInt(value);
+                        if (!isNaN(numValue) && numValue > 0) {
+                          handleItemChange(index, 'quantity', numValue);
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!e.target.value || e.target.value === '0') {
+                        handleItemChange(index, 'quantity', 1);
+                      }
+                    }}
                     className="w-full p-2 border rounded"
                     min="1"
                     placeholder="Qty"
                     required
                   />
                 </div>
-                <div className="sm:col-span-3">
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-medium mb-1 sm:hidden">Status</label>
                   <select
                     value={item.status || 'pending'}
