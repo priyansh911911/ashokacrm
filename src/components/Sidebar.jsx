@@ -255,6 +255,7 @@ const Sidebar = () => {
       children: [
         { label: "Item", path: "/pantry/item", icon: ListChecks },
         { label: "Orders", path: "/pantry/orders", icon: Package },
+        { label: "Vendors", path: "/pantry/vendors", icon: Users },
       ],
     }] : []),
     ...((localStorage.getItem("role") === "admin" || 
