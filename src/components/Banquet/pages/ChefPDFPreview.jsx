@@ -19,7 +19,13 @@ const ChefPDFPreview = ({ booking }) => {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      setMenuData(response.data.data?.categories || response.data.data || {});
+      console.log('Chef Menu API Response:', response.data);
+      console.log('Menu data structure:', response.data.data);
+      console.log('Categories:', response.data.data?.categories);
+      
+      const menuData = response.data.data?.categories || response.data.data || response.data || {};
+      console.log('Final menu data:', menuData);
+      setMenuData(menuData);
     } catch (error) {
       console.error('Error fetching menu:', error);
       setMenuData({});
@@ -114,9 +120,14 @@ const ChefPDFPreview = ({ booking }) => {
                         <h2 className="text-lg font-semibold text-[#c3ad6b] print:text-black mb-3 border-b border-[#c3ad6b]/30 print:border-gray-300 pb-2">
                           MENU ITEMS TO PREPARE
                         </h2>
-                        {menuData && Object.keys(menuData).length > 0 ? (
+                        {(() => {
+                          console.log('Rendering menu data:', menuData);
+                          console.log('Menu data keys:', Object.keys(menuData || {}));
+                          return menuData && Object.keys(menuData).length > 0;
+                        })() ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid print:grid-cols-2 print:gap-4">
                             {Object.entries(menuData).map(([category, items]) => {
+                              console.log(`Processing category: ${category}, items:`, items);
                               const skip = ["_id", "createdAt", "updatedAt", "__v", "bookingRef", "customerRef"];
                               if (skip.includes(category)) return null;
                               if (Array.isArray(items) && items.length > 0) {
