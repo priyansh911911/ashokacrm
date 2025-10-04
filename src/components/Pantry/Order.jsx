@@ -6,6 +6,7 @@ import { Plus, Edit, Trash2, Package, Clock, User, MapPin } from 'lucide-react';
 const Order = () => {
   const { axios } = useAppContext();
   const [activeTab, setActiveTab] = useState('orders');
+  const [showVendorAnalytics, setShowVendorAnalytics] = useState(false);
   const [orders, setOrders] = useState([]);
   const [pantryItems, setPantryItems] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -53,6 +54,7 @@ const Order = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const vendorsData = Array.isArray(response.data) ? response.data : (response.data.vendors || []);
+      console.log('Fetched vendors:', vendorsData);
       setVendors(vendorsData);
     } catch (err) {
       console.error('Error fetching vendors:', err);
@@ -66,7 +68,9 @@ const Order = () => {
       const { data } = await axios.get('/api/pantry/orders', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setOrders(data.orders || data.data || data || []);
+      const ordersData = data.orders || data.data || data || [];
+      console.log('Fetched orders:', ordersData);
+      setOrders(ordersData);
     } catch (error) {
       showToast.error('Failed to fetch orders');
     } finally {
@@ -309,6 +313,58 @@ const Order = () => {
     setShowVendorForm(false);
   };
 
+  const getVendorName = (vendorId) => {
+    if (!vendorId) return 'N/A';
+    
+    // Handle if vendorId is an object with _id property
+    const id = typeof vendorId === 'object' ? vendorId._id : vendorId;
+    
+    const vendor = vendors.find(v => v._id === id);
+    return vendor?.name || 'N/A';
+  };
+
+  const getVendorAnalytics = () => {
+    const analytics = {};
+    
+    orders.forEach(order => {
+      if (order.vendorId && order.totalAmount) {
+        const vendorId = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+        const vendorName = getVendorName(vendorId);
+        
+        if (!analytics[vendorId]) {
+          analytics[vendorId] = {
+            name: vendorName,
+            totalOrders: 0,
+            totalAmount: 0,
+            avgAmount: 0,
+            lastOrderDate: null,
+            orders: []
+          };
+        }
+        
+        analytics[vendorId].totalOrders++;
+        analytics[vendorId].totalAmount += order.totalAmount;
+        analytics[vendorId].orders.push({
+          date: order.createdAt || order.orderDate,
+          amount: order.totalAmount,
+          orderNumber: order.orderNumber
+        });
+        
+        if (!analytics[vendorId].lastOrderDate || new Date(order.createdAt) > new Date(analytics[vendorId].lastOrderDate)) {
+          analytics[vendorId].lastOrderDate = order.createdAt;
+        }
+      }
+    });
+    
+    // Calculate averages
+    Object.keys(analytics).forEach(vendorId => {
+      analytics[vendorId].avgAmount = analytics[vendorId].totalAmount / analytics[vendorId].totalOrders;
+      analytics[vendorId].orders.sort((a, b) => new Date(b.date) - new Date(a.date));
+    });
+    
+    return Object.values(analytics).sort((a, b) => b.totalAmount - a.totalAmount);
+  };
+
   const handleEditOrder = (order) => {
     setEditingOrder(order);
     setFormData({
@@ -362,6 +418,12 @@ const Order = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Pantry Orders</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setShowVendorAnalytics(true)}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm sm:text-base"
+          >
+            Vendor Analytics
+          </button>
           <button
             onClick={() => setShowVendorForm(true)}
             className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors text-sm sm:text-base"
@@ -446,7 +508,7 @@ const Order = () => {
                       {order.roomNumber || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {vendors.find(v => v._id === order.vendorId)?.name || 'N/A'}
+                      {getVendorName(order.vendorId)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {order.items?.length || 0} items
@@ -537,7 +599,7 @@ const Order = () => {
                 </div>
                 <div>
                   <span className="text-gray-500">Vendor:</span>
-                  <p className="font-medium">{vendors.find(v => v._id === order.vendorId)?.name || 'N/A'}</p>
+                  <p className="font-medium">{getVendorName(order.vendorId)}</p>
                 </div>
                 <div>
                   <span className="text-gray-500">Items:</span>
@@ -693,6 +755,81 @@ const Order = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vendor Analytics Modal */}
+      {showVendorAnalytics && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Vendor Price Analytics</h2>
+                <button
+                  onClick={() => setShowVendorAnalytics(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                {getVendorAnalytics().map((vendor, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{vendor.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          Last Order: {vendor.lastOrderDate ? new Date(vendor.lastOrderDate).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-green-600">₹{vendor.totalAmount.toFixed(2)}</p>
+                        <p className="text-sm text-gray-600">Total Revenue</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="bg-white rounded p-3 text-center">
+                        <p className="text-xl font-semibold text-blue-600">{vendor.totalOrders}</p>
+                        <p className="text-sm text-gray-600">Total Orders</p>
+                      </div>
+                      <div className="bg-white rounded p-3 text-center">
+                        <p className="text-xl font-semibold text-orange-600">₹{vendor.avgAmount.toFixed(2)}</p>
+                        <p className="text-sm text-gray-600">Avg Order Value</p>
+                      </div>
+                      <div className="bg-white rounded p-3 text-center">
+                        <p className="text-xl font-semibold text-purple-600">
+                          {vendor.orders.length > 0 ? `₹${vendor.orders[0].amount}` : 'N/A'}
+                        </p>
+                        <p className="text-sm text-gray-600">Latest Order</p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Recent Orders:</h4>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {vendor.orders.slice(0, 5).map((order, orderIndex) => (
+                          <div key={orderIndex} className="flex justify-between items-center bg-white rounded p-2 text-sm">
+                            <span className="text-gray-600">
+                              {order.orderNumber} - {order.date ? new Date(order.date).toLocaleDateString() : 'N/A'}
+                            </span>
+                            <span className="font-medium text-green-600">₹{order.amount}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {getVendorAnalytics().length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No vendor analytics data available
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
