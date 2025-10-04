@@ -634,12 +634,12 @@ const EasyDashboard = () => {
                                         </h4>
                                         <div className="space-y-2">
                                             <p><span className="font-medium">Name:</span> {booking?.name || booking?.guestName || booking?.customerName || 'N/A'}</p>
-                                            <p><span className="font-medium">Phone:</span> {booking?.phone || booking?.mobile || booking?.number || booking?.phoneNumber || booking?.contactNumber || 'N/A'}</p>
+                                            <p><span className="font-medium">Phone:</span> {booking?.mobileNo || booking?.phoneNo || booking?.phone || booking?.mobile || 'N/A'}</p>
                                             <p><span className="font-medium">Email:</span> {booking?.email || booking?.emailAddress || 'N/A'}</p>
-                                            <p><span className="font-medium">ID Proof:</span> {booking?.idProof || booking?.idType || booking?.identityProof || 'N/A'}</p>
+                                            <p><span className="font-medium">ID Proof:</span> {booking?.idProofType || booking?.idProof || booking?.idType || 'N/A'}</p>
                                             <p><span className="font-medium">Address:</span> {booking?.address || booking?.guestAddress || booking?.customerAddress || 'N/A'}</p>
-                                            <p><span className="font-medium">Adults:</span> {booking?.adults || booking?.pax || booking?.numberOfGuests || booking?.guestCount || 'N/A'}</p>
-                                            <p><span className="font-medium">Children:</span> {booking?.children || booking?.childrenCount || booking?.kids || '0'}</p>
+                                            <p><span className="font-medium">Adults:</span> {booking?.noOfAdults || booking?.adults || booking?.pax || booking?.numberOfGuests || 'N/A'}</p>
+                                            <p><span className="font-medium">Children:</span> {booking?.noOfChildren || booking?.children || booking?.childrenCount || '0'}</p>
                                         </div>
                                     </div>
                                     
@@ -652,10 +652,10 @@ const EasyDashboard = () => {
                                             <p><span className="font-medium">Check-in:</span> {booking?.checkInDate || booking?.checkinDate || booking?.startDate ? new Date(booking.checkInDate || booking.checkinDate || booking.startDate).toLocaleDateString('en-IN') : 'N/A'}</p>
                                             <p><span className="font-medium">Check-out:</span> {booking?.checkOutDate || booking?.checkoutDate || booking?.endDate ? new Date(booking.checkOutDate || booking.checkoutDate || booking.endDate).toLocaleDateString('en-IN') : 'Ongoing'}</p>
                                             <p><span className="font-medium">Duration:</span> {stayDuration} days</p>
-                                            <p><span className="font-medium">Room Rate:</span> ₹{booking?.rate || booking?.roomRate || booking?.dailyRate || booking?.pricePerNight || selectedRoom.price || 'N/A'}</p>
-                                            <p><span className="font-medium">Total Amount:</span> ₹{booking?.totalAmount || booking?.total || booking?.totalCost || booking?.grandTotal || 'N/A'}</p>
-                                            <p><span className="font-medium">Advance Paid:</span> ₹{booking?.advance || booking?.advanceAmount || booking?.advancePayment || booking?.deposit || 'N/A'}</p>
-                                            <p><span className="font-medium">Balance:</span> ₹{booking?.balance || booking?.remainingAmount || booking?.pendingAmount || 'N/A'}</p>
+                                            <p><span className="font-medium">Room Rate:</span> ₹{booking?.rate || booking?.roomRate || booking?.dailyRate || selectedRoom.price || 'N/A'}</p>
+                                            <p><span className="font-medium">Total Amount:</span> ₹{booking?.totalAmount || booking?.total || booking?.totalCost || (booking?.rate && booking?.days ? booking.rate * booking.days : 'N/A')}</p>
+                                            <p><span className="font-medium">Payment Status:</span> {booking?.paymentStatus || 'N/A'}</p>
+                                            <p><span className="font-medium">Payment Mode:</span> {booking?.paymentMode || 'N/A'}</p>
                                         </div>
                                     </div>
                                     
@@ -699,7 +699,15 @@ const EasyDashboard = () => {
                                                 <div key={index} className="bg-green-50 p-3 rounded border-l-4 border-green-400">
                                                     <p><span className="font-medium">Service #{service.serviceNumber || index + 1}</span></p>
                                                     <p><span className="font-medium">Date:</span> {new Date(service.createdAt || service.date).toLocaleDateString('en-IN')}</p>
-                                                    <p><span className="font-medium">Items:</span> {service.items?.map(item => `${item.name} (${item.quantity})`).join(', ') || service.itemsList || 'N/A'}</p>
+                                                    <p><span className="font-medium">Items:</span> {
+                                                        service.items && service.items.length > 0 
+                                                            ? service.items.map(item => {
+                                                                const itemName = item.name || item.itemName || item.type || item.description || 'Item';
+                                                                const quantity = item.quantity || item.qty || 1;
+                                                                return `${itemName} (${quantity})`;
+                                                            }).join(', ')
+                                                            : service.itemsList || service.itemsDescription || service.description || 'No items specified'
+                                                    }</p>
                                                     <p><span className="font-medium">Service Type:</span> {service.serviceType || 'Regular'}</p>
                                                     <p><span className="font-medium">Status:</span> <span className={`px-2 py-1 rounded text-xs ${service.status === 'completed' ? 'bg-green-100 text-green-800' : service.status === 'in-progress' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{service.status || 'Pending'}</span></p>
                                                     <p><span className="font-medium">Amount:</span> ₹{service.totalAmount || service.amount || 'N/A'}</p>
