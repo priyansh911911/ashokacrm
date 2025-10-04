@@ -42,7 +42,7 @@ const ChefPDFPreview = ({ booking }) => {
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
     documentTitle: `Chef_Instructions_${booking.customerRef || booking.name}_${new Date().toISOString().split('T')[0]}`,
-    onAfterPrint: () => setShowPreview(false)
+    onAfterPrint: () => console.log('Print completed')
   });
 
   return (
@@ -66,8 +66,9 @@ const ChefPDFPreview = ({ booking }) => {
                 <button
                   onClick={handlePrint}
                   className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+                  disabled={loading}
                 >
-                  Download PDF
+                  {loading ? 'Loading...' : 'Download PDF'}
                 </button>
                 <button
                   onClick={() => setShowPreview(false)}

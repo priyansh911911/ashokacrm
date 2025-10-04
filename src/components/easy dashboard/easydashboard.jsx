@@ -10,13 +10,17 @@ const TODAY = new Date().toDateString();
 // --- Utility: Fetch with Exponential Backoff ---
 // This robust function ensures stability by retrying API calls if they fail.
 const fetchWithRetry = async (url, retries = 3) => {
-    const apiKey = ""; // API key placeholder for canvas environment
+    const token = localStorage.getItem('token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
 
     for (let i = 0; i < retries; i++) {
         try {
             const response = await fetch(url, {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
             });
 
             if (!response.ok) {
