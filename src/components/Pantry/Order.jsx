@@ -339,6 +339,7 @@ const Order = () => {
 
   const getVendorAnalytics = (vendorId) => {
     const vendorOrders = orders.filter(order => {
+      if (!order.vendorId) return false;
       const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
       return id === vendorId;
     });
@@ -374,7 +375,11 @@ const Order = () => {
   const filteredOrders = orders.filter(order => {
     if (filterStatus && order.status !== filterStatus) return false;
     if (filterType && order.orderType !== filterType) return false;
-    if (filterVendor && order.vendorId !== filterVendor) return false;
+    if (filterVendor) {
+      if (!order.vendorId) return false;
+      const orderId = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+      if (orderId !== filterVendor) return false;
+    }
     return true;
   });
 
@@ -517,6 +522,7 @@ const Order = () => {
             <h3 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Previous Orders</h3>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {orders.filter(order => {
+                if (!order.vendorId) return false;
                 const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
                 return id === filterVendor;
               }).slice(0, 10).map((order) => (
@@ -556,6 +562,7 @@ const Order = () => {
                 </div>
               ))}
               {orders.filter(order => {
+                if (!order.vendorId) return false;
                 const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
                 return id === filterVendor;
               }).length === 0 && (
@@ -647,14 +654,13 @@ const Order = () => {
                             Fulfill
                           </button>
                         )}
-                        {order.orderType === 'Reception to Vendor' && order.status === 'approved' && (
-                          <button
-                            onClick={() => generateInvoice(order)}
-                            className="text-green-600 hover:text-green-900 text-xs"
-                          >
-                            Invoice
-                          </button>
-                        )}
+                        <button
+                          onClick={() => generateInvoice(order)}
+                          className="text-green-600 hover:text-green-900 text-xs"
+                        >
+                          Invoice
+                        </button>
+
                       </div>
                     </td>
                   </tr>
@@ -740,14 +746,13 @@ const Order = () => {
                     Fulfill
                   </button>
                 )}
-                {order.orderType === 'Reception to Vendor' && order.status === 'approved' && (
-                  <button
-                    onClick={() => generateInvoice(order)}
-                    className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
-                  >
-                    Invoice
-                  </button>
-                )}
+                <button
+                  onClick={() => generateInvoice(order)}
+                  className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
+                >
+                  Invoice
+                </button>
+
               </div>
             </div>
           ))
