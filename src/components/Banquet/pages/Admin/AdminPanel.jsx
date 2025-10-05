@@ -11,7 +11,7 @@ const AdminPanel = () => {
   const initializeDefaults = async () => {
     try {
       setInitializing(true);
-      const response = await axios.post('http://localhost:5000/api/plan-limits/initialize');
+      const response = await axios.post('https://ashoka-backend.vercel.app/api/plan-limits/initialize');
       if (response.data.success) {
         toast.success(response.data.message);
       }

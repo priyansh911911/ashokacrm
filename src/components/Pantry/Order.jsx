@@ -17,6 +17,8 @@ const Order = () => {
   const [filterVendor, setFilterVendor] = useState('');
   const [vendorAnalytics, setVendorAnalytics] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [invoiceData, setInvoiceData] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -370,6 +372,28 @@ const Order = () => {
     return true;
   });
 
+  const generateInvoice = (order) => {
+    const vendor = vendors.find(v => v._id === (typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId));
+    const subtotal = order.totalAmount;
+    const tax = subtotal * 0.18;
+    const total = subtotal + tax;
+    
+    setInvoiceData({
+      invoiceNumber: `INV-${Date.now()}`,
+      date: new Date().toLocaleDateString(),
+      order,
+      vendor,
+      subtotal,
+      tax,
+      total
+    });
+    setShowInvoice(true);
+  };
+
+  const downloadPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="p-4 sm:p-6 overflow-auto h-full bg-background">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -481,6 +505,60 @@ const Order = () => {
               </div>
             </div>
           </div>
+
+          {/* Previous Orders */}
+          <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
+            <h3 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Previous Orders</h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {orders.filter(order => {
+                const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                return id === filterVendor;
+              }).slice(0, 10).map((order) => (
+                <div key={order._id} className="bg-gray-50 p-3 rounded-lg border">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">
+                        #{order._id?.slice(-8)}
+                      </span>
+                      <span className="ml-2 text-xs text-gray-500">
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      {getStatusBadge(order.status)}
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                        ₹{order.totalAmount?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    <strong>Items:</strong>
+                    <div className="mt-1 space-y-1">
+                      {order.items?.map((item, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span>{item.name || 'Item'}</span>
+                          <span>{item.quantity} × ₹{item.unitPrice?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {order.specialInstructions && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      <strong>Notes:</strong> {order.specialInstructions}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {orders.filter(order => {
+                const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                return id === filterVendor;
+              }).length === 0 && (
+                <div className="text-center text-gray-500 py-4">
+                  No previous orders found for this vendor
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -515,7 +593,11 @@ const Order = () => {
                       {order.orderNumber || order._id?.slice(-8)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {order.orderType === 'kitchen-to-pantry' ? 'Kitchen → Pantry' : 'Pantry → Reception'}
+                      {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
+                       order.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
+                       order.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
+                       order.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
+                       order.orderType}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getVendorName(order.vendorId)}
@@ -559,6 +641,14 @@ const Order = () => {
                             Fulfill
                           </button>
                         )}
+                        {order.orderType === 'Reception to Vendor' && order.status === 'approved' && (
+                          <button
+                            onClick={() => generateInvoice(order)}
+                            className="text-green-600 hover:text-green-900 text-xs"
+                          >
+                            Invoice
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -589,7 +679,11 @@ const Order = () => {
                     #{order.orderNumber || order._id?.slice(-8)}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    {order.orderType === 'kitchen-to-pantry' ? 'Kitchen → Pantry' : 'Pantry → Reception'}
+                    {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
+                     order.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
+                     order.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
+                     order.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
+                     order.orderType}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -638,6 +732,14 @@ const Order = () => {
                     className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
                   >
                     Fulfill
+                  </button>
+                )}
+                {order.orderType === 'Reception to Vendor' && order.status === 'approved' && (
+                  <button
+                    onClick={() => generateInvoice(order)}
+                    className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
+                  >
+                    Invoice
                   </button>
                 )}
               </div>
@@ -847,6 +949,106 @@ const Order = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Modal */}
+      {showInvoice && invoiceData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Invoice Preview</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={downloadPDF}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    Save as PDF
+                  </button>
+                  <button
+                    onClick={() => setShowInvoice(false)}
+                    className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-white p-8 border" id="invoice-content">
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl font-bold text-gray-800">INVOICE</h1>
+                  <p className="text-gray-600">Invoice #{invoiceData.invoiceNumber}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-8 mb-8">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-2">From:</h3>
+                    <p className="text-gray-600">
+                      Ashoka Hotel<br/>
+                      123 Hotel Street<br/>
+                      City, State 12345
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-2">To:</h3>
+                    <p className="text-gray-600">
+                      {invoiceData.vendor?.name || 'Vendor'}<br/>
+                      {invoiceData.vendor?.address || 'Address'}<br/>
+                      {invoiceData.vendor?.phone || 'Phone'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="mb-8">
+                  <p><strong>Date:</strong> {invoiceData.date}</p>
+                  <p><strong>Order ID:</strong> #{invoiceData.order._id?.slice(-8)}</p>
+                </div>
+                
+                <table className="w-full mb-8">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300">
+                      <th className="text-left py-2">Item</th>
+                      <th className="text-right py-2">Qty</th>
+                      <th className="text-right py-2">Price</th>
+                      <th className="text-right py-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceData.order.items?.map((item, index) => (
+                      <tr key={index} className="border-b border-gray-200">
+                        <td className="py-2">{item.name}</td>
+                        <td className="text-right py-2">{item.quantity}</td>
+                        <td className="text-right py-2">₹{item.unitPrice?.toFixed(2)}</td>
+                        <td className="text-right py-2">₹{(item.quantity * item.unitPrice).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                <div className="flex justify-end">
+                  <div className="w-64">
+                    <div className="flex justify-between py-2">
+                      <span>Subtotal:</span>
+                      <span>₹{invoiceData.subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span>Tax (18%):</span>
+                      <span>₹{invoiceData.tax.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-t-2 border-gray-300 font-bold text-lg">
+                      <span>Total:</span>
+                      <span>₹{invoiceData.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-8 text-center text-gray-600">
+                  <p>Thank you for your business!</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
