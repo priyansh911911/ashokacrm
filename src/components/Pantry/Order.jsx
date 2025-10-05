@@ -334,12 +334,6 @@ const Order = () => {
       const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
       return id === vendorId;
     });
-
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
-    const pastOrders = vendorOrders.filter(order => new Date(order.createdAt) < thirtyDaysAgo);
-    const presentOrders = vendorOrders.filter(order => new Date(order.createdAt) >= thirtyDaysAgo);
     
     return {
       vendor: vendors.find(v => v._id === vendorId),
@@ -347,16 +341,6 @@ const Order = () => {
         orders: vendorOrders.length,
         amount: vendorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
         items: vendorOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
-      },
-      past: {
-        orders: pastOrders.length,
-        amount: pastOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-        items: pastOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
-      },
-      present: {
-        orders: presentOrders.length,
-        amount: presentOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-        items: presentOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
       },
       statusBreakdown: {
         pending: vendorOrders.filter(o => o.status === 'pending').length,
@@ -454,60 +438,22 @@ const Order = () => {
             </button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-1 gap-3 sm:gap-4">
             {/* Total Stats */}
-            <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-800 mb-2 sm:mb-3 text-sm sm:text-base">Total (All Time)</h3>
-              <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                <div className="flex justify-between">
-                  <span>Orders:</span>
-                  <span className="font-medium">{vendorAnalytics.total.orders}</span>
+            <div className="bg-blue-50 p-4 sm:p-6 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-3 sm:mb-4 text-base sm:text-lg">Vendor Analytics</h3>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl sm:text-3xl font-bold text-blue-600">{vendorAnalytics.total.orders}</div>
+                  <div className="text-sm text-gray-600">Total Orders</div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Amount:</span>
-                  <span className="font-medium">₹{vendorAnalytics.total.amount.toFixed(2)}</span>
+                <div>
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600">₹{vendorAnalytics.total.amount.toFixed(2)}</div>
+                  <div className="text-sm text-gray-600">Total Amount</div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Items:</span>
-                  <span className="font-medium">{vendorAnalytics.total.items}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Past Stats (30+ days ago) */}
-            <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-sm sm:text-base">Past (30+ days ago)</h3>
-              <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                <div className="flex justify-between">
-                  <span>Orders:</span>
-                  <span className="font-medium">{vendorAnalytics.past.orders}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Amount:</span>
-                  <span className="font-medium">₹{vendorAnalytics.past.amount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Items:</span>
-                  <span className="font-medium">{vendorAnalytics.past.items}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Present Stats (Last 30 days) */}
-            <div className="bg-green-50 p-3 sm:p-4 rounded-lg sm:col-span-2 lg:col-span-1">
-              <h3 className="font-semibold text-green-800 mb-2 sm:mb-3 text-sm sm:text-base">Present (Last 30 days)</h3>
-              <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                <div className="flex justify-between">
-                  <span>Orders:</span>
-                  <span className="font-medium">{vendorAnalytics.present.orders}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Amount:</span>
-                  <span className="font-medium">₹{vendorAnalytics.present.amount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Items:</span>
-                  <span className="font-medium">{vendorAnalytics.present.items}</span>
+                <div>
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-600">{vendorAnalytics.total.items}</div>
+                  <div className="text-sm text-gray-600">Total Items</div>
                 </div>
               </div>
             </div>
