@@ -2461,23 +2461,20 @@ const AddBooking = () => {
                         const grandTotal = foodTotal + decorationCharge + musicCharge;
                         return (
                           <>
-                            <div className="text-sm text-gray-600">
-                              Food: ₹{rateWithGST.toFixed(2)} x {pax} = ₹{foodTotal.toFixed(2)}
-                              {form.useCustomPrice && <span className="text-blue-600 ml-1">(Custom)</span>}
-                            </div>
-                            {decorationCharge > 0 && (
-                              <div className="text-sm text-gray-600">
-                                Decoration: ₹{decorationCharge}
+                            <span className="text-lg font-bold text-[#c3ad6b]">
+                              ₹{rateWithGST.toFixed(2)}
+                            </span>
+                            <span className="text-gray-700"> x {pax} = </span>
+                            <span className="text-lg font-bold text-[#c3ad6b]">
+                              ₹{foodTotal.toFixed(2)}
+                            </span>
+                            {(decorationCharge > 0 || musicCharge > 0) && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                {decorationCharge > 0 && <div>+ Decoration: ₹{decorationCharge}</div>}
+                                {musicCharge > 0 && <div>+ Music: ₹{musicCharge}</div>}
+                                <div className="font-semibold">= ₹{grandTotal.toFixed(2)}</div>
                               </div>
                             )}
-                            {musicCharge > 0 && (
-                              <div className="text-sm text-gray-600">
-                                Music: ₹{musicCharge}
-                              </div>
-                            )}
-                            <div className="text-lg font-bold text-[#c3ad6b] mt-1">
-                              Total: ₹{grandTotal.toFixed(2)}
-                            </div>
                             <div className="text-xs text-gray-500 mt-1">
                               Rate per pax: ₹{base} + ₹
                               {gstAmount.toFixed(2)} (GST) = ₹

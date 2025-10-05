@@ -1700,9 +1700,7 @@ const UpdateBooking = () => {
     if (
       booking.pax &&
       booking.ratePlan &&
-      booking.foodType &&
-      booking.gst !== undefined &&
-      booking.gst !== ""
+      booking.foodType
     ) {
       const rateInfo = RATE_CONFIG[booking.foodType]?.[booking.ratePlan];
       if (rateInfo) {
@@ -2386,22 +2384,24 @@ const UpdateBooking = () => {
                 </div>
                 {booking.ratePlan &&
                 booking.foodType &&
-                booking.pax &&
-                booking.gst ? (
+                booking.pax ? (
                   <>
                     {(() => {
                       const rateInfo =
                         RATE_CONFIG[booking.foodType][booking.ratePlan];
                       if (!rateInfo) return null;
                       const base = rateInfo.basePrice;
-                      const discount = parseFloat(booking.discount) || 0;
-                      const discountedBase =
-                        discount > 0 ? base - discount : base;
                       const gstPercent = parseFloat(booking.gst) || 0;
-                      const gstAmount = (discountedBase * gstPercent) / 100;
-                      const rateWithGST = discountedBase + gstAmount;
+                      const gstAmount = (base * gstPercent) / 100;
+                      const rateWithGST = base + gstAmount;
                       const pax = parseInt(booking.pax) || 0;
-                      const total = (rateWithGST * pax).toFixed(2);
+                      const foodTotal = rateWithGST * pax;
+                      
+                      // Add decoration and music charges
+                      const decorationCharge = booking.hasDecoration ? (parseFloat(booking.decorationCharge) || 0) : 0;
+                      const musicCharge = booking.hasMusic ? (parseFloat(booking.musicCharge) || 0) : 0;
+                      const grandTotal = foodTotal + decorationCharge + musicCharge;
+                      
                       return (
                         <>
                           <span className="text-lg font-bold text-[#c3ad6b]">
@@ -2409,10 +2409,17 @@ const UpdateBooking = () => {
                           </span>
                           <span className="text-gray-700"> x {pax} = </span>
                           <span className="text-lg font-bold text-[#c3ad6b]">
-                            ₹{total}
+                            ₹{foodTotal.toFixed(2)}
                           </span>
+                          {(decorationCharge > 0 || musicCharge > 0) && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {decorationCharge > 0 && <div>+ Decoration: ₹{decorationCharge}</div>}
+                              {musicCharge > 0 && <div>+ Music: ₹{musicCharge}</div>}
+                              <div className="font-semibold">= ₹{grandTotal.toFixed(2)}</div>
+                            </div>
+                          )}
                           <div className="text-xs text-gray-500 mt-1">
-                            Rate per pax: ₹{discountedBase} + ₹
+                            Rate per pax: ₹{base} + ₹
                             {gstAmount.toFixed(2)} (GST) = ₹
                             {rateWithGST.toFixed(2)}
                           </div>

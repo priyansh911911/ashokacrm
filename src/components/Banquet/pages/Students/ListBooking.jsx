@@ -538,7 +538,7 @@ const ListBooking = () => {
                     </div>
                     <div className="flex gap-2 mt-2">
                       <div className="flex-1">
-                        <ChefPDFPreview booking={item} />
+                        <ChefPDFPreview booking={item} className="w-full" />
                       </div>
                       <button
                         onClick={() => handleDeleteModal(item)}
@@ -652,8 +652,11 @@ const ListBooking = () => {
                               );
                               return;
                             }
+                            const decorationCharge = item.decorationCharge && item.decorationCharge > 0 ? item.decorationCharge : 0;
+                            const musicCharge = item.musicCharge && item.musicCharge > 0 ? item.musicCharge : 0;
+                            
                             const message =
-                              `🌟 *Welcome to Hotal ASHOKA HOTEL!* 🌟\n\n` +
+                              `🌟 *Welcome to Hotel ASHOKA HOTEL!* 🌟\n\n` +
                               `Here's your booking confirmation:\n\n` +
                               `📅 *Date:* ${new Date(
                                 item.startDate
@@ -669,31 +672,25 @@ const ListBooking = () => {
                               `🍽️ *Plan:* ${item.ratePlan}\n` +
                               `🥗 *Food Type:* ${item.foodType}\n` +
                               `🏛️ *Hall/Area:* ${item.hall}\n` +
+                              `👥 *Pax:* ${item.pax || "To be confirmed"}\n` +
+                              (decorationCharge > 0 ? `🎨 *Decoration:* ₹${decorationCharge}\n` : '') +
+                              (musicCharge > 0 ? `🎵 *Music:* ₹${musicCharge}\n` : '') +
                               `📝 *Special Requests:* ${
-                                item.specialRequests || "None"
+                                item.notes || item.specialRequests || "None"
                               }\n` +
                               `🔄 *Status:* ${item.bookingStatus}\n\n` +
-                              `💵 *Estimated Total:* ₹${
-                                item.total || "To be confirmed"
-                              }\n\n` +
-                              `📍 *Venue Address:* Medical Road ,Gorakhpur\n\n` +
+                              `💰 *Payment Details:*\n` +
+                              `💵 *Total Amount:* ₹${item.total || "To be confirmed"}\n` +
+                              `💳 *Advance Paid:* ₹${item.advance || 0}\n` +
+                              `💸 *Balance Due:* ₹${item.balance || (item.total - (item.advance || 0)) || "To be confirmed"}\n\n` +
+                              `📍 *Venue Address:* Medical Road, Gorakhpur\n\n` +
                               `📌 *Important Notes:*\n` +
                               `- Please arrive 15 minutes before your booking time\n` +
-                              `- 'Bring your ID proof for verification'\n\n` +
+                              `- Bring your ID proof for verification\n` +
+                              `- Final payment due on event day\n\n` +
                               `Thank you for choosing us! We look forward to serving you. 🙏\n\n`;
-                            const urls = [
-                              `https://web.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(
-                                message
-                              )}`,
-                              `https://api.whatsapp.com/send/?phone=${phoneNumber}&text=${encodeURIComponent(
-                                message
-                              )}`,
-                              `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
-                                message
-                              )}`,
-                            ];
-
-                            window.open(urls[0], "_blank");
+                            const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+                            window.open(whatsappUrl, "_blank");
                           }}
                           className="inline-flex items-center gap-1 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors font-semibold px-3 py-1.5 text-xs"
                           title="Send WhatsApp Message"
