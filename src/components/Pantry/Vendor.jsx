@@ -11,6 +11,7 @@ const Vendor = () => {
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [showVendorAnalytics, setShowVendorAnalytics] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [editingVendor, setEditingVendor] = useState(null);
 
   const [vendorFormData, setVendorFormData] = useState({
     name: '',
@@ -19,7 +20,7 @@ const Vendor = () => {
     address: '',
     GSTin: '',
     UpiID: '',
-    scannerCodeUrl: '',
+    scannerImg: '',
     isActive: true
   });
 
@@ -72,7 +73,7 @@ const Vendor = () => {
       reader.onload = (e) => {
         setVendorFormData(prev => ({
           ...prev,
-          scannerCodeUrl: e.target.result
+          scannerImg: e.target.result
         }));
       };
       reader.readAsDataURL(file);
@@ -84,14 +85,21 @@ const Vendor = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/vendor/add', vendorFormData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      showToast.success('Vendor added successfully!');
+      if (editingVendor) {
+        await axios.put(`/api/vendor/update/${editingVendor._id}`, vendorFormData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showToast.success('Vendor updated successfully!');
+      } else {
+        await axios.post('/api/vendor/add', vendorFormData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showToast.success('Vendor added successfully!');
+      }
       resetVendorForm();
       fetchVendors();
     } catch (err) {
-      showToast.error('Failed to add vendor');
+      showToast.error(editingVendor ? 'Failed to update vendor' : 'Failed to add vendor');
     } finally {
       setLoading(false);
     }
@@ -105,11 +113,42 @@ const Vendor = () => {
       address: '',
       GSTin: '',
       UpiID: '',
-      scannerCodeUrl: '',
+      scannerImg: '',
       isActive: true
     });
     setSelectedImage(null);
+    setEditingVendor(null);
     setShowVendorForm(false);
+  };
+
+  const handleEditVendor = (vendor) => {
+    setEditingVendor(vendor);
+    setVendorFormData({
+      name: vendor.name || '',
+      phone: vendor.phone || '',
+      email: vendor.email || '',
+      address: vendor.address || '',
+      GSTin: vendor.GSTin || '',
+      UpiID: vendor.UpiID || '',
+      scannerImg: vendor.scannerImg || '',
+      isActive: vendor.isActive !== undefined ? vendor.isActive : true
+    });
+    setShowVendorForm(true);
+  };
+
+  const handleDeleteVendor = async (vendorId) => {
+    if (!window.confirm('Are you sure you want to delete this vendor?')) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/vendor/delete/${vendorId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      showToast.success('Vendor deleted successfully!');
+      fetchVendors();
+    } catch (err) {
+      showToast.error('Failed to delete vendor');
+    }
   };
 
   const getVendorAnalytics = () => {
@@ -187,6 +226,8 @@ const Vendor = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GST</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UPI ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR Code</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -194,11 +235,11 @@ const Vendor = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-4 text-center">Loading...</td>
+                  <td colSpan="8" className="px-6 py-4 text-center">Loading...</td>
                 </tr>
               ) : vendors.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-4 text-center text-gray-500">No vendors found</td>
+                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No vendors found</td>
                 </tr>
               ) : (
                 vendors.map((vendor) => (
@@ -215,6 +256,14 @@ const Vendor = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {vendor.GSTin || 'N/A'}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {vendor.UpiID || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {vendor.scannerImg ? (
+                        <img src={vendor.scannerImg} alt="QR Code" className="w-8 h-8 object-cover rounded" />
+                      ) : 'N/A'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         vendor.isActive 
@@ -226,10 +275,16 @@ const Vendor = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
-                        <button className="text-indigo-600 hover:text-indigo-900">
+                        <button 
+                          onClick={() => handleEditVendor(vendor)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
                           <Edit size={16} />
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button 
+                          onClick={() => handleDeleteVendor(vendor._id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -248,7 +303,7 @@ const Vendor = () => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Add New Vendor</h2>
+                <h2 className="text-2xl font-bold">{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</h2>
                 <button onClick={resetVendorForm} className="text-gray-500 hover:text-gray-700">
                   <X size={20} />
                 </button>
@@ -310,10 +365,10 @@ const Vendor = () => {
                       onChange={handleImageChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     />
-                    {vendorFormData.scannerCodeUrl && (
+                    {vendorFormData.scannerImg && (
                       <div className="mt-2">
                         <img 
-                          src={vendorFormData.scannerCodeUrl} 
+                          src={vendorFormData.scannerImg} 
                           alt="Scanner QR Code" 
                           className="w-20 h-20 object-cover rounded border"
                         />
@@ -354,7 +409,7 @@ const Vendor = () => {
                     disabled={loading}
                     className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Adding...' : 'Add Vendor'}
+                    {loading ? (editingVendor ? 'Updating...' : 'Adding...') : (editingVendor ? 'Update Vendor' : 'Add Vendor')}
                   </button>
                 </div>
               </form>

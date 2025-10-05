@@ -411,10 +411,20 @@ const Order = () => {
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Pantry Orders</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
-            onClick={() => setShowOrderForm(true)}
+            onClick={() => {
+              if (filterVendor) {
+                const selectedVendor = vendors.find(v => v._id === filterVendor);
+                setFormData(prev => ({
+                  ...prev,
+                  vendor: filterVendor,
+                  orderType: 'Reception to Vendor'
+                }));
+              }
+              setShowOrderForm(true);
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
-            Create Order
+            Create Order{filterVendor ? ' for Selected Vendor' : ''}
           </button>
         </div>
       </div>
@@ -457,6 +467,82 @@ const Order = () => {
           </select>
         </div>
       </div>
+
+      {/* Vendor Payment Info */}
+      {filterVendor && (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Payment Info: {vendors.find(v => v._id === filterVendor)?.name}
+              </h3>
+              <div className="text-sm text-gray-600 mb-2">
+                <strong>UPI ID:</strong> 
+                {vendors.find(v => v._id === filterVendor)?.UpiID ? (
+                  <button
+                    onClick={() => {
+                      const vendor = vendors.find(v => v._id === filterVendor);
+                      const totalAmount = vendorAnalytics?.total?.amount || 0;
+                      
+                      // Check if mobile device
+                      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                      
+                      if (isMobile) {
+                        const upiUrl = `upi://pay?pa=${vendor.UpiID}&pn=${encodeURIComponent(vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                        window.location.href = upiUrl;
+                      } else {
+                        // Desktop fallback: copy UPI ID to clipboard
+                        navigator.clipboard.writeText(vendor.UpiID).then(() => {
+                          alert(`UPI ID copied to clipboard: ${vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
+                        }).catch(() => {
+                          alert(`UPI ID: ${vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
+                        });
+                      }
+                    }}
+                    className="ml-2 text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                  >
+                    {vendors.find(v => v._id === filterVendor)?.UpiID}
+                  </button>
+                ) : 'Not provided'}
+              </div>
+              {vendorAnalytics?.total?.amount > 0 && (
+                <div className="text-sm text-green-600 font-medium">
+                  Total Amount: ₹{vendorAnalytics.total.amount.toFixed(2)}
+                </div>
+              )}
+            </div>
+            {vendors.find(v => v._id === filterVendor)?.scannerImg && (
+              <div className="flex flex-col items-center">
+                <span className="text-xs text-gray-500 mb-2">QR Code</span>
+                <img 
+                  src={vendors.find(v => v._id === filterVendor)?.scannerImg} 
+                  alt="Payment QR Code" 
+                  className="w-20 h-20 object-cover rounded border cursor-pointer hover:scale-105 transition-transform"
+                  onClick={() => {
+                    const vendor = vendors.find(v => v._id === filterVendor);
+                    const totalAmount = vendorAnalytics?.total?.amount || 0;
+                    
+                    // Check if mobile device
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    
+                    if (isMobile) {
+                      const upiUrl = `upi://pay?pa=${vendor.UpiID}&pn=${encodeURIComponent(vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                      window.location.href = upiUrl;
+                    } else {
+                      // Desktop fallback: copy UPI ID to clipboard
+                      navigator.clipboard.writeText(vendor.UpiID).then(() => {
+                        alert(`UPI ID copied to clipboard: ${vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
+                      }).catch(() => {
+                        alert(`UPI ID: ${vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
+                      });
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Vendor Analytics */}
       {showAnalytics && vendorAnalytics && (

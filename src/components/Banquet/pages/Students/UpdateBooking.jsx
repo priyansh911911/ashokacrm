@@ -2438,51 +2438,7 @@ const UpdateBooking = () => {
                 <span className="text-xs text-gray-500">Total Amount</span>
               </div>
             </div>
-            {/* Discount Input Section */}
-            <div className="mt-4 flex flex-col md:flex-row md:items-center md:space-x-8 space-y-2 md:space-y-0">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Discount{" "}
-                  {localStorage.getItem("role") === "Admin"
-                    ? "(unlimited)"
-                    : "(max 100)"}
-                </label>
-                <input
-                  type="number"
-                  name="discount"
-                  className="w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
-                  onChange={handleInputChange}
-                  value={booking.discount}
-                  min={0}
-                  max={
-                    localStorage.getItem("role") === "Admin"
-                      ? undefined
-                      : booking.ratePlan === "Silver"
-                      ? 100
-                      : booking.ratePlan === "Gold"
-                      ? 150
-                      : booking.ratePlan === "Platinum"
-                      ? 200
-                      : 0
-                  }
-                  placeholder="Enter discount"
-                  disabled={!booking.ratePlan}
-                />
-                <div className="text-xs text-gray-500 mt-1">
-                  {booking.ratePlan
-                    ? localStorage.getItem("role") === "Admin"
-                      ? "No discount limit for Admin"
-                      : booking.ratePlan === "Silver"
-                      ? "Maximum discount allowed: ₹100"
-                      : booking.ratePlan === "Gold"
-                      ? "Maximum discount allowed: ₹150"
-                      : booking.ratePlan === "Platinum"
-                      ? "Maximum discount allowed: ₹200"
-                      : "Select a Rate Plan to enable discount"
-                    : "Select a Rate Plan to enable discount"}
-                </div>
-              </div>
-            </div>
+
           </section>
 
           {/* Booking Details Section */}

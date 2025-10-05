@@ -105,7 +105,7 @@ const ListBooking = () => {
     setLoading(true);
     try {
       axios
-        .delete(`https://ashoka-backend.vercel.app/api/banquet-bookings/${id}`)
+        .delete(`https://ashoka-backend.vercel.app/api/banquet-bookings/delete/${id}`)
         .then((res) => {
           console.log(res);
           if (res.data) {
