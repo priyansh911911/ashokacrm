@@ -168,12 +168,18 @@ const Order = () => {
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
+    const confirmMessage = `Are you sure you want to change the order status to "${newStatus.toUpperCase()}"?\n\nThis action cannot be undone.`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
     try {
       await axios.patch(`/api/pantry/orders/${orderId}/status`, 
         { status: newStatus },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      showToast.success('Order status updated');
+      showToast.success(`Order status updated to ${newStatus}`);
       fetchOrders();
     } catch (error) {
       showToast.error('Failed to update order status');

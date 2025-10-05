@@ -57,7 +57,7 @@ function LaganCalendar() {
     const fetchBookings = async () => {
       try {
         const res = await axios.get(
-          "/api/bookings"
+          "/api/banquet-bookings/"
         );
         const grouped = {};
         res.data.forEach((b) => {
@@ -265,34 +265,39 @@ function LaganCalendar() {
 
   const dateTemplate = ({ year, month, day }) => {
     const currentDate = format(year, month, day);
-    const category = getDateCategory(currentDate);
+    const hasBooking = bookings[currentDate] && bookings[currentDate].length > 0;
+    
     let bgColor = "";
-    if (category === "heavy") bgColor = "#c3ad6b"; // Theme gold
-    else if (category === "medium") bgColor = "#d4c078"; // Light gold
-    else if (category === "light") bgColor = "#e6d085"; // Lighter gold
+    let textColor = "text-gray-800";
+    
+    // Only show red for bookings
+    if (hasBooking) {
+      bgColor = "#dc2626"; // Red for bookings
+      textColor = "text-white";
+    }
+    
     const isSelected = selectedDate === currentDate;
     const highlightClass = isSelected
-      ? "border-4 border-[#c3ad6b] shadow-lg scale-105"
-      : "border border-gray-200";
-    const hasBooking =
-      bookings[currentDate] && bookings[currentDate].length > 0;
+      ? "border-4 shadow-lg scale-105 ring-2"
+      : "border border-amber-200";
+    
     return (
       <div
-        className={`w-10 h-12 md:w-14 md:h-14 relative rounded-lg flex items-center justify-center cursor-pointer transition-all duration-150 ${highlightClass} hover:ring-2 hover:ring-[#c3ad6b] ${bgColor ? 'text-white' : 'text-gray-800'}`}
-        style={{ backgroundColor: bgColor || '#f9fafb' }}
+        className={`w-10 h-12 md:w-14 md:h-14 relative rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${highlightClass} hover:shadow-md hover:transform hover:scale-110 ${textColor}`}
+        style={{ 
+          backgroundColor: bgColor || '#f9fafb',
+          ...(isSelected && { borderColor: '#FFB300', '--tw-ring-color': '#5D4037' })
+        }}
         onClick={() => {
           setSelectedDate(currentDate);
         }}
         onMouseEnter={() => setHoveredDate(currentDate)}
         onMouseLeave={() => setHoveredDate(null)}
-        title={getTooltipText(category)}
+        title={hasBooking ? "Booking exists" : ""}
       >
-        <span className={`text-base md:text-lg font-semibold select-none ${bgColor ? 'text-white' : 'text-gray-800'}`}>
+        <span className={`text-base md:text-lg font-semibold select-none ${textColor}`}>
           {day}
         </span>
-        {hasBooking && (
-          <span className="absolute bottom-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-        )}
       </div>
     );
   };
@@ -394,39 +399,60 @@ function LaganCalendar() {
   return (
     <div
       ref={calendarRef}
-      className="p-4 md:p-8 text-center max-w-full overflow-x-auto bg-[#c3ad6b]/5 font-sans min-h-screen"
+      className="p-4 md:p-8 text-center max-w-full overflow-x-auto bg-gradient-to-br from-amber-50 via-white to-yellow-50 font-sans min-h-screen"
     >
-      {/* Show user role at top on mobile */}
-      {isMobile && (
-        <div className="w-full flex justify-center items-center mb-2">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#c3ad6b]/10 text-[#c3ad6b] font-semibold text-sm shadow">
-            {userRole === "Admin" ? "👑 Admin" : "👤 Staff"}
-          </span>
+      {/* Header with Ashoka colors */}
+      <div className=" p-1 rounded-xl mb-6 shadow-lg">
+        <div className="bg-white rounded-lg p-4">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: '#5D4037' }}>
+            Lagan Calendar
+          </h1>
+          {/* Show user role */}
+          {isMobile && (
+            <div className="w-full flex justify-center items-center">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-100 to-yellow-100 font-semibold text-sm shadow" style={{ color: '#5D4037' }}>
+                {userRole === "Admin" ? "👑 Admin" : "👤 Staff"}
+              </span>
+            </div>
+          )}
         </div>
-      )}
-      <div className="flex justify-between items-center mb-4">
+      </div>
+      
+      {/* Navigation */}
+      <div className="flex justify-between items-center mb-6">
         <button
           onClick={handlePrev}
-          className="bg-[#c3ad6b]/10 hover:bg-[#c3ad6b]/20 text-[#c3ad6b] px-4 py-2 rounded shadow-sm font-semibold transition"
+          className="text-white px-6 py-3 rounded-lg shadow-md font-semibold transition-all duration-200 transform hover:scale-105"
+          style={{ background: 'linear-gradient(to right, #5D4037, #4A2C20)' }}
+          onMouseEnter={(e) => e.target.style.background = 'linear-gradient(to right, #4A2C20, #3E2723)'}
+          onMouseLeave={(e) => e.target.style.background = 'linear-gradient(to right, #5D4037, #4A2C20)'}
         >
-          Previous
+          ← Previous
         </button>
-        <h2 className="text-xl md:text-2xl font-bold mx-2 text-gray-800">{`${monthNames[month]} ${year}`}</h2>
+        <h2 className="text-xl md:text-2xl font-bold mx-2" style={{ color: '#5D4037' }}>
+          {`${monthNames[month]} ${year}`}
+        </h2>
         <button
           onClick={handleNext}
-          className="bg-[#c3ad6b]/10 hover:bg-[#c3ad6b]/20 text-[#c3ad6b] px-4 py-2 rounded shadow-sm font-semibold transition"
+          className="text-white px-6 py-3 rounded-lg shadow-md font-semibold transition-all duration-200 transform hover:scale-105"
+          style={{ background: 'linear-gradient(to right, #FFB300, #FF8F00)' }}
+          onMouseEnter={(e) => e.target.style.background = 'linear-gradient(to right, #FF8F00, #FF6F00)'}
+          onMouseLeave={(e) => e.target.style.background = 'linear-gradient(to right, #FFB300, #FF8F00)'}
         >
-          Next
+          Next →
         </button>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+      
+      {/* Calendar */}
+      <div className="overflow-x-auto rounded-xl border-2 bg-white shadow-xl" style={{ borderColor: '#FFB300' }}>
         <table className="w-full max-w-full border-collapse">
           <thead>
-            <tr>
+            <tr className="bg-gradient-to-r from-amber-100 via-white to-yellow-100">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                 <th
                   key={day}
-                  className="h-10 bg-gray-50 text-xs md:text-sm font-medium text-gray-500"
+                  className="h-12 text-sm md:text-base font-bold border-b-2"
+                  style={{ color: '#5D4037', borderBottomColor: '#FFB300' }}
                 >
                   {day}
                 </th>
@@ -436,40 +462,19 @@ function LaganCalendar() {
           <tbody className="align-top">{renderCalendar()}</tbody>
         </table>
       </div>
-      <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs md:text-sm">
-        <div className="flex items-center space-x-2">
-          <span
-            className="inline-block w-4 h-4 rounded"
-            style={{ backgroundColor: "#10b981" }}
-          ></span>
-          <span>Light Booking</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span
-            className="inline-block w-4 h-4 rounded"
-            style={{ backgroundColor: "#fde68a" }}
-          ></span>
-          <span>Medium Booking</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span
-            className="inline-block w-4 h-4 rounded"
-            style={{ backgroundColor: "#fe2f32" }}
-          ></span>
-          <span>Heavy Booking</span>
-        </div>
-      </div>
+
       <Link
-        to="/add-booking"
+        to="/banquet/add-booking"
         state={{ selectedDate }}
         className="text-[#c3ad6b] hover:underline mt-4 inline-block"
       >
         <button
-          className={`py-2 px-10 mt-6 text-white rounded-lg text-base font-semibold shadow-lg transition-all duration-150 ${
+          className={`py-3 px-12 mt-6 rounded-xl text-lg font-bold shadow-lg transition-all duration-200 transform ${
             selectedDate
-              ? "bg-[#c3ad6b] hover:bg-[#b39b5a]"
+              ? "hover:scale-105 hover:shadow-xl text-white"
               : "bg-gray-300 cursor-not-allowed"
           }`}
+          style={selectedDate ? { background: 'linear-gradient(to right, #5D4037, #FFB300)' } : {}}
           disabled={!selectedDate}
           onClick={handleBooking}
         >
@@ -482,12 +487,12 @@ function LaganCalendar() {
           Bookings for {selectedDate || "..."}
         </h3>
         {/* Status Filter Dropdown & Search Bar - Improved UI */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 shadow-sm">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-6 bg-gradient-to-r from-amber-50 via-white to-yellow-50 border-2 rounded-xl px-6 py-4 shadow-md" style={{ borderColor: '#FFB300' }}>
           {/* Filter */}
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <span className="inline-flex items-center text-[#c3ad6b]">
+            <span className="inline-flex items-center" style={{ color: '#5D4037' }}>
               <svg
-                className="w-4 h-4 mr-1"
+                className="w-5 h-5 mr-2"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -502,13 +507,14 @@ function LaganCalendar() {
             </span>
             <label
               htmlFor="statusFilter"
-              className="text-sm font-medium text-gray-700"
+              className="text-sm font-bold" style={{ color: '#5D4037' }}
             >
               Status:
             </label>
             <select
               id="statusFilter"
-              className="rounded-lg border border-gray-300 py-1 px-3 text-sm focus:ring-2 focus:ring-[#c3ad6b] focus:border-[#c3ad6b] bg-white"
+              className="rounded-lg border-2 py-2 px-4 text-sm bg-white shadow-sm font-medium"
+              style={{ borderColor: '#FFB300' }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -520,9 +526,9 @@ function LaganCalendar() {
           </div>
           {/* Search Bar */}
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <span className="inline-flex items-center text-[#c3ad6b]">
+            <span className="inline-flex items-center" style={{ color: '#FFB300' }}>
               <svg
-                className="w-4 h-4 mr-1"
+                className="w-5 h-5 mr-2"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -538,7 +544,8 @@ function LaganCalendar() {
             </span>
             <input
               type="text"
-              className="rounded-lg border border-gray-300 py-1 px-3 text-sm w-full md:w-56 focus:ring-2 focus:ring-[#c3ad6b] focus:border-[#c3ad6b] bg-white"
+              className="rounded-lg border-2 py-2 px-4 text-sm w-full md:w-64 bg-white shadow-sm"
+              style={{ borderColor: '#5D4037' }}
               placeholder="Search by name or phone..."
               value={searchTerm}
               onChange={async (e) => {
@@ -571,7 +578,7 @@ function LaganCalendar() {
               }}
             />
             {searchLoading && (
-              <span className="text-xs text-gray-400 ml-1">Searching...</span>
+              <span className="text-xs ml-1 font-medium" style={{ color: '#FFB300' }}>Searching...</span>
             )}
           </div>
         </div>
@@ -588,23 +595,39 @@ function LaganCalendar() {
             {displayBookings.map((b, i) => (
               <div
                 key={i}
-                className="bg-gray-50 border border-gray-200 rounded p-3 text-left cursor-pointer hover:shadow-lg hover:border-[#c3ad6b] transition"
-                onClick={() => {
-                  if (b._id) navigate(`/update-booking/${b._id}`);
-                }}
-                title="Click to update booking"
+                className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 rounded-xl p-4 text-left hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                style={{ borderColor: '#FFB300' }}
               >
                 <div className="font-bold text-gray-800">{b.name}</div>
                 <div className="text-xs text-gray-700">
                   Contact: {b.number || b.contact}
                 </div>
-                <div className="tesxt-xs text-gray-700">
-                  {" "}
+                <div className="text-xs text-gray-700">
                   Booking Status: {b.bookingStatus}
                 </div>
                 {b.notes && (
                   <div className="text-xs text-gray-700">{b.notes}</div>
                 )}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => {
+                      if (b._id) navigate(`/banquet/update-booking/${b._id}`);
+                    }}
+                    className="flex-1 text-white px-3 py-2 rounded-lg text-sm font-bold transition-all duration-200 transform hover:scale-105 shadow-md"
+                    style={{ background: 'linear-gradient(to right, #5D4037, #4A2C20)' }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (b._id) navigate(`/banquet/invoice/${b._id}`);
+                    }}
+                    className="flex-1 text-white px-3 py-2 rounded-lg text-sm font-bold transition-all duration-200 transform hover:scale-105 shadow-md"
+                    style={{ background: 'linear-gradient(to right, #FFB300, #FF8F00)' }}
+                  >
+                    Invoice
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -151,10 +151,37 @@ const MenuSelector = ({
   }, [menuItems, currentCategory, foodType]);
 
   const handleSelectItem = (item) => {
+    console.log('Selecting item:', item);
+    console.log('Current selected items:', selectedItems);
     setSelectedItems(prev => {
       const isSelected = prev.includes(item);
+      console.log('Is selected:', isSelected);
       if (isSelected) {
-        return prev.filter(i => i !== item);
+        const newItems = prev.filter(i => i !== item);
+        console.log('Removing item, new items:', newItems);
+        
+        // Auto-save immediately when item is removed
+        setTimeout(() => {
+          if (onSave) {
+            const categorizedMenu = {};
+            newItems.forEach(selectedItem => {
+              const itemData = menuItems.find(mi => mi.name === selectedItem);
+              if (itemData?.category && typeof itemData.category === 'string') {
+                const match = itemData.category.match(/cateName:\s*['"]([^'"]+)['"]/); 
+                if (match) {
+                  const categoryName = match[1];
+                  if (!categorizedMenu[categoryName]) {
+                    categorizedMenu[categoryName] = [];
+                  }
+                  categorizedMenu[categoryName].push(selectedItem);
+                }
+              }
+            });
+            onSave(newItems, categorizedMenu);
+          }
+        }, 0);
+        
+        return newItems;
       }
       
       // Find matching plan limit based on foodType and ratePlan
@@ -185,7 +212,31 @@ const MenuSelector = ({
         }
       }
       
-      return [...prev, item];
+      const newItems = [...prev, item];
+      console.log('Adding item, new items:', newItems);
+      
+      // Auto-save immediately when item is selected
+      setTimeout(() => {
+        if (onSave) {
+          const categorizedMenu = {};
+          newItems.forEach(selectedItem => {
+            const itemData = menuItems.find(mi => mi.name === selectedItem);
+            if (itemData?.category && typeof itemData.category === 'string') {
+              const match = itemData.category.match(/cateName:\s*['"]([^'"]+)['"]/); 
+              if (match) {
+                const categoryName = match[1];
+                if (!categorizedMenu[categoryName]) {
+                  categorizedMenu[categoryName] = [];
+                }
+                categorizedMenu[categoryName].push(selectedItem);
+              }
+            }
+          });
+          onSave(newItems, categorizedMenu);
+        }
+      }, 0);
+      
+      return newItems;
     });
   };
 
@@ -230,7 +281,26 @@ const MenuSelector = ({
   return (
     <div className="modal modal-open">
       <div className="modal-box max-w-6xl h-[92vh] flex flex-col">
-        <button className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4" onClick={onClose}>✕</button>
+        <button className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4" onClick={() => {
+          if (onSave && selectedItems.length > 0) {
+            const categorizedMenu = {};
+            selectedItems.forEach(item => {
+              const itemData = menuItems.find(mi => mi.name === item);
+              if (itemData?.category && typeof itemData.category === 'string') {
+                const match = itemData.category.match(/cateName:\s*['"]([^'"]+)['"]/); 
+                if (match) {
+                  const categoryName = match[1];
+                  if (!categorizedMenu[categoryName]) {
+                    categorizedMenu[categoryName] = [];
+                  }
+                  categorizedMenu[categoryName].push(item);
+                }
+              }
+            });
+            onSave(selectedItems, categorizedMenu);
+          }
+          onClose();
+        }}>✕</button>
         
         <div className="flex flex-1 h-full">
           {/* Categories Sidebar */}
@@ -405,43 +475,7 @@ const MenuSelector = ({
               return null;
             })()}
           </div>
-          <div className="flex gap-2">
-            <button className="btn btn-ghost" onClick={onClose}>Close</button>
-            <button 
-              className="btn btn-primary" 
-              onClick={() => {
-                console.log('Add Selected Items clicked');
-                console.log('Selected items:', selectedItems);
-                console.log('onSave function:', onSave);
-                
-                if (onSave) {
-                  // Create categorized menu from selected items
-                  const categorizedMenu = {};
-                  selectedItems.forEach(item => {
-                    const itemData = menuItems.find(mi => mi.name === item);
-                    if (itemData?.category && typeof itemData.category === 'string') {
-                      const match = itemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
-                      if (match) {
-                        const categoryName = match[1];
-                        if (!categorizedMenu[categoryName]) {
-                          categorizedMenu[categoryName] = [];
-                        }
-                        categorizedMenu[categoryName].push(item);
-                      }
-                    }
-                  });
-                  console.log('Categorized menu:', categorizedMenu);
-                  onSave(selectedItems, categorizedMenu);
-                  onClose();
-                } else {
-                  console.log('No onSave function provided');
-                }
-              }}
-              disabled={selectedItems.length === 0}
-            >
-              Add Selected Items ({selectedItems.length})
-            </button>
-          </div>
+
         </footer>
       </div>
     </div>
