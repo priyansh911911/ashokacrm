@@ -61,6 +61,17 @@ const MenuSelector = ({
     return response.data;
   };
 
+  // Sync selectedItems when initialItems changes
+  useEffect(() => {
+    console.log('🔄 MenuSelector: initialItems changed:', initialItems);
+    console.log('📊 MenuSelector: initialItems length:', initialItems?.length || 0);
+    console.log('📝 MenuSelector: initialItems content:', initialItems);
+    
+    const newItems = initialItems || [];
+    console.log('🎯 MenuSelector: Setting selectedItems to:', newItems);
+    setSelectedItems(newItems);
+  }, [initialItems]);
+
   // Fetch menu items, categories and plan limits
   useEffect(() => {
     const fetchData = async () => {
@@ -151,14 +162,16 @@ const MenuSelector = ({
   }, [menuItems, currentCategory, foodType]);
 
   const handleSelectItem = (item) => {
-    console.log('Selecting item:', item);
-    console.log('Current selected items:', selectedItems);
+    console.log('🔄 MenuSelector: Selecting item:', item);
+    console.log('📝 MenuSelector: Current selected items:', selectedItems);
+    console.log('📊 MenuSelector: Selected items length:', selectedItems.length);
     setSelectedItems(prev => {
       const isSelected = prev.includes(item);
-      console.log('Is selected:', isSelected);
+      console.log('✅ MenuSelector: Is selected:', isSelected);
+      console.log('🔍 MenuSelector: Checking if', item, 'is in', prev);
       if (isSelected) {
         const newItems = prev.filter(i => i !== item);
-        console.log('Removing item, new items:', newItems);
+        console.log('❌ MenuSelector: Removing item, new items:', newItems);
         
         // Auto-save immediately when item is removed
         setTimeout(() => {
@@ -213,7 +226,7 @@ const MenuSelector = ({
       }
       
       const newItems = [...prev, item];
-      console.log('Adding item, new items:', newItems);
+      console.log('➕ MenuSelector: Adding item, new items:', newItems);
       
       // Auto-save immediately when item is selected
       setTimeout(() => {

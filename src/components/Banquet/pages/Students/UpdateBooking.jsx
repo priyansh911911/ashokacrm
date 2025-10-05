@@ -1817,21 +1817,33 @@ const UpdateBooking = () => {
     fetchBookingDetail();
   }, [id]);
 
-  const fetchBookingDetail = () => {
-    axios
-      .get(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/get/${id}`)
-      .then((res) => {
-        if (res.data) {
-          const bookingData = res.data.data || res.data;
-          const categorizedMenu = res.data.categorizedMenu;
+  const fetchBookingDetail = async () => {
+    try {
+      // Fetch booking data
+      const bookingResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/get/${id}`);
+      
+      // Fetch associated menu data
+      let categorizedMenu = null;
+      try {
+        const menuResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-menus/${id}`);
+        const rawMenuData = menuResponse.data?.data || menuResponse.data || null;
+        categorizedMenu = rawMenuData?.categories || rawMenuData || null;
+      } catch (menuErr) {
+        // No menu found for this booking
+      }
+      
+      if (bookingResponse.data) {
+        const bookingData = bookingResponse.data.data || bookingResponse.data;
 
           // Flatten all items from categorizedMenu into a single array
           const menuItems = categorizedMenu
-            ? Object.values(categorizedMenu)
+            ? Object.entries(categorizedMenu)
+                .filter(([key]) => !['_id', 'bookingRef', 'createdAt', 'updatedAt', '__v', 'customerRef'].includes(key))
+                .map(([, arr]) => arr)
                 .flat()
                 .filter((item) => typeof item === "string")
             : [];
-
+          
           const formatDate = (date) => {
             if (!date) return "";
             try {
@@ -1924,10 +1936,9 @@ const UpdateBooking = () => {
 
           setBooking(formattedData);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         toast.error("Error fetching booking details");
-      });
+      }
   };
 
   const handleInputChange = (e) => {
@@ -2104,7 +2115,7 @@ const UpdateBooking = () => {
     if (role !== "Admin") {
       // Get original menu from server to compare
       axios
-        .get(`https://ashoka-backend.vercel.app/api/banquet-bookings/${id}`)
+        .get(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/get/${id}`)
         .then((res) => {
           const originalMenu = res.data.categorizedMenu;
           const isMenuChanged =
@@ -2187,7 +2198,7 @@ const UpdateBooking = () => {
 
 
     axios
-      .put(`https://ashoka-backend.vercel.app/api/banquet-bookings/update/${id}`, payload)
+      .put(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/update/${id}`, payload)
       .then((res) => {
         if (res.data) {
           toast.success("Booking updated successfully!");
@@ -2804,8 +2815,13 @@ const UpdateBooking = () => {
                         : ""
                     }
                     readOnly
-                    placeholder="No menu items selected yet"
+                    placeholder="No menu items selected yet - click 'Select Menu Items' to add items"
                   />
+                  {!booking.categorizedMenu && (
+                    <div className="text-sm text-blue-600 mt-1">
+                      💡 This booking doesn't have menu items yet. Use the "Select Menu Items" button above to add them.
+                    </div>
+                  )}
                 </div>
                 {/* Selected Menu Items Table */}
                 {/* {booking.menuItems && booking.menuItems.length > 0 ? (
@@ -2889,11 +2905,13 @@ const UpdateBooking = () => {
                 </div>
                 <MenuSelector
                   initialItems={
-                    booking.categorizedMenu
-                      ? Object.values(booking.categorizedMenu)
-                          .flat()
-                          .filter((item) => typeof item === "string")
-                      : []
+                    booking.menuItems && booking.menuItems.length > 0 
+                      ? booking.menuItems 
+                      : booking.categorizedMenu?.categories
+                        ? Object.values(booking.categorizedMenu.categories)
+                            .flat()
+                            .filter((item) => typeof item === "string")
+                        : []
                   }
                   foodType={booking.foodType}
                   ratePlan={booking.ratePlan}
