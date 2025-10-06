@@ -17,26 +17,28 @@ const RoomInspection = () => {
   const [editingInspection, setEditingInspection] = useState(null);
 
   useEffect(() => {
-    fetchRooms();
-    fetchBookings();
-    fetchInspections();
-    fetchTasks();
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const [roomsRes, inspectionsRes] = await Promise.all([
+          axios.get('/api/rooms/all', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('/api/housekeeping/roominspections', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        
+        setRooms(roomsRes.data);
+        const inspectionsData = Array.isArray(inspectionsRes.data) ? inspectionsRes.data : inspectionsRes.data.inspections || [];
+        setInspections(inspectionsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
   }, []);
 
-  const fetchRooms = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/rooms/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Rooms fetched:', response.data);
-      setRooms(response.data);
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
-    }
-  };
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/bookings/all', {
@@ -47,40 +49,21 @@ const RoomInspection = () => {
       console.error('Error fetching bookings:', error);
       setBookings([]);
     }
-  };
+  }, [axios]);
 
-  const fetchInspections = async () => {
+  const fetchInspections = useCallback(async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/housekeeping/roominspections', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const inspectionsData = Array.isArray(response.data) ? response.data : response.data.inspections || [];
-      console.log('Inspections fetched:', inspectionsData);
-      console.log('Sample inspection roomId:', inspectionsData[0]?.roomId);
       setInspections(inspectionsData);
     } catch (error) {
       console.error('Error fetching inspections:', error);
       setInspections([]);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  const fetchTasks = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/housekeeping/tasks', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const tasksData = Array.isArray(response.data) ? response.data : response.data.tasks || [];
-      setTasks(tasksData);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      setTasks([]);
-    }
-  };
+  }, [axios]);
 
   const fetchRoomChecklist = async (roomId) => {
     try {
@@ -236,7 +219,7 @@ const RoomInspection = () => {
             value={selectedRoom}
             onChange={(e) => {
               setSelectedRoom(e.target.value);
-              if (e.target.value) {
+              if (e.target.value && showForm) {
                 fetchRoomChecklist(e.target.value);
               }
             }}
