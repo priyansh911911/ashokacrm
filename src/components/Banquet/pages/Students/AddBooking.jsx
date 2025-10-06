@@ -1780,7 +1780,7 @@ const AddBooking = () => {
                 {/* Name */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Full Name *
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -1820,7 +1820,7 @@ const AddBooking = () => {
                 {/* Phone */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Mobile Number *
+                    Mobile Number <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <FaPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -1878,7 +1878,7 @@ const AddBooking = () => {
                 {/* Pax */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Number of Pax *
+                    Number of Pax <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <FaUsers className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -1901,7 +1901,7 @@ const AddBooking = () => {
                 {/* Date */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Booking Date *
+                    Booking Date <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <FaRegCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -1926,7 +1926,7 @@ const AddBooking = () => {
                 {/* Time */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Time *
+                    Time <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <FaRegCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -1949,7 +1949,7 @@ const AddBooking = () => {
                 {/* Hall */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Hall Type *
+                    Hall Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="hall"
@@ -2130,7 +2130,7 @@ const AddBooking = () => {
                 {/* Rate Plan */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Rate Plan *
+                    Rate Plan <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="ratePlan"
@@ -2156,7 +2156,7 @@ const AddBooking = () => {
                 {/* Food Type */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Food Type *
+                    Food Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="foodType"

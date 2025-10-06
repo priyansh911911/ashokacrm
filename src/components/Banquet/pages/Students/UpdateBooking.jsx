@@ -647,7 +647,7 @@ const UpdateBooking = () => {
               {/* Name */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Name *
+                  Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -665,7 +665,7 @@ const UpdateBooking = () => {
               {/* Email */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Email *
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -683,7 +683,7 @@ const UpdateBooking = () => {
               {/* Phone */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Phone Number *
+                  Phone Number <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <FaPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -734,7 +734,7 @@ const UpdateBooking = () => {
               {/* Pax */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Number of Pax *
+                  Number of Pax <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <FaUsers className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -753,7 +753,7 @@ const UpdateBooking = () => {
               {/* Date */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Booking Date *
+                  Booking Date <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -989,7 +989,7 @@ const UpdateBooking = () => {
               {/* Status */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Booking Status *
+                  Booking Status <span className="text-red-500">*</span>
                 </label>
                 <div className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 px-3 text-gray-700">
                   {booking.bookingStatus}
@@ -1027,7 +1027,7 @@ const UpdateBooking = () => {
                       className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
                     />
                     <label className="text-sm font-medium text-gray-700">
-                      Rate Per Plate *
+                      Rate Per Plate <span className="text-red-500">*</span>
                     </label>
                   </div>
                   {booking.useCustomPrice && (
