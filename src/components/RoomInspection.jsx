@@ -144,6 +144,24 @@ const RoomInspection = () => {
     setShowForm(true);
   };
 
+  const deleteInspection = async (inspectionId) => {
+    if (!window.confirm('Are you sure you want to delete this inspection?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/housekeeping/roominspections/${inspectionId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Inspection deleted successfully!');
+      fetchInspections();
+    } catch (error) {
+      console.error('Error deleting inspection:', error);
+      alert('Error deleting inspection: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   const submitInspection = async () => {
     if (!selectedRoom) {
       alert('Please select a room');
@@ -167,7 +185,7 @@ const RoomInspection = () => {
       };
 
       if (editingInspection) {
-        await axios.put(`/api/housekeeping/roominspection/${editingInspection._id}`, inspectionData, {
+        await axios.put(`/api/housekeeping/roominspections/${editingInspection._id}`, inspectionData, {
           headers: { 
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -496,7 +514,10 @@ const RoomInspection = () => {
                             >
                               <Edit size={16} />
                             </button>
-                            <button className="text-red-600 hover:text-red-800 p-1 rounded transition-colors">
+                            <button 
+                              onClick={() => deleteInspection(inspection._id)}
+                              className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
+                            >
                               <Trash2 size={16} />
                             </button>
                           </div>

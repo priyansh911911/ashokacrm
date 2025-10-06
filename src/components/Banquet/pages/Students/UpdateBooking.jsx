@@ -2193,33 +2193,38 @@ const UpdateBooking = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50">
       <Toaster position="top-center" />
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          to="/banquet/list-booking"
-          className="flex items-center text-[#c3ad6b] hover:text-[#b39b5a]"
-        >
-          <FaArrowLeft className="mr-2" /> Back
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-800">Update Booking</h1>
-      </div>
+      <header className="bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link
+            to="/banquet/list-booking"
+            className="flex items-center text-[#c3ad6b] hover:text-[#b39b5a]"
+          >
+            <FaArrowLeft className="mr-2" /> Back
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-800">Update Booking</h1>
+          <div className="w-8"></div> {/* Spacer for balance */}
+        </div>
+      </header>
 
       {/* Main Form */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="p-6 space-y-8">
-          {/* Personal Information Section */}
-          <section className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#c3ad6b]/20 p-2 rounded-full">
-                <FaUser className="text-[#c3ad6b] text-lg" />
+      <main className="container mx-auto px-4 py-6">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          {/* Form Sections */}
+          <div className="p-6 space-y-8">
+            {/* Guest Information Section */}
+            <section className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="bg-[#c3ad6b]/20 p-2 rounded-full">
+                  <FaUser className="text-[#c3ad6b] text-lg" />
+                </div>
+                <h2 className="text-xl font-semibold text-gray-800">
+                  Guest Information
+                </h2>
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">
-                Personal Information
-              </h2>
-            </div>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Name */}
@@ -2296,144 +2301,6 @@ const UpdateBooking = () => {
           </section>
 
           <div className="border-t border-gray-200"></div>
-
-          {/* Rate Plan Summary Section */}
-          <section className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#c3ad6b]/20 p-2 rounded-full">
-                <FaMoneyBillWave className="text-[#c3ad6b] text-lg" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-800">
-                Rate Plan Summary
-              </h2>
-            </div>
-            <div className="bg-white shadow-lg rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:space-x-8 space-y-4 md:space-y-0 border border-[#f3e9d1]">
-              {/* Rate Plan & Food Type */}
-              <div className="flex-1 flex flex-col items-center md:items-start">
-                <div className="flex items-center space-x-2 mb-1">
-                  <FaUtensils className="text-[#c3ad6b] text-xl" />
-                  <span className="font-semibold text-gray-700 text-lg">
-                    {booking.ratePlan || (
-                      <span className="text-gray-400">N/A</span>
-                    )}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500">Rate Plan</span>
-                {(() => {
-                  // Check if current rate is custom by comparing with standard rates
-                  let isCustomRate = false;
-                  let standardRate = 0;
-                  if (booking.ratePlan && booking.foodType && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
-                    standardRate = RATE_CONFIG[booking.foodType][booking.ratePlan].basePrice;
-                    const currentRate = parseFloat(booking.ratePerPax) || 0;
-                    isCustomRate = Math.abs(currentRate - standardRate) > 0.01;
-                  }
-                  
-                  if (isCustomRate) {
-                    return (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Custom Rate: <span className="font-bold text-[#c3ad6b]">₹{booking.ratePerPax}</span>
-                      </div>
-                    );
-                  } else if (booking.foodType && booking.ratePlan && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
-                    return (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {booking.ratePlan} Rate:{" "}
-                        <span className="font-bold text-[#c3ad6b]">
-                          ₹{standardRate}
-                        </span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-              {/* Food Type */}
-              <div className="flex-1 flex flex-col items-center md:items-start">
-                <div className="flex items-center space-x-2 mb-1">
-                  <FaUsers className="text-[#c3ad6b] text-xl" />
-                  <span className="font-semibold text-gray-700 text-lg">
-                    {booking.foodType || (
-                      <span className="text-gray-400">N/A</span>
-                    )}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500">Food Type</span>
-              </div>
-              {/* Calculation */}
-              <div className="flex-1 flex flex-col items-center md:items-start">
-                <div className="flex items-center space-x-2 mb-1">
-                  <FaRupeeSign className="text-[#c3ad6b] text-xl" />
-                  <span className="font-semibold text-gray-700 text-lg">
-                    Calculation
-                  </span>
-                </div>
-                {booking.pax && booking.ratePerPax ? (
-                  <>
-                    {(() => {
-                      const pax = parseInt(booking.pax) || 0;
-                      const ratePerPax = parseFloat(booking.ratePerPax) || 0;
-                      const foodTotal = ratePerPax * pax;
-                      
-                      const decorationCharge = booking.hasDecoration ? (parseFloat(booking.decorationCharge) || 0) : 0;
-                      const musicCharge = booking.hasMusic ? (parseFloat(booking.musicCharge) || 0) : 0;
-                      const grandTotal = foodTotal + decorationCharge + musicCharge;
-                      
-                      // Check if this is a custom rate by comparing with standard rates
-                      let isCustomRate = false;
-                      let standardRate = 0;
-                      if (booking.ratePlan && booking.foodType && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
-                        standardRate = RATE_CONFIG[booking.foodType][booking.ratePlan].basePrice;
-                        isCustomRate = Math.abs(ratePerPax - standardRate) > 0.01; // Allow for small floating point differences
-                      }
-                      
-                      return (
-                        <>
-                          <span className="text-lg font-bold text-[#c3ad6b]">
-                            ₹{ratePerPax.toFixed(2)}
-                          </span>
-                          <span className="text-gray-700"> x {pax} = </span>
-                          <span className="text-lg font-bold text-[#c3ad6b]">
-                            ₹{foodTotal.toFixed(2)}
-                          </span>
-                          {(decorationCharge > 0 || musicCharge > 0) && (
-                            <div className="text-xs text-gray-600 mt-1">
-                              {decorationCharge > 0 && <div>+ Decoration: ₹{decorationCharge}</div>}
-                              {musicCharge > 0 && <div>+ Music: ₹{musicCharge}</div>}
-                              <div className="font-semibold">= ₹{grandTotal.toFixed(2)}</div>
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-500 mt-1">
-                            {isCustomRate ? (
-                              `Custom rate: ₹${ratePerPax.toFixed(2)} + ₹0.00 (GST) = ₹${ratePerPax.toFixed(2)}`
-                            ) : (
-                              `${booking.ratePlan} rate: ₹${standardRate} + ₹0.00 (GST) = ₹${ratePerPax.toFixed(2)}`
-                            )}
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </>
-                ) : (
-                  <span className="text-gray-400">N/A</span>
-                )}
-              </div>
-              {/* Total Amount */}
-              <div className="flex-1 flex flex-col items-center md:items-start">
-                <div className="flex items-center space-x-2 mb-1">
-                  <FaMoneyBillWave className="text-[#c3ad6b] text-xl" />
-                  <span className="font-semibold text-gray-700 text-lg">
-                    Total
-                  </span>
-                </div>
-                <span className="text-2xl font-extrabold text-[#c3ad6b]">
-                  ₹{booking.total || <span className="text-gray-400">N/A</span>}
-                </span>
-                <span className="text-xs text-gray-500">Total Amount</span>
-              </div>
-            </div>
-
-          </section>
 
           {/* Booking Details Section */}
           <section className="space-y-4">
@@ -2762,6 +2629,145 @@ const UpdateBooking = () => {
                   )}
                 </div>
               )}
+            </div>
+          </section>
+
+          <div className="border-t border-gray-200"></div>
+
+          {/* Rate Plan Summary Section */}
+          <section className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-[#c3ad6b]/20 p-2 rounded-full">
+                <FaMoneyBillWave className="text-[#c3ad6b] text-lg" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Rate Plan Summary
+              </h2>
+            </div>
+            <div className="bg-white shadow-lg rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:space-x-8 space-y-4 md:space-y-0 border border-[#f3e9d1]">
+              {/* Rate Plan & Food Type */}
+              <div className="flex-1 flex flex-col items-center md:items-start">
+                <div className="flex items-center space-x-2 mb-1">
+                  <FaUtensils className="text-[#c3ad6b] text-xl" />
+                  <span className="font-semibold text-gray-700 text-lg">
+                    {booking.ratePlan || (
+                      <span className="text-gray-400">N/A</span>
+                    )}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500">Rate Plan</span>
+                {(() => {
+                  // Check if current rate is custom by comparing with standard rates
+                  let isCustomRate = false;
+                  let standardRate = 0;
+                  if (booking.ratePlan && booking.foodType && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
+                    standardRate = RATE_CONFIG[booking.foodType][booking.ratePlan].basePrice;
+                    const currentRate = parseFloat(booking.ratePerPax) || 0;
+                    isCustomRate = Math.abs(currentRate - standardRate) > 0.01;
+                  }
+                  
+                  if (isCustomRate) {
+                    return (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Custom Rate: <span className="font-bold text-[#c3ad6b]">₹{booking.ratePerPax}</span>
+                      </div>
+                    );
+                  } else if (booking.foodType && booking.ratePlan && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
+                    return (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {booking.ratePlan} Rate:{" "}
+                        <span className="font-bold text-[#c3ad6b]">
+                          ₹{standardRate}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+              {/* Food Type */}
+              <div className="flex-1 flex flex-col items-center md:items-start">
+                <div className="flex items-center space-x-2 mb-1">
+                  <FaUsers className="text-[#c3ad6b] text-xl" />
+                  <span className="font-semibold text-gray-700 text-lg">
+                    {booking.foodType || (
+                      <span className="text-gray-400">N/A</span>
+                    )}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500">Food Type</span>
+              </div>
+              {/* Calculation */}
+              <div className="flex-1 flex flex-col items-center md:items-start">
+                <div className="flex items-center space-x-2 mb-1">
+                  <FaRupeeSign className="text-[#c3ad6b] text-xl" />
+                  <span className="font-semibold text-gray-700 text-lg">
+                    Calculation
+                  </span>
+                </div>
+                {booking.pax && booking.ratePerPax ? (
+                  <>
+                    {(() => {
+                      const pax = parseInt(booking.pax) || 0;
+                      const ratePerPax = parseFloat(booking.ratePerPax) || 0;
+                      const foodTotal = ratePerPax * pax;
+                      
+                      const decorationCharge = booking.hasDecoration ? (parseFloat(booking.decorationCharge) || 0) : 0;
+                      const musicCharge = booking.hasMusic ? (parseFloat(booking.musicCharge) || 0) : 0;
+                      const grandTotal = foodTotal + decorationCharge + musicCharge;
+                      
+                      // Check if this is a custom rate by comparing with standard rates
+                      let isCustomRate = false;
+                      let standardRate = 0;
+                      if (booking.ratePlan && booking.foodType && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
+                        standardRate = RATE_CONFIG[booking.foodType][booking.ratePlan].basePrice;
+                        isCustomRate = Math.abs(ratePerPax - standardRate) > 0.01; // Allow for small floating point differences
+                      }
+                      
+                      return (
+                        <>
+                          <span className="text-lg font-bold text-[#c3ad6b]">
+                            ₹{ratePerPax.toFixed(2)}
+                          </span>
+                          <span className="text-gray-700"> x {pax} = </span>
+                          <span className="text-lg font-bold text-[#c3ad6b]">
+                            ₹{foodTotal.toFixed(2)}
+                          </span>
+                          {(decorationCharge > 0 || musicCharge > 0) && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {decorationCharge > 0 && <div>+ Decoration: ₹{decorationCharge}</div>}
+                              {musicCharge > 0 && <div>+ Music: ₹{musicCharge}</div>}
+                              <div className="font-semibold">= ₹{grandTotal.toFixed(2)}</div>
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            {isCustomRate ? (
+                              `Custom rate: ₹${ratePerPax.toFixed(2)} + ₹0.00 (GST) = ₹${ratePerPax.toFixed(2)}`
+                            ) : (
+                              `${booking.ratePlan} rate: ₹${standardRate} + ₹0.00 (GST) = ₹${ratePerPax.toFixed(2)}`
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <span className="text-gray-400">N/A</span>
+                )}
+              </div>
+              {/* Total Amount */}
+              <div className="flex-1 flex flex-col items-center md:items-start">
+                <div className="flex items-center space-x-2 mb-1">
+                  <FaMoneyBillWave className="text-[#c3ad6b] text-xl" />
+                  <span className="font-semibold text-gray-700 text-lg">
+                    Total
+                  </span>
+                </div>
+                <span className="text-2xl font-extrabold text-[#c3ad6b]">
+                  ₹{booking.total || <span className="text-gray-400">N/A</span>}
+                </span>
+                <span className="text-xs text-gray-500">Total Amount</span>
+              </div>
             </div>
           </section>
 
@@ -3167,8 +3173,9 @@ const UpdateBooking = () => {
               )}
             </button>
           </div>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

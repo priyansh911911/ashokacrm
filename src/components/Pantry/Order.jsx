@@ -612,7 +612,7 @@ const Order = () => {
                 if (!order.vendorId) return false;
                 const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
                 return id === filterVendor;
-              }).slice(0, 10).map((order) => (
+              }).map((order) => (
                 <div key={order._id} className="bg-gray-50 p-3 rounded-lg border">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -871,7 +871,7 @@ const Order = () => {
                       <option value="Kitchen to Pantry">Kitchen to Pantry</option>
                       <option value="Pantry to Reception">Pantry to Reception</option>
                       <option value="Reception to Vendor">Reception to Vendor</option>
-                      <option value="Daily Essentials Distributor">🛒 Daily Essentials Distributor</option>
+                      {/* <option value="Daily Essentials Distributor">🛒 Daily Essentials Distributor</option> */}
                     </select>
                   </div>
                   
@@ -941,12 +941,53 @@ const Order = () => {
                               {analytics.vendor?.UpiID && (
                                 <div className="mt-3 p-2 bg-green-50 rounded border">
                                   <div className="text-xs text-gray-600 mb-1">Payment Info:</div>
-                                  <div className="text-sm font-mono text-green-700">{analytics.vendor.UpiID}</div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const totalAmount = analytics.total?.amount || 0;
+                                      
+                                      // Check if mobile device
+                                      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                      
+                                      if (isMobile) {
+                                        const upiUrl = `upi://pay?pa=${analytics.vendor.UpiID}&pn=${encodeURIComponent(analytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                                        window.location.href = upiUrl;
+                                      } else {
+                                        // Desktop fallback: copy UPI ID to clipboard
+                                        navigator.clipboard.writeText(analytics.vendor.UpiID).then(() => {
+                                          alert(`UPI ID copied to clipboard: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
+                                        }).catch(() => {
+                                          alert(`UPI ID: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
+                                        });
+                                      }
+                                    }}
+                                    className="text-sm font-mono text-green-700 hover:text-green-900 underline cursor-pointer bg-transparent border-none p-0"
+                                  >
+                                    {analytics.vendor.UpiID}
+                                  </button>
                                   {analytics.vendor.scannerImg && (
                                     <img 
                                       src={analytics.vendor.scannerImg} 
                                       alt="QR Code" 
-                                      className="mt-2 w-20 h-20 border rounded shadow-sm"
+                                      className="mt-2 w-20 h-20 border rounded shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                                      onClick={() => {
+                                        const totalAmount = analytics.total?.amount || 0;
+                                        
+                                        // Check if mobile device
+                                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                        
+                                        if (isMobile) {
+                                          const upiUrl = `upi://pay?pa=${analytics.vendor.UpiID}&pn=${encodeURIComponent(analytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                                          window.location.href = upiUrl;
+                                        } else {
+                                          // Desktop fallback: copy UPI ID to clipboard
+                                          navigator.clipboard.writeText(analytics.vendor.UpiID).then(() => {
+                                            alert(`UPI ID copied to clipboard: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
+                                          }).catch(() => {
+                                            alert(`UPI ID: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
+                                          });
+                                        }
+                                      }}
                                     />
                                   )}
                                 </div>
@@ -966,7 +1007,7 @@ const Order = () => {
                                       if (!order.vendorId) return false;
                                       const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
                                       return id === formData.vendor;
-                                    }).slice(0, 3);
+                                    });
                                     
                                     return vendorOrders.map((order, orderIdx) => (
                                       <div key={orderIdx} className="bg-white/70 p-2 rounded border">
@@ -989,18 +1030,6 @@ const Order = () => {
                                         })}
                                       </div>
                                     ));
-                                  })()}
-                                  {(() => {
-                                    const vendorOrders = orders.filter(order => {
-                                      if (!order.vendorId) return false;
-                                      const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
-                                      return id === formData.vendor;
-                                    });
-                                    return vendorOrders.length > 3 && (
-                                      <div className="text-xs text-gray-500 text-center py-1">
-                                        +{vendorOrders.length - 3} more orders...
-                                      </div>
-                                    );
                                   })()}
                                 </div>
                               </div>
