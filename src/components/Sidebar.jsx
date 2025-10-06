@@ -177,13 +177,11 @@ const Sidebar = () => {
 
     // Admin only items
     if (role === "admin") {
-      items.push({ icon: ChartBarStacked, label: "Category", path: "/category" });
       items.push({ icon: FileText, label: "Room Inspection", path: "/room-inspection" });
     }
 
     // Reception and Admin items
     if (role === "admin" || (role === "staff" && hasReception)) {
-      items.push({ icon: BedDouble, label: "Room", path: "/room" });
       items.push({ icon: FileText, label: "Booking", path: "/booking" });
       items.push({ icon: FileText, label: "Reservation", path: "/reservation" });
     }
@@ -211,6 +209,34 @@ const Sidebar = () => {
         { label: "Staff Dashboard", path: "/staff-dashboard", icon: LayoutDashboard },
       ],
     }] : []),
+    ...(() => {
+      const role = localStorage.getItem("role");
+      let userDepartments = [];
+      try {
+        const departmentData = localStorage.getItem("department") || localStorage.getItem("departments");
+        userDepartments = departmentData && departmentData !== 'undefined' ? JSON.parse(departmentData) : [];
+      } catch (e) {
+        userDepartments = [];
+      }
+      const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
+      
+      if (role === "admin" || (role === "staff" && hasReception)) {
+        const children = [
+          { label: "Room", path: "/room", icon: BedDouble },
+        ];
+        if (role === "admin") {
+          children.push({ label: "Category", path: "/category", icon: ChartBarStacked });
+        }
+        return [{
+          icon: BedDouble,
+          label: "Room Management",
+          path: "/room",
+          isDropdown: true,
+          children,
+        }];
+      }
+      return [];
+    })(),
     ...(() => {
       const role = localStorage.getItem("role");
       let userDepartments = [];

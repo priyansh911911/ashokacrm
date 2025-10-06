@@ -29,6 +29,7 @@ const RoomInspection = () => {
       const response = await axios.get('/api/rooms/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Rooms fetched:', response.data);
       setRooms(response.data);
     } catch (error) {
       console.error('Error fetching rooms:', error);
@@ -56,6 +57,8 @@ const RoomInspection = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const inspectionsData = Array.isArray(response.data) ? response.data : response.data.inspections || [];
+      console.log('Inspections fetched:', inspectionsData);
+      console.log('Sample inspection roomId:', inspectionsData[0]?.roomId);
       setInspections(inspectionsData);
     } catch (error) {
       console.error('Error fetching inspections:', error);
@@ -428,9 +431,24 @@ const RoomInspection = () => {
                     return (
                       <tr key={inspection._id} className="border-t" style={{borderColor: 'hsl(45, 100%, 85%)'}}>
                         <td className="px-4 py-3 text-sm font-medium">
-                          {room ? `Room ${room.roomNumber || room.room_number}` : 
-                           inspection.roomId?.roomNumber ? `Room ${inspection.roomId.roomNumber}` :
-                           inspection.roomId?.room_number ? `Room ${inspection.roomId.room_number}` : 'N/A'}
+                          {(() => {
+                            // Try to find room from rooms array first
+                            if (room) {
+                              return `Room ${room.roomNumber || room.room_number || room.number || 'Unknown'}`;
+                            }
+                            // If inspection has populated roomId object
+                            if (inspection.roomId && typeof inspection.roomId === 'object') {
+                              return `Room ${inspection.roomId.roomNumber || inspection.roomId.room_number || inspection.roomId.number || 'Unknown'}`;
+                            }
+                            // If roomId is just a string, try to find in rooms array
+                            if (typeof inspection.roomId === 'string') {
+                              const foundRoom = rooms.find(r => r._id === inspection.roomId);
+                              if (foundRoom) {
+                                return `Room ${foundRoom.roomNumber || foundRoom.room_number || foundRoom.number || 'Unknown'}`;
+                              }
+                            }
+                            return 'N/A';
+                          })()} 
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {booking ? (
