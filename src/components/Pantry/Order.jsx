@@ -518,7 +518,7 @@ const Order = () => {
                 <img 
                   src={vendors.find(v => v._id === filterVendor)?.scannerImg} 
                   alt="Payment QR Code" 
-                  className="w-20 h-20 object-cover rounded border cursor-pointer hover:scale-105 transition-transform"
+                  className="w-24 h-24 object-cover rounded border cursor-pointer hover:scale-105 transition-transform shadow-md"
                   onClick={() => {
                     const vendor = vendors.find(v => v._id === filterVendor);
                     const totalAmount = vendorAnalytics?.total?.amount || 0;
@@ -858,55 +858,7 @@ const Order = () => {
               </h2>
               
               <form onSubmit={handleSubmitOrder} className="space-y-4">
-                {/* General Analytics in Form */}
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-semibold text-blue-800 text-sm">📊 Order Analytics</h4>
-                    <button
-                      type="button"
-                      onClick={() => setShowFormAnalytics(!showFormAnalytics)}
-                      className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 rounded border border-blue-300 hover:bg-blue-100"
-                    >
-                      {showFormAnalytics ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                  {showFormAnalytics && (
-                    <>
-                      <div className="grid grid-cols-3 gap-3 text-center text-xs mb-3">
-                        <div>
-                          <div className="text-lg font-bold text-blue-600">{orders.length}</div>
-                          <div className="text-gray-600">Total Orders</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-green-600">₹{orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0).toFixed(0)}</div>
-                          <div className="text-gray-600">Total Amount</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-purple-600">{pantryItems.length}</div>
-                          <div className="text-gray-600">Available Items</div>
-                        </div>
-                      </div>
-                      
-                      {/* Items List */}
-                      <div className="border-t border-blue-200 pt-2">
-                        <h5 className="font-medium text-blue-700 mb-2 text-xs">Available Items & Prices:</h5>
-                        <div className="max-h-32 overflow-y-auto space-y-1">
-                          {pantryItems.slice(0, 10).map((item, idx) => (
-                            <div key={idx} className="flex justify-between text-xs bg-white/50 px-2 py-1 rounded">
-                              <span className="text-gray-700">{item.name}</span>
-                              <span className="text-green-600 font-medium">₹{item.price || 0}</span>
-                            </div>
-                          ))}
-                          {pantryItems.length > 10 && (
-                            <div className="text-xs text-gray-500 text-center py-1">
-                              +{pantryItems.length - 10} more items...
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -976,7 +928,7 @@ const Order = () => {
                                   <div className="text-gray-600">Orders</div>
                                 </div>
                                 <div>
-                                  <div className="text-lg font-bold text-green-600">₹{analytics.total.amount.toFixed(0)}</div>
+                                  <div className="text-lg font-bold text-green-600">₹{analytics.total.amount}</div>
                                   <div className="text-gray-600">Amount</div>
                                 </div>
                                 <div>
@@ -984,37 +936,59 @@ const Order = () => {
                                   <div className="text-gray-600">Items</div>
                                 </div>
                               </div>
+                              
+                              {/* UPI and Scanner Info */}
+                              {analytics.vendor?.UpiID && (
+                                <div className="mt-3 p-2 bg-green-50 rounded border">
+                                  <div className="text-xs text-gray-600 mb-1">Payment Info:</div>
+                                  <div className="text-sm font-mono text-green-700">{analytics.vendor.UpiID}</div>
+                                  {analytics.vendor.scannerImg && (
+                                    <img 
+                                      src={analytics.vendor.scannerImg} 
+                                      alt="QR Code" 
+                                      className="mt-2 w-20 h-20 border rounded shadow-sm"
+                                    />
+                                  )}
+                                </div>
+                              )}
+                              
                               <div className="mt-2 flex justify-between text-xs">
                                 <span className="text-yellow-600">Pending: {analytics.statusBreakdown.pending}</span>
                                 <span className="text-green-600">Fulfilled: {analytics.statusBreakdown.fulfilled}</span>
                               </div>
                               
-                              {/* Vendor Items List */}
+                              {/* Vendor Orders List */}
                               <div className="border-t border-blue-200 pt-2 mt-2">
-                                <h5 className="font-medium text-blue-700 mb-2 text-xs">Recent Order Items:</h5>
+                                <h5 className="font-medium text-blue-700 mb-2 text-xs">Recent Orders:</h5>
                                 <div className="max-h-24 overflow-y-auto space-y-1">
                                   {(() => {
                                     const vendorOrders = orders.filter(order => {
                                       if (!order.vendorId) return false;
                                       const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
                                       return id === formData.vendor;
-                                    });
-                                    const allItems = vendorOrders.flatMap(order => order.items || []);
-                                    return allItems.slice(0, 8).map((item, idx) => {
-                                      // Try to get item name from pantryItems if not available in order
-                                      let itemName = item.name || item.itemName;
-                                      if (!itemName && (item.itemId || item.pantryItemId)) {
-                                        const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
-                                        itemName = pantryItem?.name;
-                                      }
-                                      console.log('Item debug:', item, 'Found name:', itemName);
-                                      return (
-                                        <div key={idx} className="flex justify-between text-xs bg-white/50 px-2 py-1 rounded">
-                                          <span className="text-gray-700">{itemName || 'Unknown Item'} x{item.quantity || 1}</span>
-                                          <span className="text-green-600 font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(0)}</span>
+                                    }).slice(0, 3);
+                                    
+                                    return vendorOrders.map((order, orderIdx) => (
+                                      <div key={orderIdx} className="bg-white/70 p-2 rounded border">
+                                        <div className="flex justify-between items-center text-xs font-medium text-gray-800 mb-1">
+                                          <span>Order #{order._id?.slice(-6)} - {order.status}</span>
+                                          <span className="text-green-600 font-bold">₹{order.totalAmount?.toFixed(0) || '0'}</span>
                                         </div>
-                                      );
-                                    });
+                                        {(order.items || []).map((item, itemIdx) => {
+                                          let itemName = item.name || item.itemName;
+                                          if (!itemName && (item.itemId || item.pantryItemId)) {
+                                            const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                                            itemName = pantryItem?.name;
+                                          }
+                                          return (
+                                            <div key={itemIdx} className="flex justify-between text-xs text-gray-700 ml-2">
+                                              <span>{itemName || 'Unknown Item'} x{item.quantity || 1}</span>
+                                              <span className="text-green-600 font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(0)}</span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ));
                                   })()}
                                   {(() => {
                                     const vendorOrders = orders.filter(order => {
@@ -1022,10 +996,9 @@ const Order = () => {
                                       const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
                                       return id === formData.vendor;
                                     });
-                                    const allItems = vendorOrders.flatMap(order => order.items || []);
-                                    return allItems.length > 8 && (
+                                    return vendorOrders.length > 3 && (
                                       <div className="text-xs text-gray-500 text-center py-1">
-                                        +{allItems.length - 8} more items...
+                                        +{vendorOrders.length - 3} more orders...
                                       </div>
                                     );
                                   })()}
