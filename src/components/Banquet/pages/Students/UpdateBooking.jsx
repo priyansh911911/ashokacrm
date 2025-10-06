@@ -348,6 +348,11 @@ const UpdateBooking = () => {
       setBooking(prev => ({ ...prev, showRatePerPax: false, ratePerPax: "" }));
       return;
     }
+    
+    // Capitalize name field - make all letters uppercase
+    if (name === "name") {
+      val = val.toUpperCase();
+    }
     setBooking((prev) => {
       let newStatus = prev.bookingStatus;
       let newStatusHistory = [

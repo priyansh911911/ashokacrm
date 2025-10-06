@@ -45,13 +45,33 @@ const Invoice = () => {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const res = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`);
-        console.log('API Response:', res.data);
-        if (res.data.error) {
-          throw new Error(res.data.error);
+        // Fetch booking data
+        const bookingRes = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`);
+        console.log('Booking API Response:', bookingRes.data);
+        if (bookingRes.data.error) {
+          throw new Error(bookingRes.data.error);
         }
-        setBooking(res.data.data || res.data);
+        
+        const bookingData = bookingRes.data.data || bookingRes.data;
+        
+        // Fetch menu data
+        let categorizedMenu = null;
+        try {
+          const menuRes = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-menus/${id}`);
+          console.log('Menu API Response:', menuRes.data);
+          const rawMenuData = menuRes.data?.data || menuRes.data || null;
+          categorizedMenu = rawMenuData?.categories || rawMenuData || null;
+        } catch (menuErr) {
+          console.log('No menu found for this booking:', menuErr);
+        }
+        
+        // Combine booking and menu data
+        setBooking({
+          ...bookingData,
+          categorizedMenu: categorizedMenu || bookingData.categorizedMenu
+        });
       } catch (error) {
+        console.error('Fetch error:', error);
         setError("Failed to load booking details. Please try again later.");
       } finally {
         setLoading(false);

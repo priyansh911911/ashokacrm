@@ -1586,6 +1586,11 @@ const AddBooking = () => {
       }
     }
 
+    // Capitalize name field - make all letters uppercase
+    if (name === "name") {
+      val = val.toUpperCase();
+    }
+    
     // If bookingStatus is changed, set statusChangedAt
     if (name === "bookingStatus" && value !== form.bookingStatus) {
       // Add status history tracking and update booleans
