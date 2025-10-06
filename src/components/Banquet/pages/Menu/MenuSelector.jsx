@@ -87,14 +87,62 @@ const MenuSelector = ({
         console.log('Menu items response:', menuData);
         console.log('Plan limits response:', limitsData);
         
-        // Handle categories
+        // Handle categories with predefined order
         if (categoriesData) {
           const cats = Array.isArray(categoriesData) ? categoriesData : 
                       categoriesData.data ? categoriesData.data : 
                       categoriesData.categories ? categoriesData.categories : [];
-          setCategories(cats);
-          if (cats.length > 0) {
-            setCurrentCategory(cats[0].cateName || cats[0].name);
+          
+          console.log('🍽️ MenuSelector: foodType received:', foodType);
+          console.log('📋 MenuSelector: All categories:', cats.map(c => c.cateName || c.name));
+          
+          // Define the desired order based on food type
+          const vegCategoryOrder = [
+            'WELCOME DRINK', 'STARTER VEG', 'SALAD', 'RAITA', 'MAIN COURSE[PANEER]', 
+            'VEGETABLE', 'DAL', 'RICE', 'BREADS', 'DESSERTS'
+          ];
+          
+          const nonVegCategoryOrder = [
+            'WELCOME DRINK', 'STARTER VEG', 'SALAD', 'RAITA', 'MAIN COURSE[PANEER]', 
+            'MAIN COURSE[NON-VEG]', 'VEGETABLE', 'DAL', 'RICE', 'BREADS', 'DESSERTS'
+          ];
+          
+          const categoryOrder = foodType === 'Veg' ? vegCategoryOrder : nonVegCategoryOrder;
+          console.log('📝 MenuSelector: Using category order:', categoryOrder);
+          
+          // Filter categories based on food type
+          const filteredCats = cats.filter(cat => {
+            const catName = cat.cateName || cat.name;
+            // For Veg, exclude any NON-VEG categories
+            if (foodType === 'Veg' && (catName.includes('NON-VEG') || catName.includes('NON VEG'))) {
+              console.log('❌ MenuSelector: Filtering out NON-VEG category:', catName);
+              return false;
+            }
+            return true;
+          });
+          
+          console.log('✅ MenuSelector: Filtered categories:', filteredCats.map(c => c.cateName || c.name));
+          
+          const sortedCats = filteredCats.sort((a, b) => {
+            const aName = a.cateName || a.name;
+            const bName = b.cateName || b.name;
+            const aIndex = categoryOrder.indexOf(aName);
+            const bIndex = categoryOrder.indexOf(bName);
+            
+            // If both are in the order array, sort by their position
+            if (aIndex !== -1 && bIndex !== -1) {
+              return aIndex - bIndex;
+            }
+            // If only one is in the order array, prioritize it
+            if (aIndex !== -1) return -1;
+            if (bIndex !== -1) return 1;
+            // If neither is in the order array, sort alphabetically
+            return aName.localeCompare(bName);
+          });
+          
+          setCategories(sortedCats);
+          if (sortedCats.length > 0) {
+            setCurrentCategory(sortedCats[0].cateName || sortedCats[0].name);
           }
         }
         

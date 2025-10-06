@@ -633,7 +633,7 @@ const ListBooking = () => {
                         <ChefPDFPreview booking={item} />
                         <button
                           onClick={() => {
-                            let raw = String(item.number || "").replace(
+                            let raw = String(item.whatsapp || item.number || "").replace(
                               /[^\d]/g,
                               ""
                             );
@@ -689,7 +689,7 @@ const ListBooking = () => {
                               `- Bring your ID proof for verification\n` +
                               `- Final payment due on event day\n\n` +
                               `Thank you for choosing us! We look forward to serving you. 🙏\n\n`;
-                            const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+                            const whatsappUrl = `https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
                             window.open(whatsappUrl, "_blank");
                           }}
                           className="inline-flex items-center gap-1 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors font-semibold px-3 py-1.5 text-xs"
