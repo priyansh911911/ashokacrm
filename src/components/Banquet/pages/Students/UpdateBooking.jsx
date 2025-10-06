@@ -2771,173 +2771,6 @@ const UpdateBooking = () => {
             </div>
           </section>
 
-          {/* Menu Section - Only for Admin */}
-          {
-            <>
-              <div className="border-t border-gray-200"></div>
-              <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-[#c3ad6b]/20 p-2 rounded-full">
-                      <FaUtensils className="text-[#c3ad6b] text-lg" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      Menu Selection
-                    </h2>
-                  </div>
-                  <button
-                    onClick={() => setShowMenuModal(true)}
-                    className={`flex items-center bg-[#c3ad6b] hover:bg-[#b39b5a] text-white py-2 px-4 rounded-lg ${
-                      isStaffEditLimitReached
-                        ? "opacity-60 cursor-not-allowed"
-                        : ""
-                    }`}
-                    disabled={isStaffEditLimitReached}
-                  >
-                    <FaList className="mr-2" /> Select Menu Items
-                  </button>
-                  {isStaffEditLimitReached && (
-                    <div className="text-red-500 text-sm ml-4">
-                      Menu edit limit reached for staff.
-                    </div>
-                  )}
-                </div>
-                {/* Selected Menu Items (read-only textarea, like AddBooking) */}
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Selected Menu Items
-                  </label>
-                  <textarea
-                    name="menuItems"
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 py-2 px-3 h-24"
-                    value={
-                      booking.categorizedMenu
-                        ? Object.entries(booking.categorizedMenu)
-                            .filter(
-                              ([key]) =>
-                                ![
-                                  "_id",
-                                  "bookingRef",
-                                  "createdAt",
-                                  "updatedAt",
-                                  "__v",
-                                ].includes(key)
-                            )
-                            .map(([, arr]) => arr)
-                            .flat()
-                            .join(", ")
-                        : ""
-                    }
-                    readOnly
-                    placeholder="No menu items selected yet - click 'Select Menu Items' to add items"
-                  />
-                  {!booking.categorizedMenu && (
-                    <div className="text-sm text-blue-600 mt-1">
-                      💡 This booking doesn't have menu items yet. Use the "Select Menu Items" button above to add them.
-                    </div>
-                  )}
-                </div>
-                {/* Selected Menu Items Table */}
-                {/* {booking.menuItems && booking.menuItems.length > 0 ? (
-                  <div className="space-y-4 mt-6">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {booking.menuItems.map((item, index) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                                <div className="text-sm text-gray-500">{item.category}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">
-                                  <FaRupeeSign className="inline mr-1" />
-                                  {item.price}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <input
-                                  type="number"
-                                  name="quantity"
-                                  min="1"
-                                  className="w-20 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1 px-2"
-                                  value={isNaN(item.quantity) ? "" : item.quantity}
-                                  onChange={(e) => handleMenuItemChange(e, index)}
-                                />
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">
-                                  <FaRupeeSign className="inline mr-1" />
-                                  {item.price * item.quantity}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <button
-                                  onClick={() => removeMenuItem(index)}
-                                  className="text-red-500 hover:text-red-700"
-                                  title="Remove item"
-                                >
-                                  <FaTrash />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    No menu items selected. Click "Select Menu Items" to add items.
-                  </div>
-                )} */}
-              </section>
-            </>
-          }
-
-          {/* Menu Selection Modal */}
-          {showMenuModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-semibold">Select Menu Items</h3>
-                  <button
-                    onClick={() => setShowMenuModal(false)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    &times;
-                  </button>
-                </div>
-                <MenuSelector
-                  initialItems={
-                    booking.menuItems && booking.menuItems.length > 0 
-                      ? booking.menuItems 
-                      : booking.categorizedMenu?.categories
-                        ? Object.values(booking.categorizedMenu.categories)
-                            .flat()
-                            .filter((item) => typeof item === "string")
-                        : []
-                  }
-                  foodType={booking.foodType}
-                  ratePlan={booking.ratePlan}
-                  onSave={handleMenuSelection}
-                  onClose={() => setShowMenuModal(false)}
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="border-t border-gray-200"></div>
-
           {/* Financial Information Section */}
           <section className="space-y-4">
             <div className="flex items-center space-x-3">
@@ -3105,6 +2938,172 @@ const UpdateBooking = () => {
               </div>
             </div>
           </section>
+
+          <div className="border-t border-gray-200"></div>
+
+          {/* Menu Section - Only for Admin */}
+          {
+            <>
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-[#c3ad6b]/20 p-2 rounded-full">
+                      <FaUtensils className="text-[#c3ad6b] text-lg" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      Menu Selection
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setShowMenuModal(true)}
+                    className={`flex items-center bg-[#c3ad6b] hover:bg-[#b39b5a] text-white py-2 px-4 rounded-lg ${
+                      isStaffEditLimitReached
+                        ? "opacity-60 cursor-not-allowed"
+                        : ""
+                    }`}
+                    disabled={isStaffEditLimitReached}
+                  >
+                    <FaList className="mr-2" /> Select Menu Items
+                  </button>
+                  {isStaffEditLimitReached && (
+                    <div className="text-red-500 text-sm ml-4">
+                      Menu edit limit reached for staff.
+                    </div>
+                  )}
+                </div>
+                {/* Selected Menu Items (read-only textarea, like AddBooking) */}
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Selected Menu Items
+                  </label>
+                  <textarea
+                    name="menuItems"
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50 py-2 px-3 h-24"
+                    value={
+                      booking.categorizedMenu
+                        ? Object.entries(booking.categorizedMenu)
+                            .filter(
+                              ([key]) =>
+                                ![
+                                  "_id",
+                                  "bookingRef",
+                                  "createdAt",
+                                  "updatedAt",
+                                  "__v",
+                                ].includes(key)
+                            )
+                            .map(([, arr]) => arr)
+                            .flat()
+                            .join(", ")
+                        : ""
+                    }
+                    readOnly
+                    placeholder="No menu items selected yet - click 'Select Menu Items' to add items"
+                  />
+                  {!booking.categorizedMenu && (
+                    <div className="text-sm text-blue-600 mt-1">
+                      💡 This booking doesn't have menu items yet. Use the "Select Menu Items" button above to add them.
+                    </div>
+                  )}
+                </div>
+                {/* Selected Menu Items Table */}
+                {/* {booking.menuItems && booking.menuItems.length > 0 ? (
+                  <div className="space-y-4 mt-6">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {booking.menuItems.map((item, index) => (
+                            <tr key={index}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                                <div className="text-sm text-gray-500">{item.category}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  <FaRupeeSign className="inline mr-1" />
+                                  {item.price}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <input
+                                  type="number"
+                                  name="quantity"
+                                  min="1"
+                                  className="w-20 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1 px-2"
+                                  value={isNaN(item.quantity) ? "" : item.quantity}
+                                  onChange={(e) => handleMenuItemChange(e, index)}
+                                />
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                  <FaRupeeSign className="inline mr-1" />
+                                  {item.price * item.quantity}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={() => removeMenuItem(index)}
+                                  className="text-red-500 hover:text-red-700"
+                                  title="Remove item"
+                                >
+                                  <FaTrash />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    No menu items selected. Click "Select Menu Items" to add items.
+                  </div>
+                )} */}
+              </section>
+            </>
+          }
+
+          {/* Menu Selection Modal */}
+          {showMenuModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold">Select Menu Items</h3>
+                  <button
+                    onClick={() => setShowMenuModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    &times;
+                  </button>
+                </div>
+                <MenuSelector
+                  initialItems={
+                    booking.menuItems && booking.menuItems.length > 0 
+                      ? booking.menuItems 
+                      : booking.categorizedMenu?.categories
+                        ? Object.values(booking.categorizedMenu.categories)
+                            .flat()
+                            .filter((item) => typeof item === "string")
+                        : []
+                  }
+                  foodType={booking.foodType}
+                  ratePlan={booking.ratePlan}
+                  onSave={handleMenuSelection}
+                  onClose={() => setShowMenuModal(false)}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="border-t border-gray-200"></div>
 
