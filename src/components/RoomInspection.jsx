@@ -151,10 +151,10 @@ const RoomInspection = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/housekeeping/roominspections/${inspectionId}`, {
+      await axios.delete(`/api/room-inspections/${inspectionId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Inspection deleted successfully!');
+      alert('Room inspection deleted successfully!');
       fetchInspections();
     } catch (error) {
       console.error('Error deleting inspection:', error);
