@@ -9,7 +9,9 @@ const MenuSelector = ({
   foodType,
   ratePlan
 }) => {
-  const isAdmin = (localStorage.getItem('role') === 'Admin');
+  const userRole = localStorage.getItem('role');
+  const isAdmin = userRole?.toLowerCase() === 'admin';
+  console.log('👤 MenuSelector: User role:', userRole, 'isAdmin:', isAdmin);
   const { axios } = useAppContext();
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
@@ -199,8 +201,13 @@ const MenuSelector = ({
         
         if (!categoryMatch) return false;
         
-        // Filter by foodType - exact match only
+        // Filter by foodType - handle 'Both' case
         if (foodType && item.foodType) {
+          // If item foodType is 'Both', show for any selected foodType
+          if (item.foodType === 'Both') {
+            return true;
+          }
+          // Otherwise exact match
           return item.foodType === foodType;
         }
         
@@ -245,31 +252,34 @@ const MenuSelector = ({
         return newItems;
       }
       
-      // Find matching plan limit based on foodType and ratePlan
-      const matchingPlan = Array.isArray(planLimits) 
-        ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
-        : null;
-      
-      const categoryLimit = matchingPlan?.limits?.[currentCategory];
-      
-      console.log('Matching Plan:', matchingPlan);
-      console.log('Current Category:', currentCategory);
-      console.log('Category Limit:', categoryLimit);
-      
-      if (categoryLimit) {
-        const currentCategorySelectedCount = prev.filter(selectedItem => {
-          const selectedItemData = menuItems.find(mi => mi.name === selectedItem);
-          if (selectedItemData?.category && typeof selectedItemData.category === 'string') {
-            const match = selectedItemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
-            return match && match[1] === currentCategory;
+      // Skip limit checks for Admin users
+      if (!isAdmin) {
+        // Find matching plan limit based on foodType and ratePlan
+        const matchingPlan = Array.isArray(planLimits) 
+          ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
+          : null;
+        
+        const categoryLimit = matchingPlan?.limits?.[currentCategory];
+        
+        console.log('Matching Plan:', matchingPlan);
+        console.log('Current Category:', currentCategory);
+        console.log('Category Limit:', categoryLimit);
+        
+        if (categoryLimit) {
+          const currentCategorySelectedCount = prev.filter(selectedItem => {
+            const selectedItemData = menuItems.find(mi => mi.name === selectedItem);
+            if (selectedItemData?.category && typeof selectedItemData.category === 'string') {
+              const match = selectedItemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
+              return match && match[1] === currentCategory;
+            }
+            return false;
+          }).length;
+          
+          console.log('Current selected count for category:', currentCategorySelectedCount);
+          
+          if (currentCategorySelectedCount >= categoryLimit) {
+            return prev;
           }
-          return false;
-        }).length;
-        
-        console.log('Current selected count for category:', currentCategorySelectedCount);
-        
-        if (currentCategorySelectedCount >= categoryLimit) {
-          return prev;
         }
       }
       
@@ -421,7 +431,7 @@ const MenuSelector = ({
                   onClick={() => setCurrentCategory(category.cateName || category.name)}
                 >
                   <div>{category.cateName || category.name}</div>
-                  {(() => {
+                  {!isAdmin && (() => {
                     const matchingPlan = Array.isArray(planLimits) 
                       ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
                       : null;
@@ -451,21 +461,24 @@ const MenuSelector = ({
                 currentCategoryItems.map(item => {
                   const isSelected = selectedItems.includes(item);
                   
-                  // Check if limit reached for this category
-                  const matchingPlan = Array.isArray(planLimits) 
-                    ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
-                    : null;
-                  const categoryLimit = matchingPlan?.limits?.[currentCategory];
-                  const currentCategorySelectedCount = selectedItems.filter(selectedItem => {
-                    const selectedItemData = menuItems.find(mi => mi.name === selectedItem);
-                    if (selectedItemData?.category && typeof selectedItemData.category === 'string') {
-                      const match = selectedItemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
-                      return match && match[1] === currentCategory;
-                    }
-                    return false;
-                  }).length;
-                  
-                  const isLimitReached = categoryLimit && currentCategorySelectedCount >= categoryLimit && !isSelected;
+                  // Check if limit reached for this category (skip for Admin)
+                  let isLimitReached = false;
+                  if (!isAdmin) {
+                    const matchingPlan = Array.isArray(planLimits) 
+                      ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
+                      : null;
+                    const categoryLimit = matchingPlan?.limits?.[currentCategory];
+                    const currentCategorySelectedCount = selectedItems.filter(selectedItem => {
+                      const selectedItemData = menuItems.find(mi => mi.name === selectedItem);
+                      if (selectedItemData?.category && typeof selectedItemData.category === 'string') {
+                        const match = selectedItemData.category.match(/cateName:\s*['"]([^'"]+)['"]/);
+                        return match && match[1] === currentCategory;
+                      }
+                      return false;
+                    }).length;
+                    
+                    isLimitReached = categoryLimit && currentCategorySelectedCount >= categoryLimit && !isSelected;
+                  }
                   
                   return (
                     <div
@@ -513,7 +526,7 @@ const MenuSelector = ({
         <footer className="p-4 border-t flex justify-between items-center">
           <div className="text-sm text-gray-600">
             Selected: {selectedItems.length} items
-            {(() => {
+            {!isAdmin && (() => {
               const matchingPlan = Array.isArray(planLimits) 
                 ? planLimits.find(plan => plan.foodType === foodType && plan.ratePlan === ratePlan)
                 : null;
