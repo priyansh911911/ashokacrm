@@ -1697,27 +1697,12 @@ const UpdateBooking = () => {
     },
   };
 
-  // Calculate total when pax, ratePlan, foodType, gst, discount, decoration, or music charges change
+  // Calculate total when any relevant field changes
   useEffect(() => {
-    if (booking.pax && (booking.useCustomPrice ? booking.customPlatePrice : (booking.ratePlan && booking.foodType))) {
+    if (booking.pax && booking.ratePerPax) {
       const paxNum = parseInt(booking.pax) || 0;
-      const gstPercent = parseFloat(booking.gst) || 0;
-      
-      let basePrice;
-      if (booking.useCustomPrice) {
-        basePrice = parseFloat(booking.customPlatePrice) || 0;
-      } else {
-        const rateInfo = RATE_CONFIG[booking.foodType][booking.ratePlan];
-        if (!rateInfo) return;
-        basePrice = rateInfo.basePrice;
-      }
-      
-      // Discount logic: apply discount to base price per pax only
-      const discount = parseFloat(booking.discount) || 0;
-      const discountedBase = basePrice - discount;
-      const gstAmount = (discountedBase * gstPercent) / 100;
-      const rateWithGST = discountedBase + gstAmount;
-      const foodTotal = rateWithGST * paxNum;
+      const ratePerPax = parseFloat(booking.ratePerPax) || 0;
+      const foodTotal = ratePerPax * paxNum;
       
       // Add decoration and music charges
       const decorationCharge = booking.hasDecoration ? (parseFloat(booking.decorationCharge) || 0) : 0;
@@ -1726,11 +1711,10 @@ const UpdateBooking = () => {
       
       setBooking((prev) => ({
         ...prev,
-        total: total ? total.toFixed(2) : "",
-        ratePerPax: rateWithGST.toFixed(2),
+        total: total.toFixed(2),
       }));
     }
-  }, [booking.pax, booking.ratePlan, booking.foodType, booking.gst, booking.discount, booking.decorationCharge, booking.musicCharge, booking.hasDecoration, booking.hasMusic, booking.useCustomPrice, booking.customPlatePrice]);
+  }, [booking.pax, booking.ratePerPax, booking.decorationCharge, booking.musicCharge, booking.hasDecoration, booking.hasMusic]);
 
   // Calculate room price when rooms change
   useEffect(() => {
@@ -2024,17 +2008,17 @@ const UpdateBooking = () => {
         ...prev,
         [name]: numValue,
       };
-      if (name === "pax" || name === "ratePerPax") {
-        const paxVal = name === "pax" ? numValue : prev.pax;
-        const rateVal = name === "ratePerPax" ? numValue : prev.ratePerPax;
-        const newTotal =
-          paxVal !== "" && rateVal !== "" ? paxVal * rateVal : "";
-        return {
-          ...updated,
-          total: newTotal,
-          balance: newTotal !== "" ? newTotal - (prev.advance || 0) : "",
-        };
+      
+      // For ratePerPax changes, let the useEffect handle the calculation
+      if (name === "ratePerPax") {
+        return updated;
       }
+      
+      if (name === "pax") {
+        // Let the useEffect handle the calculation for pax changes too
+        return updated;
+      }
+      
       if (name === "advance") {
         return {
           ...updated,
@@ -2209,7 +2193,7 @@ const UpdateBooking = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-6">
       <Toaster position="top-center" />
 
       {/* Header */}
@@ -2335,42 +2319,34 @@ const UpdateBooking = () => {
                   </span>
                 </div>
                 <span className="text-xs text-gray-500">Rate Plan</span>
-                {booking.useCustomPrice ? (
-                  <div className="text-xs text-gray-500 mt-1">
-                    Custom Rate: <span className="font-bold text-[#c3ad6b]">₹{booking.customPlatePrice || booking.ratePerPax}</span>
-                  </div>
-                ) : (
-                  booking.foodType &&
-                  booking.ratePlan &&
-                  RATE_CONFIG[booking.foodType] &&
-                  RATE_CONFIG[booking.foodType][booking.ratePlan] && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {(() => {
-                        const base =
-                          RATE_CONFIG[booking.foodType][booking.ratePlan]
-                            .basePrice;
-                        const discount = parseFloat(booking.discount) || 0;
-                        let displayBase = base;
-                        if (discount > 0) {
-                          displayBase = base - discount;
-                        }
-                        return (
-                          <>
-                            {booking.ratePlan} Rate:{" "}
-                            <span className="font-bold text-[#c3ad6b]">
-                              ₹{displayBase}
-                            </span>
-                            {discount > 0 && (
-                              <span className="ml-2 text-green-600">
-                                (Discounted)
-                              </span>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )
-                )}
+                {(() => {
+                  // Check if current rate is custom by comparing with standard rates
+                  let isCustomRate = false;
+                  let standardRate = 0;
+                  if (booking.ratePlan && booking.foodType && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
+                    standardRate = RATE_CONFIG[booking.foodType][booking.ratePlan].basePrice;
+                    const currentRate = parseFloat(booking.ratePerPax) || 0;
+                    isCustomRate = Math.abs(currentRate - standardRate) > 0.01;
+                  }
+                  
+                  if (isCustomRate) {
+                    return (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Custom Rate: <span className="font-bold text-[#c3ad6b]">₹{booking.ratePerPax}</span>
+                      </div>
+                    );
+                  } else if (booking.foodType && booking.ratePlan && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
+                    return (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {booking.ratePlan} Rate:{" "}
+                        <span className="font-bold text-[#c3ad6b]">
+                          ₹{standardRate}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               {/* Food Type */}
               <div className="flex-1 flex flex-col items-center md:items-start">
@@ -2392,35 +2368,29 @@ const UpdateBooking = () => {
                     Calculation
                   </span>
                 </div>
-                {booking.pax && (booking.useCustomPrice ? booking.customPlatePrice : (booking.ratePlan && booking.foodType)) ? (
+                {booking.pax && booking.ratePerPax ? (
                   <>
                     {(() => {
                       const pax = parseInt(booking.pax) || 0;
-                      const gstPercent = parseFloat(booking.gst) || 0;
-                      
-                      let basePrice;
-                      if (booking.useCustomPrice) {
-                        basePrice = parseFloat(booking.customPlatePrice) || 0;
-                      } else {
-                        const rateInfo = RATE_CONFIG[booking.foodType][booking.ratePlan];
-                        if (!rateInfo) return null;
-                        basePrice = rateInfo.basePrice;
-                      }
-                      
-                      const discount = parseFloat(booking.discount) || 0;
-                      const discountedBase = basePrice - discount;
-                      const gstAmount = (discountedBase * gstPercent) / 100;
-                      const rateWithGST = discountedBase + gstAmount;
-                      const foodTotal = rateWithGST * pax;
+                      const ratePerPax = parseFloat(booking.ratePerPax) || 0;
+                      const foodTotal = ratePerPax * pax;
                       
                       const decorationCharge = booking.hasDecoration ? (parseFloat(booking.decorationCharge) || 0) : 0;
                       const musicCharge = booking.hasMusic ? (parseFloat(booking.musicCharge) || 0) : 0;
                       const grandTotal = foodTotal + decorationCharge + musicCharge;
                       
+                      // Check if this is a custom rate by comparing with standard rates
+                      let isCustomRate = false;
+                      let standardRate = 0;
+                      if (booking.ratePlan && booking.foodType && RATE_CONFIG[booking.foodType] && RATE_CONFIG[booking.foodType][booking.ratePlan]) {
+                        standardRate = RATE_CONFIG[booking.foodType][booking.ratePlan].basePrice;
+                        isCustomRate = Math.abs(ratePerPax - standardRate) > 0.01; // Allow for small floating point differences
+                      }
+                      
                       return (
                         <>
                           <span className="text-lg font-bold text-[#c3ad6b]">
-                            ₹{rateWithGST.toFixed(2)}
+                            ₹{ratePerPax.toFixed(2)}
                           </span>
                           <span className="text-gray-700"> x {pax} = </span>
                           <span className="text-lg font-bold text-[#c3ad6b]">
@@ -2434,10 +2404,10 @@ const UpdateBooking = () => {
                             </div>
                           )}
                           <div className="text-xs text-gray-500 mt-1">
-                            {booking.useCustomPrice ? (
-                              `Custom rate: ₹${basePrice} ${discount > 0 ? `- ₹${discount} (discount)` : ''} + ₹${gstAmount.toFixed(2)} (GST) = ₹${rateWithGST.toFixed(2)}`
+                            {isCustomRate ? (
+                              `Custom rate: ₹${ratePerPax.toFixed(2)} + ₹0.00 (GST) = ₹${ratePerPax.toFixed(2)}`
                             ) : (
-                              `Rate per pax: ₹${basePrice} ${discount > 0 ? `- ₹${discount} (discount)` : ''} + ₹${gstAmount.toFixed(2)} (GST) = ₹${rateWithGST.toFixed(2)}`
+                              `${booking.ratePlan} rate: ₹${standardRate} + ₹0.00 (GST) = ₹${ratePerPax.toFixed(2)}`
                             )}
                           </div>
                         </>
@@ -3043,8 +3013,11 @@ const UpdateBooking = () => {
                     type="number"
                     name="ratePerPax"
                     className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
-                    onChange={handleNumberInputChange}
-                    value={booking.ratePerPax}
+                    onChange={(e) => {
+                      const value = e.target.value === "" ? "" : Number(e.target.value);
+                      setBooking(prev => ({ ...prev, ratePerPax: value }));
+                    }}
+                    value={booking.ratePerPax || ""}
                     min="0"
                     required
                   />
