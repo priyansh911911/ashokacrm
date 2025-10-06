@@ -403,10 +403,7 @@ function LaganCalendar() {
     >
       {/* Header with Ashoka colors */}
       <div className=" p-1 rounded-xl mb-6 shadow-lg">
-        <div className="bg-white rounded-lg p-4">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: '#5D4037' }}>
-            Lagan Calendar
-          </h1>
+        <div>
           {/* Show user role */}
           {isMobile && (
             <div className="w-full flex justify-center items-center">

@@ -2140,7 +2140,6 @@ const AddBooking = () => {
                     onChange={handleChange}
                     value={form.ratePlan || ""}
                     required
-                    disabled={form.useCustomPrice}
                   >
                     <option value="">Select Rate Plan</option>
                     <option value="Silver">Silver</option>
@@ -2167,7 +2166,6 @@ const AddBooking = () => {
                     onChange={handleChange}
                     value={form.foodType || ""}
                     required
-                    disabled={form.useCustomPrice}
                   >
                     <option value="">Select Food Type</option>
                     <option value="Veg">Veg</option>
