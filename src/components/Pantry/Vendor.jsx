@@ -30,6 +30,7 @@ const Vendor = () => {
   }, []);
 
   const fetchVendors = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('/api/vendor/all', {
@@ -41,6 +42,8 @@ const Vendor = () => {
       console.error('Error fetching vendors:', err);
       showToast.error('Failed to fetch vendors');
       setVendors([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -194,6 +197,17 @@ const Vendor = () => {
     return Object.values(analytics).sort((a, b) => b.totalAmount - a.totalAmount);
   };
 
+  if (loading && vendors.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 overflow-auto h-full bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading vendors...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 overflow-auto h-full bg-background">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -233,55 +247,39 @@ const Vendor = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center">Loading...</td>
-                </tr>
-              ) : vendors.length === 0 ? (
+              {vendors.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No vendors found</td>
                 </tr>
               ) : (
                 vendors.map((vendor) => (
                   <tr key={vendor._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {vendor.name}
-                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{vendor.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vendor.phone}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vendor.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vendor.GSTin}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vendor.UpiID}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {vendor.phone || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {vendor.email || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {vendor.GSTin || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {vendor.UpiID || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {vendor.scannerImg ? (
-                        <img src={vendor.scannerImg} alt="QR Code" className="w-8 h-8 object-cover rounded" />
-                      ) : 'N/A'}
+                      {vendor.scannerImg && (
+                        <img src={vendor.scannerImg} alt="QR Code" className="h-8 w-8 object-cover rounded" />
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        vendor.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        vendor.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
                         {vendor.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <button 
+                      <div className="flex space-x-2">
+                        <button
                           onClick={() => handleEditVendor(vendor)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="text-blue-600 hover:text-blue-900"
                         >
                           <Edit size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteVendor(vendor._id)}
                           className="text-red-600 hover:text-red-900"
                         >
@@ -297,197 +295,158 @@ const Vendor = () => {
         </div>
       </div>
 
-      {/* Add Vendor Modal */}
+      {/* Vendor Form Modal */}
       {showVendorForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</h2>
-                <button onClick={resetVendorForm} className="text-gray-500 hover:text-gray-700">
-                  <X size={20} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">{editingVendor ? 'Edit Vendor' : 'Add New Vendor'}</h2>
+              <button onClick={resetVendorForm} className="text-gray-500 hover:text-gray-700">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleVendorSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={vendorFormData.name}
+                  onChange={handleVendorChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={vendorFormData.phone}
+                  onChange={handleVendorChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={vendorFormData.email}
+                  onChange={handleVendorChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <textarea
+                  name="address"
+                  value={vendorFormData.address}
+                  onChange={handleVendorChange}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
+                <input
+                  type="text"
+                  name="GSTin"
+                  value={vendorFormData.GSTin}
+                  onChange={handleVendorChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UPI ID</label>
+                <input
+                  type="text"
+                  name="UpiID"
+                  value={vendorFormData.UpiID}
+                  onChange={handleVendorChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">QR Code Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                {vendorFormData.scannerImg && (
+                  <img src={vendorFormData.scannerImg} alt="Preview" className="mt-2 h-20 w-20 object-cover rounded" />
+                )}
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  checked={vendorFormData.isActive}
+                  onChange={handleVendorChange}
+                  className="mr-2"
+                />
+                <label className="text-sm font-medium text-gray-700">Active</label>
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={resetVendorForm}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                  {editingVendor ? 'Update' : 'Add'} Vendor
                 </button>
               </div>
-              <form onSubmit={handleVendorSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                    <input
-                      name="name"
-                      value={vendorFormData.name}
-                      onChange={handleVendorChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                    <input
-                      name="phone"
-                      value={vendorFormData.phone}
-                      onChange={handleVendorChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input
-                      name="email"
-                      type="email"
-                      value={vendorFormData.email}
-                      onChange={handleVendorChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-                    <input
-                      name="GSTin"
-                      value={vendorFormData.GSTin}
-                      onChange={handleVendorChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">UPI ID</label>
-                    <input
-                      name="UpiID"
-                      value={vendorFormData.UpiID}
-                      onChange={handleVendorChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Scanner QR Code</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    {vendorFormData.scannerImg && (
-                      <div className="mt-2">
-                        <img 
-                          src={vendorFormData.scannerImg} 
-                          alt="Scanner QR Code" 
-                          className="w-20 h-20 object-cover rounded border"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <textarea
-                    name="address"
-                    value={vendorFormData.address}
-                    onChange={handleVendorChange}
-                    rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div className="flex items-center">
-                  <input
-                    name="isActive"
-                    type="checkbox"
-                    checked={vendorFormData.isActive}
-                    onChange={handleVendorChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">Active</label>
-                </div>
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={resetVendorForm}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (editingVendor ? 'Updating...' : 'Adding...') : (editingVendor ? 'Update Vendor' : 'Add Vendor')}
-                  </button>
-                </div>
-              </form>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
       {/* Vendor Analytics Modal */}
       {showVendorAnalytics && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Vendor Price Analytics</h2>
-                <button
-                  onClick={() => setShowVendorAnalytics(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <div className="space-y-6">
-                {getVendorAnalytics().map((vendor, index) => (
-                  <div key={index} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{vendor.name}</h3>
-                        <p className="text-sm text-gray-600">
-                          Last Order: {vendor.lastOrderDate ? new Date(vendor.lastOrderDate).toLocaleDateString() : 'N/A'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-green-600">₹{vendor.totalAmount.toFixed(2)}</p>
-                        <p className="text-sm text-gray-600">Total Revenue</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="bg-white rounded p-3 text-center">
-                        <p className="text-xl font-semibold text-blue-600">{vendor.totalOrders}</p>
-                        <p className="text-sm text-gray-600">Total Orders</p>
-                      </div>
-                      <div className="bg-white rounded p-3 text-center">
-                        <p className="text-xl font-semibold text-orange-600">₹{vendor.avgAmount.toFixed(2)}</p>
-                        <p className="text-sm text-gray-600">Avg Order Value</p>
-                      </div>
-                      <div className="bg-white rounded p-3 text-center">
-                        <p className="text-xl font-semibold text-purple-600">
-                          {vendor.orders.length > 0 ? `₹${vendor.orders[0].amount}` : 'N/A'}
-                        </p>
-                        <p className="text-sm text-gray-600">Latest Order</p>
-                      </div>
-                    </div>
-                    
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Vendor Analytics</h2>
+              <button onClick={() => setShowVendorAnalytics(false)} className="text-gray-500 hover:text-gray-700">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="grid gap-4">
+              {getVendorAnalytics().map((vendor, index) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-2">{vendor.name}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Recent Orders:</h4>
-                      <div className="space-y-2 max-h-32 overflow-y-auto">
-                        {vendor.orders.slice(0, 5).map((order, orderIndex) => (
-                          <div key={orderIndex} className="flex justify-between items-center bg-white rounded p-2 text-sm">
-                            <span className="text-gray-600">
-                              {order.orderNumber} - {order.date ? new Date(order.date).toLocaleDateString() : 'N/A'}
-                            </span>
-                            <span className="font-medium text-green-600">₹{order.amount}</span>
-                          </div>
-                        ))}
+                      <span className="text-gray-600">Total Orders:</span>
+                      <div className="font-semibold">{vendor.totalOrders}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total Amount:</span>
+                      <div className="font-semibold">₹{vendor.totalAmount.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Avg Amount:</span>
+                      <div className="font-semibold">₹{vendor.avgAmount.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Last Order:</span>
+                      <div className="font-semibold">
+                        {vendor.lastOrderDate ? new Date(vendor.lastOrderDate).toLocaleDateString() : 'N/A'}
                       </div>
                     </div>
                   </div>
-                ))}
-                
-                {getVendorAnalytics().length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    No vendor analytics data available
-                  </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

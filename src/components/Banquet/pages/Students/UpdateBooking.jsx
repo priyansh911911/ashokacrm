@@ -1269,7 +1269,7 @@ const UpdateBooking = () => {
                     className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
                   />
                   <label className="text-sm font-medium text-gray-700">
-                    Rate Per Plate *
+                    Rate Per Plate *``
                   </label>
                 </div>
                 {booking.showRatePerPax && (

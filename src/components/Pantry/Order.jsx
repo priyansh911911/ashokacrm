@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import { Plus, Edit, Trash2, Package, Clock, User, MapPin } from 'lucide-react';
+import PantryInvoice from './PantryInvoice';
 
 const Order = () => {
   const { axios } = useAppContext();
@@ -20,6 +21,8 @@ const Order = () => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
   const [showFormAnalytics, setShowFormAnalytics] = useState(true);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingOrder, setViewingOrder] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -305,7 +308,8 @@ const Order = () => {
       priority: order.priority || 'medium',
       notes: order.notes || '',
       totalAmount: order.totalAmount || 0,
-      guestName: order.guestName || ''
+      guestName: order.guestName || '',
+      vendor: typeof order.vendorId === 'object' ? order.vendorId._id : (order.vendorId || '')
     });
     setShowOrderForm(true);
   };
@@ -404,6 +408,11 @@ const Order = () => {
 
   const downloadPDF = () => {
     window.print();
+  };
+
+  const handleViewOrder = (order) => {
+    setViewingOrder(order);
+    setShowViewModal(true);
   };
 
   return (
@@ -680,7 +689,12 @@ const Order = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center">Loading...</td>
+                  <td colSpan="7" className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mr-2"></div>
+                      Loading orders...
+                    </div>
+                  </td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
@@ -741,6 +755,12 @@ const Order = () => {
                             Fulfill
                           </button>
                         )}
+                        <button
+                          onClick={() => handleViewOrder(order)}
+                          className="text-gray-600 hover:text-gray-900 text-xs"
+                        >
+                          View
+                        </button>
                         <button
                           onClick={() => generateInvoice(order)}
                           className="text-green-600 hover:text-green-900 text-xs"
@@ -833,6 +853,12 @@ const Order = () => {
                     Fulfill
                   </button>
                 )}
+                <button
+                  onClick={() => handleViewOrder(order)}
+                  className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                >
+                  View
+                </button>
                 <button
                   onClick={() => generateInvoice(order)}
                   className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
@@ -1191,98 +1217,185 @@ const Order = () => {
 
       {/* Invoice Modal */}
       {showInvoice && invoiceData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
+        <PantryInvoice 
+          invoiceData={invoiceData}
+          onClose={() => setShowInvoice(false)}
+          vendors={vendors}
+        />
+      )}
+
+      {/* View Order Modal */}
+      {showViewModal && viewingOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Invoice Preview</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={downloadPDF}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                  >
-                    Save as PDF
-                  </button>
-                  <button
-                    onClick={() => setShowInvoice(false)}
-                    className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-                  >
-                    Close
-                  </button>
-                </div>
+                <h2 className="text-2xl font-bold">Order Details</h2>
+                <button
+                  onClick={() => setShowViewModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ✕
+                </button>
               </div>
               
-              <div className="bg-white p-8 border" id="invoice-content">
-                <div className="text-center mb-8">
-                  <h1 className="text-3xl font-bold text-gray-800">INVOICE</h1>
-                  <p className="text-gray-600">Invoice #{invoiceData.invoiceNumber}</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-8 mb-8">
-                  <div>
-                    <h3 className="font-semibold text-gray-800 mb-2">From:</h3>
-                    <p className="text-gray-600">
-                      Ashoka Hotel<br/>
-                      123 Hotel Street<br/>
-                      City, State 12345
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 mb-2">To:</h3>
-                    <p className="text-gray-600">
-                      {invoiceData.vendor?.name || 'Vendor'}<br/>
-                      {invoiceData.vendor?.address || 'Address'}<br/>
-                      {invoiceData.vendor?.phone || 'Phone'}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="mb-8">
-                  <p><strong>Date:</strong> {invoiceData.date}</p>
-                  <p><strong>Order ID:</strong> #{invoiceData.order._id?.slice(-8)}</p>
-                </div>
-                
-                <table className="w-full mb-8">
-                  <thead>
-                    <tr className="border-b-2 border-gray-300">
-                      <th className="text-left py-2">Item</th>
-                      <th className="text-right py-2">Qty</th>
-                      <th className="text-right py-2">Price</th>
-                      <th className="text-right py-2">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoiceData.order.items?.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-200">
-                        <td className="py-2">{item.name}</td>
-                        <td className="text-right py-2">{item.quantity}</td>
-                        <td className="text-right py-2">₹{item.unitPrice?.toFixed(2)}</td>
-                        <td className="text-right py-2">₹{(item.quantity * item.unitPrice).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                
-                <div className="flex justify-end">
-                  <div className="w-64">
-                    <div className="flex justify-between py-2">
-                      <span>Subtotal:</span>
-                      <span>₹{invoiceData.subtotal.toFixed(2)}</span>
+              <div className="space-y-6">
+                {/* Order Info */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">Order Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Order ID:</span>
+                      <p className="font-medium">#{viewingOrder.orderNumber || viewingOrder._id?.slice(-8)}</p>
                     </div>
-                    <div className="flex justify-between py-2">
-                      <span>Tax (18%):</span>
-                      <span>₹{invoiceData.tax.toFixed(2)}</span>
+                    <div>
+                      <span className="text-gray-500">Order Type:</span>
+                      <p className="font-medium">
+                        {viewingOrder.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
+                         viewingOrder.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
+                         viewingOrder.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
+                         viewingOrder.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
+                         viewingOrder.orderType}
+                      </p>
                     </div>
-                    <div className="flex justify-between py-2 border-t-2 border-gray-300 font-bold text-lg">
-                      <span>Total:</span>
-                      <span>₹{invoiceData.total.toFixed(2)}</span>
+                    <div>
+                      <span className="text-gray-500">Priority:</span>
+                      <div className="mt-1">{getPriorityBadge(viewingOrder.priority)}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Status:</span>
+                      <div className="mt-1">{getStatusBadge(viewingOrder.status)}</div>
+                    </div>
+                    {viewingOrder.vendorId && (
+                      <div>
+                        <span className="text-gray-500">Vendor:</span>
+                        <p className="font-medium">{getVendorName(viewingOrder.vendorId)}</p>
+                      </div>
+                    )}
+                    {viewingOrder.guestName && (
+                      <div>
+                        <span className="text-gray-500">Guest Name:</span>
+                        <p className="font-medium">{viewingOrder.guestName}</p>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-gray-500">Total Amount:</span>
+                      <p className="font-medium text-green-600">₹{viewingOrder.totalAmount?.toFixed(2) || '0.00'}</p>
                     </div>
                   </div>
                 </div>
-                
-                <div className="mt-8 text-center text-gray-600">
-                  <p>Thank you for your business!</p>
+
+                {/* Vendor Analytics (if vendor selected) */}
+                {viewingOrder.vendorId && (() => {
+                  const analytics = getVendorAnalytics(typeof viewingOrder.vendorId === 'object' ? viewingOrder.vendorId._id : viewingOrder.vendorId);
+                  const vendor = vendors.find(v => v._id === (typeof viewingOrder.vendorId === 'object' ? viewingOrder.vendorId._id : viewingOrder.vendorId));
+                  return (
+                    <div className="bg-blue-50 p-4 rounded-lg border">
+                      <h3 className="font-semibold text-blue-800 mb-3">📊 Vendor Analytics: {analytics.vendor?.name}</h3>
+                      <div className="grid grid-cols-3 gap-3 text-center text-sm mb-4">
+                        <div>
+                          <div className="text-lg font-bold text-blue-600">{analytics.total.orders}</div>
+                          <div className="text-gray-600">Orders</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold text-green-600">₹{analytics.total.amount}</div>
+                          <div className="text-gray-600">Amount</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold text-purple-600">{analytics.total.items}</div>
+                          <div className="text-gray-600">Items</div>
+                        </div>
+                      </div>
+                      
+                      {/* Payment Info */}
+                      {vendor?.UpiID && (
+                        <div className="bg-green-50 p-3 rounded border">
+                          <div className="text-sm text-gray-600 mb-1">Payment Info:</div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-green-700">{vendor.UpiID}</span>
+                            {vendor.scannerImg && (
+                              <img 
+                                src={vendor.scannerImg} 
+                                alt="QR Code" 
+                                className="w-16 h-16 border rounded shadow-sm"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-3 flex justify-between text-sm">
+                        <span className="text-yellow-600">Pending: {analytics.statusBreakdown.pending}</span>
+                        <span className="text-blue-600">Approved: {analytics.statusBreakdown.approved}</span>
+                        <span className="text-green-600">Fulfilled: {analytics.statusBreakdown.fulfilled}</span>
+                        <span className="text-red-600">Cancelled: {analytics.statusBreakdown.cancelled}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Items */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Items ({viewingOrder.items?.length || 0})</h3>
+                  <div className="space-y-3">
+                    {viewingOrder.items?.map((item, index) => (
+                      <div key={index} className="bg-white border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{item.name || 'Item'}</h4>
+                            <p className="text-sm text-gray-500">Unit: {item.unit || 'pcs'}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}</p>
+                            <p className="text-sm text-gray-500">{item.quantity || 1} × ₹{item.unitPrice?.toFixed(2) || '0.00'}</p>
+                          </div>
+                        </div>
+                        {item.notes && (
+                          <p className="text-sm text-gray-600 mt-2">Notes: {item.notes}</p>
+                        )}
+                      </div>
+                    )) || (
+                      <div className="text-center text-gray-500 py-4">
+                        No items in this order
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Notes */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Notes</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-gray-700">{viewingOrder.notes || 'No notes added'}</p>
+                  </div>
+                </div>
+
+                {/* Timestamps */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">Timestamps</h3>
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">Created:</span>
+                      <span className="ml-2">{new Date(viewingOrder.createdAt).toLocaleString()}</span>
+                    </div>
+                    {viewingOrder.updatedAt && (
+                      <div>
+                        <span className="text-gray-500">Updated:</span>
+                        <span className="ml-2">{new Date(viewingOrder.updatedAt).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end mt-6 pt-4 border-t">
+                <button
+                  onClick={() => setShowViewModal(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>

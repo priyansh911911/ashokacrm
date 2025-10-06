@@ -2191,7 +2191,10 @@ const AddBooking = () => {
                         onChange={handleChange}
                         className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
                       />
-                      <label className="text-sm font-medium text-gray-700">
+                      <label 
+                        className="text-sm font-medium text-gray-700 cursor-pointer"
+                        onClick={() => handleChange({ target: { name: 'useCustomPrice', type: 'checkbox', checked: !form.useCustomPrice } })}
+                      >
                         Set Custom Plate Price
                       </label>
                     </div>
