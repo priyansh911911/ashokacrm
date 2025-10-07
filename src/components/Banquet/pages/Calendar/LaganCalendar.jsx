@@ -273,10 +273,16 @@ function LaganCalendar() {
     
     if (bookingCount === 1) {
       const booking = dayBookings[0];
-      if (booking.startTime) {
-        const startHour = parseInt(booking.startTime.split(':')[0]);
-        fillPosition = startHour < 16 ? 'upper' : 'lower'; // 16 = 4 PM
+      console.log('Booking data:', booking);
+      const timeValue = booking.startTime || booking.timeSlot || booking.time || booking.slot;
+      console.log('Available fields:', Object.keys(booking));
+      if (timeValue) {
+        const startHour = parseInt(timeValue.split(':')[0]);
+        console.log('Time value:', timeValue, 'Start hour:', startHour);
+        fillPosition = startHour < 16 ? 'upper' : 'lower';
+        console.log('Fill position:', fillPosition);
       } else {
+        console.log('No time found in any field, defaulting to upper');
         fillPosition = 'upper';
       }
     } else if (bookingCount >= 2) {
@@ -300,7 +306,7 @@ function LaganCalendar() {
         }}
         onMouseEnter={() => setHoveredDate(currentDate)}
         onMouseLeave={() => setHoveredDate(null)}
-        title={bookingCount > 0 ? `${bookingCount} booking${bookingCount > 1 ? 's' : ''} (${fillPosition === 'upper' ? 'Morning' : fillPosition === 'lower' ? 'Evening' : 'Full Day'})` : ''}
+        title={bookingCount > 0 ? `${bookingCount} booking${bookingCount > 1 ? 's' : ''} (${fillPosition === 'upper' ? 'First Half' : fillPosition === 'lower' ? 'Second Half' : 'Full Day'})` : ''}
       >
         {/* Fill based on booking time */}
         {fillPosition === 'upper' && (
