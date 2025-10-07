@@ -54,7 +54,7 @@ const ListBooking = () => {
               advance: item.advance ?? 0,
               total: item.total ?? 0,
               balance: item.balance ?? 0,
-            }));
+            })).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
             console.log(processedData);
             setUserData(processedData);
@@ -368,7 +368,7 @@ const ListBooking = () => {
     whatsapp: item.whatsapp || "",
     pax: item.pax || "",
     startDate: item.startDate
-      ? new Date(item.startDate).toLocaleDateString()
+      ? new Date(item.startDate).toLocaleDateString('en-GB')
       : "",
     foodType: item.foodType || "",
     ratePlan: item.ratePlan || "",
@@ -490,7 +490,7 @@ const ListBooking = () => {
                     <div className="flex flex-col gap-1 text-sm mb-2">
                       <div>
                         <span className="font-semibold">Start Date:</span>{" "}
-                        {new Date(item.startDate).toLocaleDateString()}
+                        {new Date(item.startDate).toLocaleDateString('en-GB')}
                       </div>
                       <div>
                         <span className="font-semibold">Rate Plan:</span>{" "}
@@ -599,7 +599,7 @@ const ListBooking = () => {
                         {item.number}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {new Date(item.startDate).toLocaleDateString()}
+                        {new Date(item.startDate).toLocaleDateString('en-GB')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {item.ratePlan}

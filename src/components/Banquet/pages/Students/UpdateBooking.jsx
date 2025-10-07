@@ -65,6 +65,8 @@ const UpdateBooking = () => {
     hasMusic: false,
     statusChangedAt: null, // Track when status changes
     staffEditCount: 0, // Added for staff edit limit logic
+    paymentMethod: "cash", // Payment method
+    transactionId: "" // Transaction ID for online payments
   });
 
   const [showMenuModal, setShowMenuModal] = useState(false);
@@ -1370,6 +1372,40 @@ const UpdateBooking = () => {
                   />
                 </div>
               </div>
+
+              {/* Payment Method */}
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Payment Method
+                </label>
+                <select
+                  name="paymentMethod"
+                  className="w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                  onChange={handleInputChange}
+                  value={booking.paymentMethod || "cash"}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="online">Online</option>
+                  <option value="card">Card</option>
+                </select>
+              </div>
+
+              {/* Transaction ID - Only show for online and card payments */}
+              {(booking.paymentMethod === "online" || booking.paymentMethod === "card") && (
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Transaction ID
+                  </label>
+                  <input
+                    type="text"
+                    name="transactionId"
+                    className="w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                    onChange={handleInputChange}
+                    value={booking.transactionId || ""}
+                    placeholder="Enter transaction ID"
+                  />
+                </div>
+              )}
             </div>
           </section>
 
