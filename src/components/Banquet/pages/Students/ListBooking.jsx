@@ -512,7 +512,15 @@ const ListBooking = () => {
                       </div>
                       <div>
                         <span className="font-semibold">Status:</span>{" "}
-                        {item.bookingStatus}
+                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                          item.bookingStatus === 'Confirmed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : item.bookingStatus === 'Tentative'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {item.bookingStatus}
+                        </span>
                       </div>
                     </div>
                     <div className="flex gap-2 mt-2">
@@ -610,7 +618,15 @@ const ListBooking = () => {
                         {item.hall}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {item.bookingStatus}
+                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                          item.bookingStatus === 'Confirmed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : item.bookingStatus === 'Tentative'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {item.bookingStatus}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap flex gap-2">
                         <Link
@@ -633,7 +649,7 @@ const ListBooking = () => {
                         <ChefPDFPreview booking={item} />
                         <button
                           onClick={() => {
-                            let raw = String(item.number || "").replace(
+                            let raw = String(item.whatsapp || item.number || "").replace(
                               /[^\d]/g,
                               ""
                             );
@@ -689,7 +705,7 @@ const ListBooking = () => {
                               `- Bring your ID proof for verification\n` +
                               `- Final payment due on event day\n\n` +
                               `Thank you for choosing us! We look forward to serving you. 🙏\n\n`;
-                            const whatsappUrl = `https://api.whatsapp.com/send/?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+                            const whatsappUrl = `https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
                             window.open(whatsappUrl, "_blank");
                           }}
                           className="inline-flex items-center gap-1 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors font-semibold px-3 py-1.5 text-xs"

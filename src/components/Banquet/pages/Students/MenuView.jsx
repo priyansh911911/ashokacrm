@@ -12,7 +12,7 @@ const MenuView = () => {
   const [error, setError] = useState(null);
   const printRef = useRef();
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `Menu_${id}`,
     pageStyle: `
       @page {
