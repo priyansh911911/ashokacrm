@@ -1483,7 +1483,9 @@ const AddBooking = () => {
     hasMusic: false,
     staffEditCount: 0, // Add this field for new bookings
     useCustomPrice: false, // Admin can override calculated price
-    customPlatePrice: "" // Custom price per plate
+    customPlatePrice: "", // Custom price per plate
+    paymentMethod: "cash", // Payment method
+    transactionId: "" // Transaction ID for online payments
   });
 
   // Calculate total when pax, ratePlan, foodType, gst, discount, decoration, or music charges change
@@ -2333,6 +2335,40 @@ const AddBooking = () => {
                     />
                   </div>
                 </div>
+
+                {/* Payment Method */}
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Payment Method
+                  </label>
+                  <select
+                    name="paymentMethod"
+                    className="w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                    onChange={handleChange}
+                    value={form.paymentMethod}
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="online">Online</option>
+                    <option value="card">Card</option>
+                  </select>
+                </div>
+
+                {/* Transaction ID - Only show for online and card payments */}
+                {(form.paymentMethod === "online" || form.paymentMethod === "card") && (
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Transaction ID
+                    </label>
+                    <input
+                      type="text"
+                      name="transactionId"
+                      className="w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                      onChange={handleChange}
+                      value={form.transactionId}
+                      placeholder="Enter transaction ID"
+                    />
+                  </div>
+                )}
 
                 {/* Total */}
                 <div className="space-y-1">
