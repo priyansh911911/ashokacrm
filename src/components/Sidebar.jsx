@@ -284,24 +284,7 @@ const Sidebar = () => {
         { label: "Vendors", path: "/pantry/vendors", icon: Users },
       ],
     }] : []),
-    ...((localStorage.getItem("role") === "admin" || 
-         (() => {
-           try {
-             const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
-             return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && dept.name === "reception") : false;
-           } catch (e) {
-             return false;
-           }
-         })()) ? [{
-      icon: UserRound,
-      label: "Cab",
-      path: "/cab",
-      isDropdown: true,
-      // children: [
-      //   { label: "Driver Management", path: "/cab/driver", icon: ListChecks },
-      //   { label: "Vehicle Management", path: "/cab/vehicle", icon: Package },
-      // ],
-    }] : []),
+
     ...(() => {
       const mainRole = localStorage.getItem("role");
       const restRole = localStorage.getItem("restaurantRole");
