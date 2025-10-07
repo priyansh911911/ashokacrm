@@ -1333,9 +1333,21 @@ const UpdateBooking = () => {
 
               {/* Advance */}
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Advance Payment
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Advance Payment
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const section = document.getElementById('additionalAdvanceSection');
+                      section.style.display = section.style.display === 'none' ? 'block' : 'none';
+                    }}
+                    className="bg-[#c3ad6b] hover:bg-[#b39b5a] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold"
+                  >
+                    +
+                  </button>
+                </div>
                 <div className="relative">
                   <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
@@ -1346,6 +1358,58 @@ const UpdateBooking = () => {
                     value={booking.advance !== "" ? booking.advance : ""}
                     min="0"
                   />
+                </div>
+              </div>
+
+              {/* Additional Advance Payment */}
+              <div id="additionalAdvanceSection" style={{display: 'none'}} className="space-y-2">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="number"
+                      placeholder="Enter additional amount"
+                      className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          const additionalAmount = e.target.value;
+                          if (additionalAmount && !isNaN(additionalAmount) && Number(additionalAmount) > 0) {
+                            const currentAdvance = Number(booking.advance) || 0;
+                            const newAdvance = currentAdvance + Number(additionalAmount);
+                            setBooking(prev => ({
+                              ...prev,
+                              advance: newAdvance,
+                              balance: (Number(prev.total) || 0) - newAdvance
+                            }));
+                            e.target.value = '';
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const input = e.target.parentElement.querySelector('input');
+                      const additionalAmount = input.value;
+                      if (additionalAmount && !isNaN(additionalAmount) && Number(additionalAmount) > 0) {
+                        const currentAdvance = Number(booking.advance) || 0;
+                        const newAdvance = currentAdvance + Number(additionalAmount);
+                        setBooking(prev => ({
+                          ...prev,
+                          advance: newAdvance,
+                          balance: (Number(prev.total) || 0) - newAdvance
+                        }));
+                        input.value = '';
+                      }
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500">
+                  Enter amount and press Enter or click Add to accept additional advance
                 </div>
               </div>
 

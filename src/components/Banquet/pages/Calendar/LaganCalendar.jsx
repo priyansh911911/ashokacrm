@@ -265,15 +265,22 @@ function LaganCalendar() {
 
   const dateTemplate = ({ year, month, day }) => {
     const currentDate = format(year, month, day);
-    const hasBooking = bookings[currentDate] && bookings[currentDate].length > 0;
+    const dayBookings = bookings[currentDate] || [];
+    const bookingCount = dayBookings.length;
     
-    let bgColor = "";
-    let textColor = "text-gray-800";
+    // Determine fill position based on booking time
+    let fillPosition = 'none'; // 'upper', 'lower', 'full', 'none'
     
-    // Only show red for bookings
-    if (hasBooking) {
-      bgColor = "#dc2626"; // Red for bookings
-      textColor = "text-white";
+    if (bookingCount === 1) {
+      const booking = dayBookings[0];
+      if (booking.startTime) {
+        const startHour = parseInt(booking.startTime.split(':')[0]);
+        fillPosition = startHour < 16 ? 'upper' : 'lower'; // 16 = 4 PM
+      } else {
+        fillPosition = 'upper';
+      }
+    } else if (bookingCount >= 2) {
+      fillPosition = 'full';
     }
     
     const isSelected = selectedDate === currentDate;
@@ -283,9 +290,9 @@ function LaganCalendar() {
     
     return (
       <div
-        className={`w-10 h-12 md:w-14 md:h-14 relative rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${highlightClass} hover:shadow-md hover:transform hover:scale-110 ${textColor}`}
+        className={`w-10 h-12 md:w-14 md:h-14 relative rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${highlightClass} hover:shadow-md hover:transform hover:scale-110 overflow-hidden`}
         style={{ 
-          backgroundColor: bgColor || '#f9fafb',
+          backgroundColor: '#f9fafb',
           ...(isSelected && { borderColor: '#FFB300', '--tw-ring-color': '#5D4037' })
         }}
         onClick={() => {
@@ -293,9 +300,19 @@ function LaganCalendar() {
         }}
         onMouseEnter={() => setHoveredDate(currentDate)}
         onMouseLeave={() => setHoveredDate(null)}
-        title={hasBooking ? "Booking exists" : ""}
+        title={bookingCount > 0 ? `${bookingCount} booking${bookingCount > 1 ? 's' : ''} (${fillPosition === 'upper' ? 'Morning' : fillPosition === 'lower' ? 'Evening' : 'Full Day'})` : ''}
       >
-        <span className={`text-base md:text-lg font-semibold select-none ${textColor}`}>
+        {/* Fill based on booking time */}
+        {fillPosition === 'upper' && (
+          <div className="absolute top-0 left-0 right-0 bg-red-600 transition-all duration-300" style={{ height: '50%' }} />
+        )}
+        {fillPosition === 'lower' && (
+          <div className="absolute bottom-0 left-0 right-0 bg-red-600 transition-all duration-300" style={{ height: '50%' }} />
+        )}
+        {fillPosition === 'full' && (
+          <div className="absolute top-0 left-0 right-0 bottom-0 bg-red-600 transition-all duration-300" />
+        )}
+        <span className={`text-base md:text-lg font-semibold select-none relative z-10 ${bookingCount > 2 ? 'text-white' : 'text-gray-800'}`}>
           {day}
         </span>
       </div>
