@@ -50,7 +50,6 @@ function SuccessModal({ message, onClose }) {
 function Item() {
   const { axios } = useAppContext();
   const [items, setItems] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -88,21 +87,8 @@ function Item() {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const token = getAuthToken();
-      const { data } = await axios.get('/api/pantry/categories', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setCategories(data.categories || data || []);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
-  };
-
   useEffect(() => {
     fetchItems();
-    fetchCategories();
   }, []);
 
   const handleSubmit = async (e) => {
