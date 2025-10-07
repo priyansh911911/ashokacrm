@@ -251,15 +251,13 @@ const Vendor = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {vendors.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No vendors found</td>
+                  <td colSpan="6" className="px-6 py-4 text-center text-gray-500">No vendors found</td>
                 </tr>
               ) : (
                 vendors.map((vendor) => (
                   <tr key={vendor._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{vendor.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vendor.phone}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vendor.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vendor.GSTin}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vendor.UpiID}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {vendor.scannerImg && (
