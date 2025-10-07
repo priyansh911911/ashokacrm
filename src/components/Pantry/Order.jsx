@@ -857,35 +857,35 @@ const Order = () => {
       {/* Payment Modal */}
       {showPaymentModal && paymentVendor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md border-t-4 border-primary">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Payment Details</h2>
+                <h2 className="text-xl font-bold text-[#1f2937]">Payment Details</h2>
                 <button
                   onClick={() => setShowPaymentModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-xl"
+                  className="text-gray-500 hover:text-primary text-xl transition-colors"
                 >
                   ×
                 </button>
               </div>
               
               <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">{paymentVendor.name}</h3>
-                <div className="text-2xl font-bold text-green-600 mb-4">₹{paymentVendor.totalAmount.toFixed(2)}</div>
+                <h3 className="text-lg font-semibold text-[#1f2937] mb-2">{paymentVendor.name}</h3>
+                <div className="text-2xl font-bold text-primary mb-4">₹{paymentVendor.totalAmount.toFixed(2)}</div>
                 
                 {paymentVendor.scannerImg && (
                   <div className="mb-4">
                     <img 
                       src={paymentVendor.scannerImg} 
                       alt="Payment QR Code" 
-                      className="w-48 h-48 object-cover rounded border mx-auto shadow-md"
+                      className="w-48 h-48 object-cover rounded-lg border-2 border-primary/20 mx-auto shadow-lg"
                     />
                   </div>
                 )}
                 
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-2">UPI ID:</p>
-                  <p className="font-mono text-sm bg-gray-100 p-2 rounded border">{paymentVendor.UpiID}</p>
+                  <p className="font-mono text-sm bg-primary/5 text-primary p-3 rounded-lg border border-primary/20">{paymentVendor.UpiID}</p>
                 </div>
               </div>
               
@@ -905,7 +905,7 @@ const Order = () => {
                       });
                     }
                   }}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                  className="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-semibold shadow-md"
                 >
                   Pay Now
                 </button>
@@ -918,14 +918,14 @@ const Order = () => {
                       showToast.error('Failed to copy UPI ID');
                     });
                   }}
-                  className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="w-full bg-primary/10 text-primary py-2 px-4 rounded-lg hover:bg-primary/20 transition-colors border border-primary/30"
                 >
                   Copy UPI ID
                 </button>
                 
                 <button
                   onClick={() => setShowPaymentModal(false)}
-                  className="w-full bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                  className="w-full bg-gray-100 text-gray-600 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   Cancel
                 </button>
