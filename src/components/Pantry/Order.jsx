@@ -23,6 +23,8 @@ const Order = () => {
   const [showFormAnalytics, setShowFormAnalytics] = useState(true);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingOrder, setViewingOrder] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentVendor, setPaymentVendor] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -492,22 +494,11 @@ const Order = () => {
                   <button
                     onClick={() => {
                       const vendor = vendors.find(v => v._id === filterVendor);
-                      const totalAmount = vendorAnalytics?.total?.amount || 0;
-                      
-                      // Check if mobile device
-                      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                      
-                      if (isMobile) {
-                        const upiUrl = `upi://pay?pa=${vendor.UpiID}&pn=${encodeURIComponent(vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
-                        window.location.href = upiUrl;
-                      } else {
-                        // Desktop fallback: copy UPI ID to clipboard
-                        navigator.clipboard.writeText(vendor.UpiID).then(() => {
-                          alert(`UPI ID copied to clipboard: ${vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
-                        }).catch(() => {
-                          alert(`UPI ID: ${vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
-                        });
-                      }
+                      setPaymentVendor({
+                        ...vendor,
+                        totalAmount: vendorAnalytics?.total?.amount || 0
+                      });
+                      setShowPaymentModal(true);
                     }}
                     className="ml-2 text-blue-600 hover:text-blue-800 underline cursor-pointer"
                   >
@@ -530,22 +521,11 @@ const Order = () => {
                   className="w-24 h-24 object-cover rounded border cursor-pointer hover:scale-105 transition-transform shadow-md"
                   onClick={() => {
                     const vendor = vendors.find(v => v._id === filterVendor);
-                    const totalAmount = vendorAnalytics?.total?.amount || 0;
-                    
-                    // Check if mobile device
-                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                    
-                    if (isMobile) {
-                      const upiUrl = `upi://pay?pa=${vendor.UpiID}&pn=${encodeURIComponent(vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
-                      window.location.href = upiUrl;
-                    } else {
-                      // Desktop fallback: copy UPI ID to clipboard
-                      navigator.clipboard.writeText(vendor.UpiID).then(() => {
-                        alert(`UPI ID copied to clipboard: ${vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
-                      }).catch(() => {
-                        alert(`UPI ID: ${vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
-                      });
-                    }
+                    setPaymentVendor({
+                      ...vendor,
+                      totalAmount: vendorAnalytics?.total?.amount || 0
+                    });
+                    setShowPaymentModal(true);
                   }}
                 />
               </div>
@@ -873,6 +853,87 @@ const Order = () => {
       </div>
 
 
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentVendor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Payment Details</h2>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">{paymentVendor.name}</h3>
+                <div className="text-2xl font-bold text-green-600 mb-4">₹{paymentVendor.totalAmount.toFixed(2)}</div>
+                
+                {paymentVendor.scannerImg && (
+                  <div className="mb-4">
+                    <img 
+                      src={paymentVendor.scannerImg} 
+                      alt="Payment QR Code" 
+                      className="w-48 h-48 object-cover rounded border mx-auto shadow-md"
+                    />
+                  </div>
+                )}
+                
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">UPI ID:</p>
+                  <p className="font-mono text-sm bg-gray-100 p-2 rounded border">{paymentVendor.UpiID}</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    
+                    if (isMobile) {
+                      const upiUrl = `upi://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                      window.location.href = upiUrl;
+                    } else {
+                      navigator.clipboard.writeText(paymentVendor.UpiID).then(() => {
+                        showToast.success('UPI ID copied to clipboard!');
+                      }).catch(() => {
+                        showToast.error('Failed to copy UPI ID');
+                      });
+                    }
+                  }}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                >
+                  Pay Now
+                </button>
+                
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(paymentVendor.UpiID).then(() => {
+                      showToast.success('UPI ID copied to clipboard!');
+                    }).catch(() => {
+                      showToast.error('Failed to copy UPI ID');
+                    });
+                  }}
+                  className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Copy UPI ID
+                </button>
+                
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="w-full bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Order Form Modal */}
       {showOrderForm && (
