@@ -297,10 +297,10 @@ const Sidebar = () => {
       label: "Cab",
       path: "/cab",
       isDropdown: true,
-      children: [
-        { label: "Driver Management", path: "/cab/driver", icon: ListChecks },
-        { label: "Vehicle Management", path: "/cab/vehicle", icon: Package },
-      ],
+      // children: [
+      //   { label: "Driver Management", path: "/cab/driver", icon: ListChecks },
+      //   { label: "Vehicle Management", path: "/cab/vehicle", icon: Package },
+      // ],
     }] : []),
     ...(() => {
       const mainRole = localStorage.getItem("role");

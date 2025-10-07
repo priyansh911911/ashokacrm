@@ -15,6 +15,7 @@ const Vendor = () => {
 
   const [vendorFormData, setVendorFormData] = useState({
     name: '',
+    companyName: '',
     phone: '',
     email: '',
     address: '',
@@ -111,6 +112,7 @@ const Vendor = () => {
   const resetVendorForm = () => {
     setVendorFormData({
       name: '',
+      companyName: '',
       phone: '',
       email: '',
       address: '',
@@ -318,21 +320,21 @@ const Vendor = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
                 <input
-                  type="tel"
-                  name="phone"
-                  value={vendorFormData.phone}
+                  type="text"
+                  name="companyName"
+                  value={vendorFormData.companyName}
                   onChange={handleVendorChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                 <input
-                  type="email"
-                  name="email"
-                  value={vendorFormData.email}
+                  type="tel"
+                  name="phone"
+                  value={vendorFormData.phone}
                   onChange={handleVendorChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
@@ -344,16 +346,6 @@ const Vendor = () => {
                   value={vendorFormData.address}
                   onChange={handleVendorChange}
                   rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
-                <input
-                  type="text"
-                  name="GSTin"
-                  value={vendorFormData.GSTin}
-                  onChange={handleVendorChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
