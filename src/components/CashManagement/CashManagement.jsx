@@ -3,7 +3,6 @@ import { useAppContext } from '../../context/AppContext';
 import { IndianRupee, CreditCard, Smartphone, TrendingUp, TrendingDown, Clock, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-
 const CashManagement = () => {
   const { axios } = useAppContext();
   const [cashData, setCashData] = useState({
@@ -13,7 +12,8 @@ const CashManagement = () => {
     upiPayments: 0,
     recentTransactions: [],
     expenses: [],
-    sentToOffice: 0
+    sentToOffice: 0,
+    sourceBreakdown: []
   });
   const [loading, setLoading] = useState(true);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
@@ -28,60 +28,75 @@ const CashManagement = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [dateFilter, setDateFilter] = useState('today');
+  const [customDate, setCustomDate] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('all');
+
+  const fetchCashData = async (filter = dateFilter, date = customDate, source = sourceFilter) => {
+    setLoading(true);
+    try {
+      let url = `/api/cash-transactions/cash-at-reception?filter=${filter}`;
+      if (filter === 'date' && date) {
+        url += `&date=${date}`;
+      }
+      if (source && source !== 'all') {
+        url += `&source=${source}`;
+      }
+      
+      const response = await axios.get(url);
+      const data = response.data;
+      console.log('🔍 Cash Management - Raw API Data:', data);
+      
+      // Calculate totals from all sources
+      let totalReceived = 0;
+      let totalSent = 0;
+      let cashInReception = 0;
+      let allTransactions = [];
+      let sourceBreakdown = [];
+      
+      Object.entries(data.cards || {}).forEach(([source, sourceData]) => {
+        console.log(`📊 Processing ${source}:`, sourceData.summary);
+        totalReceived += sourceData.summary?.totalReceived || 0;
+        totalSent += sourceData.summary?.totalSent || 0;
+        cashInReception += sourceData.summary?.cashInReception || 0;
+        allTransactions = [...allTransactions, ...(sourceData.transactions || [])];
+        
+        // Add to source breakdown (show all sources)
+        const receivedTotal = sourceData.summary?.totalReceived || 0;
+        sourceBreakdown.push({ _id: source, total: receivedTotal });
+      });
+      
+      const finalData = {
+        todayRevenue: totalReceived,
+        cashInHand: cashInReception,
+        cardPayments: 0,
+        upiPayments: 0,
+        recentTransactions: allTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+        expenses: [],
+        sentToOffice: totalSent,
+        sourceBreakdown
+      };
+      
+      console.log('💰 Final Cash Data:', finalData);
+      setCashData(finalData);
+    } catch (error) {
+      console.error('Cash Management API Error:', error);
+      setCashData({
+        todayRevenue: 0,
+        cashInHand: 0,
+        cardPayments: 0,
+        upiPayments: 0,
+        recentTransactions: [],
+        expenses: [],
+        sentToOffice: 0,
+        sourceBreakdown: []
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCashData = async () => {
-      try {
-        console.log('🔄 Cash Management: Fetching data...');
-        const cashAtReceptionRes = await axios.get('/api/cash-transactions/cash-at-reception');
-        console.log('📡 Cash Management API Response:', cashAtReceptionRes.status, cashAtReceptionRes.data);
-        
-        const data = cashAtReceptionRes.data;
-        
-        console.log('📊 Cash Management Data Structure:');
-        console.log('- totalRevenue:', data.totalRevenue);
-        console.log('- cashAtReception:', data.cashAtReception);
-        console.log('- cardPayments:', data.cardPayments);
-        console.log('- upiPayments:', data.upiPayments);
-        console.log('- recentTransactions:', data.recentTransactions?.length || 0);
-        console.log('- expenses:', data.expenses?.length || 0);
-        console.log('- sentToOffice from API:', data.sentToOffice);
-        
-        // Calculate sentToOffice from transactions if not provided by backend
-        const calculatedSentToOffice = (data.recentTransactions || []).reduce((total, transaction) => {
-          console.log('Transaction:', transaction.type, transaction.amount);
-          return transaction.type === 'SENT' ? total + (parseFloat(transaction.amount) || 0) : total;
-        }, 0);
-        console.log('- calculated sentToOffice:', calculatedSentToOffice);
-        console.log('- backend sentToOffice:', data.sentToOffice);
-        
-        setCashData({
-          todayRevenue: data.totalRevenue || data.totalReceived || 0,
-          cashInHand: data.cashAtReception || data.cashInReception || 0,
-          cardPayments: data.cardPayments || 0,
-          upiPayments: data.upiPayments || 0,
-          recentTransactions: data.recentTransactions || [],
-          expenses: data.expenses || [],
-          sentToOffice: data.totalSentToOffice || data.sentToOffice || calculatedSentToOffice || 0
-        });
-        console.log('✅ Cash Management: Data loaded successfully');
-      } catch (error) {
-        console.error('🚨 Cash Management API Error:', error.response?.status, error.response?.data || error.message);
-        // Set default data on error
-        setCashData({
-          todayRevenue: 0,
-          cashInHand: 0,
-          cardPayments: 0,
-          upiPayments: 0,
-          recentTransactions: [],
-          expenses: [],
-          sentToOffice: 0
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchCashData();
   }, [axios]);
 
@@ -94,279 +109,294 @@ const CashManagement = () => {
     
     setFormLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      console.log('🔄 Transaction Submit:', {
-        amount: formData.amount,
-        type: formData.type,
-        isCustomerPayment: formData.isCustomerPayment,
-        keepPercentage: formData.keepPercentage
-      });
-      
       if (formData.isCustomerPayment && Number(formData.amount) > 0) {
         const totalAmount = Number(formData.amount);
         const keepAmount = totalAmount * formData.keepPercentage / 100;
         const sendAmount = totalAmount * (100 - formData.keepPercentage) / 100;
         
-        console.log('💰 Customer Payment Split:', { totalAmount, keepAmount, sendAmount });
-        
         if (keepAmount > 0) {
-          console.log('📤 Sending KEEP transaction...');
-          const keepResponse = await axios.post('/api/cash-transactions/add-transaction', {
+          await axios.post('/api/cash-transactions/add-transaction', {
             amount: keepAmount,
             type: 'KEEP',
             source: formData.source,
-            description: `Customer Payment - Kept at Reception (${formData.keepPercentage}%)`
-          }, {
-            headers: { Authorization: `Bearer ${token}` }
+            description: `Customer Payment - Kept (${formData.keepPercentage}%)`
           });
-          console.log('✅ KEEP transaction response:', keepResponse.data);
         }
         
         if (sendAmount > 0) {
-          console.log('📤 Sending SENT transaction...');
-          const sentResponse = await axios.post('/api/cash-transactions/add-transaction', {
+          await axios.post('/api/cash-transactions/add-transaction', {
             amount: sendAmount,
             type: 'SENT',
             source: formData.source,
-            description: `Customer Payment - Sent to Office (${100 - formData.keepPercentage}%)`
-          }, {
-            headers: { Authorization: `Bearer ${token}` }
+            description: `Customer Payment - Sent (${100 - formData.keepPercentage}%)`
           });
-          console.log('✅ SENT transaction response:', sentResponse.data);
         }
         
-        toast.success(`Payment split: ₹${keepAmount.toFixed(0)} kept, ₹${sendAmount.toFixed(0)} sent to office`);
+        toast.success(`Payment split: ₹${keepAmount.toFixed(0)} kept, ₹${sendAmount.toFixed(0)} sent`);
       } else {
-        console.log('📤 Sending single transaction:', formData.type);
-        const response = await axios.post('/api/cash-transactions/add-transaction', {
-          ...formData,
-          amount: Number(formData.amount)
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
+        await axios.post('/api/cash-transactions/add-transaction', {
+          amount: Number(formData.amount),
+          type: formData.type,
+          source: formData.source,
+          description: formData.description
         });
-        console.log('✅ Single transaction response:', response.data);
         
-        if (formData.type === 'SENT') {
-          toast.success(`₹${formData.amount} sent to office successfully!`);
-        } else {
-          toast.success('Transaction added successfully!');
-        }
+        toast.success(formData.type === 'SENT' ? `₹${formData.amount} sent to office` : 'Transaction added');
       }
       
-      setFormData({ amount: '', type: 'KEEP', description: '', isCustomerPayment: false, keepPercentage: 30 });
+      setFormData({ amount: '', type: 'KEEP', source: 'OTHER', description: '', isCustomerPayment: false, keepPercentage: 30 });
       setShowTransactionForm(false);
       
       // Refresh data
-      setLoading(true);
-      const cashAtReceptionRes = await axios.get('/api/cash-transactions/cash-at-reception');
-      const data = cashAtReceptionRes.data;
-      const calculatedSentToOffice = (data.recentTransactions || []).reduce((total, transaction) => {
-        return transaction.type === 'SENT' ? total + (parseFloat(transaction.amount) || 0) : total;
-      }, 0);
-      console.log('Refresh - calculated sentToOffice:', calculatedSentToOffice);
-      
-      setCashData({
-        todayRevenue: data.totalRevenue || data.totalReceived || 0,
-        cashInHand: data.cashAtReception || data.cashInReception || 0,
-        cardPayments: data.cardPayments || 0,
-        upiPayments: data.upiPayments || 0,
-        recentTransactions: data.recentTransactions || [],
-        expenses: data.expenses || [],
-        sentToOffice: data.totalSentToOffice || data.sentToOffice || calculatedSentToOffice || 0
-      });
-      setLoading(false);
+      await fetchCashData();
     } catch (error) {
-      console.error('🚨 Transaction Error:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          data: error.config?.data
-        }
-      });
-      
-      if (error.response?.status === 401) {
-        toast.error('Authentication failed. Please login again.');
-      } else if (error.response?.status === 404) {
-        toast.error('API endpoint not found. Please contact support.');
-      } else if (error.response?.data?.message) {
-        toast.error(`Error: ${error.response.data.message}`);
-      } else {
-        toast.error(`Transaction failed: ${error.message}`);
-      }
+      toast.error(error.response?.data?.message || 'Transaction failed');
     } finally {
       setFormLoading(false);
     }
   };
 
-  const handleGenerateReport = () => {
-    setShowReport(true);
-  };
-
-  const handleViewAnalytics = () => {
-    setShowAnalytics(true);
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{background: 'linear-gradient(to bottom right, hsl(45, 100%, 95%), hsl(45, 100%, 90%)'}}>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 mx-auto mb-4" style={{borderColor: 'hsl(45, 43%, 58%)'}}></div>
-          <p className="text-lg font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>Loading Cash Management...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg font-semibold text-gray-700">Loading Cash Management...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-4" style={{background: 'linear-gradient(to bottom right, hsl(45, 100%, 95%), hsl(45, 100%, 90%))'}}>      {/* Header */}
-      <div className="mb-4 flex justify-between items-start">
-        <div>
-          <h1 className="text-4xl font-bold mb-2 flex items-center gap-3" style={{color: 'hsl(45, 100%, 20%)'}}>
-            <IndianRupee className="h-10 w-10" style={{color: 'hsl(45, 43%, 58%)'}} />
-            Cash Management
-          </h1>
-          <p style={{color: 'hsl(45, 100%, 30%)'}}>Monitor and manage your cash flow operations</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <div className="p-2 rounded-lg" style={{backgroundColor: 'hsl(45, 43%, 58%)'}}>
+                  <IndianRupee className="h-8 w-8 text-white" />
+                </div>
+                Cash Management
+              </h1>
+              <p className="text-gray-600 mt-1">Monitor and manage your cash flow operations</p>
+            </div>
+            <button 
+              onClick={() => setShowTransactionForm(true)}
+              className="text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+              style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
+            >
+              <IndianRupee className="h-5 w-5" />
+              Add Transaction
+            </button>
+          </div>
         </div>
-        <button 
-          onClick={() => setShowTransactionForm(true)}
-          className="px-6 py-3 rounded-lg transition-colors hover:opacity-90 font-semibold flex items-center gap-2"
-          style={{backgroundColor: 'hsl(45, 43%, 58%)', color: 'white'}}
-        >
-          💰 Add Transaction
-        </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Today's Revenue</p>
-              <p className="text-3xl font-bold text-green-600">₹{cashData.todayRevenue.toLocaleString()}</p>
-              <p className="text-sm" style={{color: 'hsl(45, 100%, 40%)'}}>Total revenue today</p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <TrendingUp className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4" style={{borderLeftColor: 'hsl(45, 43%, 58%)'}}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Cash At Reception</p>
-              <p className={`text-3xl font-bold ${cashData.cashInHand >= 0 ? '' : 'text-red-600'}`} style={cashData.cashInHand >= 0 ? {color: 'hsl(45, 43%, 58%)'} : {}}>
-                ₹{Math.abs(cashData.cashInHand).toLocaleString()}
-              </p>
-              <p className="text-sm" style={{color: 'hsl(45, 100%, 40%)'}}>
-                {cashData.cashInHand >= 0 ? 'Available cash' : 'Cash deficit'}
-              </p>
-            </div>
-            <div className={`p-3 rounded-full ${cashData.cashInHand >= 0 ? '' : 'bg-red-100'}`} style={cashData.cashInHand >= 0 ? {backgroundColor: 'hsl(45, 100%, 90%)'} : {}}>
-              {cashData.cashInHand >= 0 ? 
-                <IndianRupee className="h-6 w-6" style={{color: 'hsl(45, 43%, 58%)'}} /> :
-                <AlertCircle className="h-6 w-6 text-red-600" />
-              }
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-purple-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Cash In Office</p>
-              <p className="text-3xl font-bold text-purple-600">₹{cashData.sentToOffice.toLocaleString()}</p>
-              <p className="text-sm" style={{color: 'hsl(45, 100%, 40%)'}}>Sent to office</p>
-            </div>
-            <div className="bg-purple-100 p-3 rounded-full">
-              <IndianRupee className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-
-      </div>
-
-      {/* Management Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="bg-white rounded-xl shadow-lg p-4" style={{border: '1px solid hsl(45, 100%, 85%)'}}>
-          <h3 className="text-lg font-bold mb-3" style={{color: 'hsl(45, 100%, 20%)'}}>
-            Cash Flow Analysis
-          </h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span style={{color: 'hsl(45, 100%, 30%)'}}>Net Cash Flow:</span>
-              <span className="font-bold text-green-600">
-                ₹{(cashData.todayRevenue - (cashData.todayRevenue * 0.2)).toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span style={{color: 'hsl(45, 100%, 30%)'}}>Digital vs Cash:</span>
-              <span className="font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                {cashData.todayRevenue > 0 ? Math.round(((cashData.cardPayments + cashData.upiPayments) / cashData.todayRevenue) * 100) : 0}% Digital
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span style={{color: 'hsl(45, 100%, 30%)'}}>Cash Efficiency:</span>
-              <span className="font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                {cashData.todayRevenue > 0 ? Math.round((cashData.cashInHand / cashData.todayRevenue) * 100) : 0}%
-              </span>
-            </div>
-          </div>
-        </div>
-
-        
-        <div className="bg-white rounded-xl shadow-lg p-4" style={{border: '1px solid hsl(45, 100%, 85%)'}}>
-          <h3 className="text-lg font-bold mb-3" style={{color: 'hsl(45, 100%, 20%)'}}>
-            Cash Distribution
-          </h3>
-          <div className="space-y-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm" style={{color: 'hsl(45, 100%, 30%)'}}>Reception Cash</span>
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  {dateFilter === 'today' ? "Today's Revenue" : 
+                   dateFilter === 'week' ? "This Week's Revenue" :
+                   dateFilter === 'month' ? "This Month's Revenue" :
+                   dateFilter === 'year' ? "This Year's Revenue" : "Revenue"}
+                </p>
+                <p className="text-3xl font-bold text-green-600 mt-2">₹{cashData.todayRevenue.toLocaleString()}</p>
+                <p className="text-sm text-gray-500 mt-1">Total received</p>
               </div>
-              <span className="text-sm font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                ₹{Math.abs(cashData.cashInHand).toLocaleString()}
-              </span>
+              <div className="bg-green-100 p-3 rounded-full">
+                <TrendingUp className="h-6 w-6 text-green-600" />
+              </div>
             </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <span className="text-sm" style={{color: 'hsl(45, 100%, 30%)'}}>Office Cash</span>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Cash At Reception</p>
+                <p className="text-3xl font-bold mt-2" style={{
+                  color: cashData.cashInHand >= 0 ? 'hsl(45, 43%, 58%)' : '#dc2626'
+                }}>
+                  ₹{Math.abs(cashData.cashInHand).toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {cashData.cashInHand >= 0 ? 'Available cash' : 'Cash deficit'}
+                </p>
               </div>
-              <span className="text-sm font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                ₹{cashData.sentToOffice.toLocaleString()}
-              </span>
+              <div className="p-3 rounded-full" style={{
+                backgroundColor: cashData.cashInHand >= 0 ? 'hsl(45, 100%, 90%)' : '#fef2f2'
+              }}>
+                {cashData.cashInHand >= 0 ? 
+                  <IndianRupee className="h-6 w-6" style={{color: 'hsl(45, 43%, 58%)'}} /> :
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                }
+              </div>
             </div>
-            <div className="flex items-center justify-between border-t pt-2" style={{borderColor: 'hsl(45, 100%, 90%)'}}>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{backgroundColor: 'hsl(45, 43%, 58%)'}}></div>
-                <span className="text-sm font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>Total Cash</span>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Cash In Office</p>
+                <p className="text-3xl font-bold mt-2" style={{color: 'hsl(45, 43%, 58%)'}}>₹{cashData.sentToOffice.toLocaleString()}</p>
+                <p className="text-sm text-gray-500 mt-1">Sent to office</p>
               </div>
-              <span className="text-sm font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                ₹{(Math.abs(cashData.cashInHand) + cashData.sentToOffice).toLocaleString()}
-              </span>
+              <div className="p-3 rounded-full" style={{backgroundColor: 'hsl(45, 100%, 90%)'}}>
+                <IndianRupee className="h-6 w-6" style={{color: 'hsl(45, 43%, 58%)'}} />
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Source Breakdown Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {['RESTAURANT', 'ROOM_BOOKING', 'BANQUET + PARTY', 'OTHER'].map(source => {
+            const sourceData = (cashData.sourceBreakdown || []).find(s => s._id === source) || { total: 0 };
+            const colors = {
+              'RESTAURANT': { bg: 'hsl(45, 100%, 90%)', text: 'hsl(45, 43%, 58%)', border: 'hsl(45, 43%, 58%)' },
+              'ROOM_BOOKING': { bg: 'hsl(45, 100%, 90%)', text: 'hsl(45, 43%, 58%)', border: 'hsl(45, 43%, 58%)' },
+              'BANQUET + PARTY': { bg: 'hsl(45, 100%, 90%)', text: 'hsl(45, 43%, 58%)', border: 'hsl(45, 43%, 58%)' },
+              'OTHER': { bg: 'hsl(45, 100%, 90%)', text: 'hsl(45, 43%, 58%)', border: 'hsl(45, 43%, 58%)' }
+            };
+            const color = colors[source];
+            
+            return (
+              <div key={source} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">
+                      {source.replace('_', ' ').replace(' + ', ' & ')}
+                    </p>
+                    <p className="text-2xl font-bold mt-2" style={{color: color.text}}>
+                      ₹{sourceData.total.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Revenue from {source.toLowerCase().replace('_', ' ')}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-full" style={{backgroundColor: color.bg}}>
+                    <IndianRupee className="h-5 w-5" style={{color: color.text}} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Recent Transactions */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Recent Transactions</h3>
+            <div className="flex gap-2 items-center">
+              <select 
+                value={dateFilter} 
+                onChange={(e) => {
+                  setDateFilter(e.target.value);
+                  fetchCashData(e.target.value, customDate, sourceFilter);
+                }}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="year">This Year</option>
+                <option value="date">Custom Date</option>
+              </select>
+              {dateFilter === 'date' && (
+                <input 
+                  type="date" 
+                  value={customDate}
+                  onChange={(e) => {
+                    setCustomDate(e.target.value);
+                    fetchCashData('date', e.target.value, sourceFilter);
+                  }}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                />
+              )}
+              <select 
+                value={sourceFilter} 
+                onChange={(e) => {
+                  setSourceFilter(e.target.value);
+                  fetchCashData(dateFilter, customDate, e.target.value);
+                }}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                <option value="all">All Sources</option>
+                <option value="RESTAURANT">Restaurant</option>
+                <option value="ROOM_BOOKING">Room Booking</option>
+                <option value="BANQUET + PARTY">Banquet + Party</option>
+                <option value="OTHER">Other</option>
+              </select>
+2            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            {cashData.recentTransactions.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
+                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Amount</th>
+                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Type</th>
+                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Source</th>
+                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Description</th>
+                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cashData.recentTransactions
+                    .filter(transaction => sourceFilter === 'all' || transaction.source === sourceFilter)
+                    .slice(0, 10).map((transaction, index) => (
+                    <tr key={index} className="border-b border-gray-100">
+                      <td className="p-3">
+                        <span className="font-semibold" style={{color: transaction.type === 'KEEP' ? '#16a34a' : 'hsl(45, 43%, 58%)'}}>
+                          ₹{transaction.amount?.toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <span className="px-2 py-1 rounded-full text-xs font-medium" style={{
+                          backgroundColor: transaction.type === 'KEEP' ? '#dcfce7' : 'hsl(45, 100%, 90%)',
+                          color: transaction.type === 'KEEP' ? '#166534' : 'hsl(45, 100%, 20%)'
+                        }}>
+                          {transaction.type === 'KEEP' ? 'Keep' : 'Sent'}
+                        </span>
+                      </td>
+                      <td className="p-3 text-gray-600">
+                        {transaction.source?.replace('_', ' ')}
+                      </td>
+                      <td className="p-3 text-gray-500">
+                        {transaction.description || '-'}
+                      </td>
+                      <td className="p-3 text-xs text-gray-400">
+                        {new Date(transaction.createdAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Clock className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                <p>No transactions found</p>
+                <p className="text-sm">{sourceFilter !== 'all' ? `No transactions found for ${sourceFilter.replace('_', ' ')}` : 'Add your first transaction to get started'}</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-
-
 
       {/* Transaction Form Modal */}
       {showTransactionForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md" style={{border: '1px solid hsl(45, 100%, 85%)'}}>
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2" style={{color: 'hsl(45, 100%, 20%)'}}>
-              Add Cash Transaction
-            </h3>
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4 text-gray-900">Add Cash Transaction</h3>
             <form onSubmit={handleTransactionSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 30%)'}}>Amount (₹)</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Amount (₹)</label>
                 <input
                   type="number"
                   value={formData.amount}
@@ -374,18 +404,16 @@ const CashManagement = () => {
                   required
                   min="0"
                   step="0.01"
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
-                  style={{borderColor: 'hsl(45, 100%, 85%)', '--tw-ring-color': 'hsl(45, 43%, 58%)'}}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter amount"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 30%)'}}>Transaction Type</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Transaction Type</label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({...formData, type: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
-                  style={{borderColor: 'hsl(45, 100%, 85%)', '--tw-ring-color': 'hsl(45, 43%, 58%)'}}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={formData.isCustomerPayment}
                 >
                   <option value="KEEP">Keep at Reception</option>
@@ -393,17 +421,15 @@ const CashManagement = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 30%)'}}>Source</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Source</label>
                 <select
                   value={formData.source}
                   onChange={(e) => setFormData({...formData, source: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
-                  style={{borderColor: 'hsl(45, 100%, 85%)', '--tw-ring-color': 'hsl(45, 43%, 58%)'}}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="RESTAURANT">Restaurant</option>
                   <option value="ROOM_BOOKING">Room Booking</option>
-                  <option value="BANQUET">Banquet</option>
-                  <option value="PARTY">Party</option>
+                  <option value="BANQUET + PARTY">Banquet + Party</option>
                   <option value="OTHER">Other</option>
                 </select>
               </div>
@@ -413,17 +439,16 @@ const CashManagement = () => {
                     type="checkbox"
                     checked={formData.isCustomerPayment}
                     onChange={(e) => setFormData({...formData, isCustomerPayment: e.target.checked, description: e.target.checked ? 'Customer Payment' : ''})}
-                    className="h-4 w-4 rounded"
-                    style={{color: 'hsl(45, 43%, 58%)', '--tw-ring-color': 'hsl(45, 43%, 58%)', borderColor: 'hsl(45, 100%, 85%)'}}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label className="text-sm font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>
+                  <label className="text-sm font-medium text-gray-700">
                     Customer Payment (Auto Split)
                   </label>
                 </div>
               </div>
               {formData.isCustomerPayment && (
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 30%)'}}>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     Keep at Reception: {formData.keepPercentage}% (₹{formData.amount ? (Number(formData.amount) * formData.keepPercentage / 100).toFixed(0) : 0})
                   </label>
                   <input
@@ -434,7 +459,7 @@ const CashManagement = () => {
                     onChange={(e) => setFormData({...formData, keepPercentage: Number(e.target.value)})}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                   />
-                  <div className="flex justify-between text-xs mt-1" style={{color: 'hsl(45, 100%, 40%)'}}>
+                  <div className="flex justify-between text-xs mt-1 text-gray-500">
                     <span>0%</span>
                     <span>Send to Office: {100 - formData.keepPercentage}% (₹{formData.amount ? (Number(formData.amount) * (100 - formData.keepPercentage) / 100).toFixed(0) : 0})</span>
                     <span>100%</span>
@@ -442,13 +467,12 @@ const CashManagement = () => {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 30%)'}}>Description</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Description</label>
                 <input
                   type="text"
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
-                  style={{borderColor: 'hsl(45, 100%, 85%)', '--tw-ring-color': 'hsl(45, 43%, 58%)'}}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Optional description"
                 />
               </div>
@@ -456,8 +480,10 @@ const CashManagement = () => {
                 <button
                   type="submit"
                   disabled={formLoading || !formData.amount}
-                  className="flex-1 text-white py-2 rounded-lg disabled:opacity-50 transition-opacity"
-                  style={{background: 'linear-gradient(to right, hsl(45, 43%, 58%), hsl(45, 32%, 46%))'}}
+                  className="flex-1 text-white py-2 rounded-lg disabled:opacity-50 transition-colors"
+                  style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
+                  onMouseEnter={(e) => !e.target.disabled && (e.target.style.backgroundColor = 'hsl(45, 32%, 46%)')}
+                  onMouseLeave={(e) => !e.target.disabled && (e.target.style.backgroundColor = 'hsl(45, 43%, 58%)')}
                 >
                   {formLoading ? 'Adding...' : 'Add Transaction'}
                 </button>
@@ -467,144 +493,12 @@ const CashManagement = () => {
                     setShowTransactionForm(false);
                     setFormData({ amount: '', type: 'KEEP', source: 'OTHER', description: '', isCustomerPayment: false, keepPercentage: 30 });
                   }}
-                  className="flex-1 text-white py-2 rounded-lg transition-opacity"
-                  style={{backgroundColor: 'hsl(45, 100%, 50%)'}}
+                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Report Modal */}
-      {showReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                📈 Cash Management Report
-              </h3>
-              <button
-                onClick={() => setShowReport(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-green-800">Total Revenue</h4>
-                  <p className="text-2xl font-bold text-green-600">₹{cashData.todayRevenue.toLocaleString()}</p>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-800">Cash at Reception</h4>
-                  <p className="text-2xl font-bold text-blue-600">₹{Math.abs(cashData.cashInHand).toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2">Payment Breakdown</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Card Payments:</span>
-                    <span className="font-semibold">₹{cashData.cardPayments.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>UPI Payments:</span>
-                    <span className="font-semibold">₹{cashData.upiPayments.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Cash Payments:</span>
-                    <span className="font-semibold">₹{(cashData.todayRevenue - cashData.cardPayments - cashData.upiPayments).toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Analytics Modal */}
-      {showAnalytics && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                📊 Cash Analytics
-              </h3>
-              <button
-                onClick={() => setShowAnalytics(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
-                <h4 className="font-semibold text-blue-800 mb-3">Payment Method Distribution</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Digital Payments:</span>
-                    <span className="font-bold">
-                      {cashData.todayRevenue > 0 ? Math.round(((cashData.cardPayments + cashData.upiPayments) / cashData.todayRevenue) * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Cash Payments:</span>
-                    <span className="font-bold">
-                      {cashData.todayRevenue > 0 ? Math.round(((cashData.todayRevenue - cashData.cardPayments - cashData.upiPayments) / cashData.todayRevenue) * 100) : 0}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
-                <h4 className="font-semibold text-green-800 mb-3">Cash Flow Efficiency</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Reception Retention:</span>
-                    <span className="font-bold">
-                      {cashData.todayRevenue > 0 ? Math.round((Math.abs(cashData.cashInHand) / cashData.todayRevenue) * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Office Transfer:</span>
-                    <span className="font-bold">60%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
-                <h4 className="font-semibold text-purple-800 mb-3">Transaction Summary</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Total Transactions:</span>
-                    <span className="font-bold">{cashData.recentTransactions.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Average Transaction:</span>
-                    <span className="font-bold">
-                      ₹{cashData.recentTransactions.length > 0 ? Math.round(cashData.todayRevenue / cashData.recentTransactions.length).toLocaleString() : 0}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg">
-                <h4 className="font-semibold text-orange-800 mb-3">Performance Metrics</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Revenue Growth:</span>
-                    <span className="font-bold text-green-600">+12%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Cash Utilization:</span>
-                    <span className="font-bold">
-                      {cashData.todayRevenue > 0 ? Math.round((cashData.todayRevenue / (cashData.todayRevenue + Math.abs(cashData.cashInHand))) * 100) : 0}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
