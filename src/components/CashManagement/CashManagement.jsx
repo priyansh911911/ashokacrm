@@ -20,6 +20,7 @@ const CashManagement = () => {
   const [formData, setFormData] = useState({
     amount: '',
     type: 'KEEP',
+    source: 'OTHER',
     description: '',
     isCustomerPayment: false,
     keepPercentage: 30
@@ -113,6 +114,7 @@ const CashManagement = () => {
           const keepResponse = await axios.post('/api/cash-transactions/add-transaction', {
             amount: keepAmount,
             type: 'KEEP',
+            source: formData.source,
             description: `Customer Payment - Kept at Reception (${formData.keepPercentage}%)`
           }, {
             headers: { Authorization: `Bearer ${token}` }
@@ -125,6 +127,7 @@ const CashManagement = () => {
           const sentResponse = await axios.post('/api/cash-transactions/add-transaction', {
             amount: sendAmount,
             type: 'SENT',
+            source: formData.source,
             description: `Customer Payment - Sent to Office (${100 - formData.keepPercentage}%)`
           }, {
             headers: { Authorization: `Bearer ${token}` }
@@ -390,6 +393,21 @@ const CashManagement = () => {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 30%)'}}>Source</label>
+                <select
+                  value={formData.source}
+                  onChange={(e) => setFormData({...formData, source: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
+                  style={{borderColor: 'hsl(45, 100%, 85%)', '--tw-ring-color': 'hsl(45, 43%, 58%)'}}
+                >
+                  <option value="RESTAURANT">Restaurant</option>
+                  <option value="ROOM_BOOKING">Room Booking</option>
+                  <option value="BANQUET">Banquet</option>
+                  <option value="PARTY">Party</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div>
                 <div className="flex items-center space-x-3">
                   <input
                     type="checkbox"
@@ -447,7 +465,7 @@ const CashManagement = () => {
                   type="button"
                   onClick={() => {
                     setShowTransactionForm(false);
-                    setFormData({ amount: '', type: 'KEEP', description: '', isCustomerPayment: false, keepPercentage: 30 });
+                    setFormData({ amount: '', type: 'KEEP', source: 'OTHER', description: '', isCustomerPayment: false, keepPercentage: 30 });
                   }}
                   className="flex-1 text-white py-2 rounded-lg transition-opacity"
                   style={{backgroundColor: 'hsl(45, 100%, 50%)'}}
