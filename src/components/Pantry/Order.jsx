@@ -1485,23 +1485,32 @@ const Order = () => {
                 <div>
                   <h3 className="font-semibold text-lg mb-3">Items ({viewingOrder.items?.length || 0})</h3>
                   <div className="space-y-3">
-                    {viewingOrder.items?.map((item, index) => (
-                      <div key={index} className="bg-white border rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium">{item.name || 'Item'}</h4>
-                            <p className="text-sm text-gray-500">Unit: {item.unit || 'pcs'}</p>
+                    {viewingOrder.items?.map((item, index) => {
+                      // Get item name from multiple possible sources
+                      let itemName = item.name || item.itemName;
+                      if (!itemName && (item.itemId || item.pantryItemId)) {
+                        const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                        itemName = pantryItem?.name;
+                      }
+                      
+                      return (
+                        <div key={index} className="bg-white border rounded-lg p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium">{itemName || 'Unknown Item'}</h4>
+                              <p className="text-sm text-gray-500">Unit: {item.unit || 'pcs'}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}</p>
+                              <p className="text-sm text-gray-500">{item.quantity || 1} × ₹{item.unitPrice?.toFixed(2) || '0.00'}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}</p>
-                            <p className="text-sm text-gray-500">{item.quantity || 1} × ₹{item.unitPrice?.toFixed(2) || '0.00'}</p>
-                          </div>
+                          {item.notes && (
+                            <p className="text-sm text-gray-600 mt-2">Notes: {item.notes}</p>
+                          )}
                         </div>
-                        {item.notes && (
-                          <p className="text-sm text-gray-600 mt-2">Notes: {item.notes}</p>
-                        )}
-                      </div>
-                    )) || (
+                      );
+                    }) || (
                       <div className="text-center text-gray-500 py-4">
                         No items in this order
                       </div>
