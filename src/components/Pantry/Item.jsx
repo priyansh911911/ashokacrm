@@ -50,6 +50,7 @@ function SuccessModal({ message, onClose }) {
 function Item() {
   const { axios } = useAppContext();
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -87,8 +88,21 @@ function Item() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const token = getAuthToken();
+      const { data } = await axios.get('/api/restaurant-categories/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCategories(data || []);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  };
+
   useEffect(() => {
     fetchItems();
+    fetchCategories();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -213,13 +227,20 @@ function Item() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Category</label>
-                    <input
+                    <select
                       name="category"
                       value={formData.category}
                       onChange={handleChange}
                       required
                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map((category) => (
+                        <option key={category._id} value={category.name}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Price</label>
