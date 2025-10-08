@@ -893,7 +893,21 @@ const Order = () => {
                 <button
                   onClick={() => {
                     const upiUrl = `upi://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
-                    window.location.href = upiUrl;
+                    
+                    // Try to open UPI app
+                    try {
+                      window.location.href = upiUrl;
+                      
+                      // Fallback after 2 seconds if app doesn't open
+                      setTimeout(() => {
+                        const fallbackUrl = `https://pay.google.com/gp/p/ui/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
+                        window.open(fallbackUrl, '_blank');
+                      }, 2000);
+                    } catch (error) {
+                      // If UPI fails, open Google Pay web
+                      const fallbackUrl = `https://pay.google.com/gp/p/ui/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
+                      window.open(fallbackUrl, '_blank');
+                    }
                   }}
                   className="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-semibold shadow-md"
                 >
@@ -904,7 +918,14 @@ const Order = () => {
                   <button
                     onClick={() => {
                       const phonepeUrl = `phonepe://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
-                      window.location.href = phonepeUrl;
+                      try {
+                        window.location.href = phonepeUrl;
+                        setTimeout(() => {
+                          window.open(`https://phon.pe/ru_${paymentVendor.UpiID}`, '_blank');
+                        }, 2000);
+                      } catch (error) {
+                        window.open(`https://phon.pe/ru_${paymentVendor.UpiID}`, '_blank');
+                      }
                     }}
                     className="bg-purple-100 text-purple-700 py-2 px-3 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
                   >
@@ -913,7 +934,16 @@ const Order = () => {
                   <button
                     onClick={() => {
                       const gpayUrl = `tez://upi/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
-                      window.location.href = gpayUrl;
+                      try {
+                        window.location.href = gpayUrl;
+                        setTimeout(() => {
+                          const webUrl = `https://pay.google.com/gp/p/ui/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
+                          window.open(webUrl, '_blank');
+                        }, 2000);
+                      } catch (error) {
+                        const webUrl = `https://pay.google.com/gp/p/ui/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
+                        window.open(webUrl, '_blank');
+                      }
                     }}
                     className="bg-blue-100 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
                   >
@@ -922,7 +952,14 @@ const Order = () => {
                   <button
                     onClick={() => {
                       const paytmUrl = `paytmmp://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
-                      window.location.href = paytmUrl;
+                      try {
+                        window.location.href = paytmUrl;
+                        setTimeout(() => {
+                          window.open(`https://paytm.com/papi/v1/pay?pa=${paymentVendor.UpiID}&am=${paymentVendor.totalAmount}`, '_blank');
+                        }, 2000);
+                      } catch (error) {
+                        window.open(`https://paytm.com/papi/v1/pay?pa=${paymentVendor.UpiID}&am=${paymentVendor.totalAmount}`, '_blank');
+                      }
                     }}
                     className="bg-cyan-100 text-cyan-700 py-2 px-3 rounded-lg hover:bg-cyan-200 transition-colors text-sm font-medium"
                   >
