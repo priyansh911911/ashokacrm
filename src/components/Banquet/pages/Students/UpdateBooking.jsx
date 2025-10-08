@@ -54,6 +54,7 @@ const UpdateBooking = () => {
     advance: 0,
     total: 0,
     balance: 0,
+    advanceHistory: [],
     ratePerPax: 0,
     foodType: "Veg",
     menuItems: [],
@@ -311,6 +312,11 @@ const UpdateBooking = () => {
             hasDecoration: !!(bookingData.decorationCharge && bookingData.decorationCharge > 0),
             hasMusic: !!(bookingData.musicCharge && bookingData.musicCharge > 0),
             showRatePerPax: !!(bookingData.ratePerPax && bookingData.ratePerPax > 0),
+            advanceHistory: bookingData.advanceHistory || (bookingData.advance > 0 ? [{
+              amount: Number(bookingData.advance),
+              date: bookingData.createdAt || new Date().toISOString(),
+              method: bookingData.paymentMethod || 'cash'
+            }] : []),
             // ... rest of the fields
           };
 
@@ -1344,16 +1350,29 @@ const UpdateBooking = () => {
                   <label className="block text-sm font-medium text-gray-700">
                     Advance Payment
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const section = document.getElementById('additionalAdvanceSection');
-                      section.style.display = section.style.display === 'none' ? 'block' : 'none';
-                    }}
-                    className="bg-[#c3ad6b] hover:bg-[#b39b5a] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold"
-                  >
-                    +
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const section = document.getElementById('advanceHistorySection');
+                        section.style.display = section.style.display === 'none' ? 'block' : 'none';
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                      title="View History"
+                    >
+                      H
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const section = document.getElementById('additionalAdvanceSection');
+                        section.style.display = section.style.display === 'none' ? 'block' : 'none';
+                      }}
+                      className="bg-[#c3ad6b] hover:bg-[#b39b5a] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div className="relative">
                   <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -1365,6 +1384,28 @@ const UpdateBooking = () => {
                     value={booking.advance !== "" ? booking.advance : ""}
                     min="0"
                   />
+                </div>
+              </div>
+
+              {/* Advance Payment History */}
+              <div id="advanceHistorySection" style={{display: 'none'}} className="space-y-2 bg-blue-50 p-3 rounded-lg">
+                <h4 className="text-sm font-semibold text-blue-800">Advance Payment History</h4>
+                <div className="max-h-32 overflow-y-auto">
+                  {booking.advanceHistory && booking.advanceHistory.length > 0 ? (
+                    booking.advanceHistory.map((payment, index) => (
+                      <div key={index} className="flex justify-between items-center text-xs bg-white p-2 rounded border">
+                        <span>₹{payment.amount}</span>
+                        <span className="text-gray-500">{new Date(payment.date).toLocaleDateString()} ({payment.method})</span>
+                      </div>
+                    ))
+                  ) : booking.advance > 0 ? (
+                    <div className="flex justify-between items-center text-xs bg-white p-2 rounded border">
+                      <span>₹{booking.advance}</span>
+                      <span className="text-gray-500">Initial Payment (cash)</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">No payment history available</div>
+                  )}
                 </div>
               </div>
 
@@ -1383,10 +1424,16 @@ const UpdateBooking = () => {
                           if (additionalAmount && !isNaN(additionalAmount) && Number(additionalAmount) > 0) {
                             const currentAdvance = Number(booking.advance) || 0;
                             const newAdvance = currentAdvance + Number(additionalAmount);
+                            const newPayment = {
+                              amount: Number(additionalAmount),
+                              date: new Date().toISOString(),
+                              method: booking.paymentMethod || 'cash'
+                            };
                             setBooking(prev => ({
                               ...prev,
                               advance: newAdvance,
-                              balance: (Number(prev.total) || 0) - newAdvance
+                              balance: (Number(prev.total) || 0) - newAdvance,
+                              advanceHistory: [...(prev.advanceHistory || []), newPayment]
                             }));
                             e.target.value = '';
                           }
@@ -1402,10 +1449,16 @@ const UpdateBooking = () => {
                       if (additionalAmount && !isNaN(additionalAmount) && Number(additionalAmount) > 0) {
                         const currentAdvance = Number(booking.advance) || 0;
                         const newAdvance = currentAdvance + Number(additionalAmount);
+                        const newPayment = {
+                          amount: Number(additionalAmount),
+                          date: new Date().toISOString(),
+                          method: booking.paymentMethod || 'cash'
+                        };
                         setBooking(prev => ({
                           ...prev,
                           advance: newAdvance,
-                          balance: (Number(prev.total) || 0) - newAdvance
+                          balance: (Number(prev.total) || 0) - newAdvance,
+                          advanceHistory: [...(prev.advanceHistory || []), newPayment]
                         }));
                         input.value = '';
                       }
