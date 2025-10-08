@@ -235,12 +235,28 @@ function Item() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Unit</label>
-                    <input
+                    <select
                       name="unit"
                       value={formData.unit}
                       onChange={handleChange}
                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    >
+                      <option value="piece">Piece</option>
+                      <option value="plate">Plate</option>
+                      <option value="bowl">Bowl</option>
+                      <option value="glass">Glass</option>
+                      <option value="cup">Cup</option>
+                      <option value="bottle">Bottle</option>
+                      <option value="ml">ML</option>
+                      <option value="ltr">Liter</option>
+                      <option value="gram">Gram</option>
+                      <option value="kg">KG</option>
+                      <option value="packet">Packet</option>
+                      <option value="combo">Combo</option>
+                      <option value="slice">Slice</option>
+                      <option value="scoop">Scoop</option>
+                      <option value="portion">Portion</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Stock Quantity</label>
