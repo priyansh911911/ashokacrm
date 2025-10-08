@@ -332,7 +332,7 @@ const CashManagement = () => {
                 <option value="BANQUET + PARTY">Banquet + Party</option>
                 <option value="OTHER">Other</option>
               </select>
-2            </div>
+            </div>
           </div>
           
           <div className="overflow-x-auto">
