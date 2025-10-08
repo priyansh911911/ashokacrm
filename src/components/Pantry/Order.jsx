@@ -892,23 +892,43 @@ const Order = () => {
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
-                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                    
-                    if (isMobile) {
-                      const upiUrl = `upi://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
-                      window.location.href = upiUrl;
-                    } else {
-                      navigator.clipboard.writeText(paymentVendor.UpiID).then(() => {
-                        showToast.success('UPI ID copied to clipboard!');
-                      }).catch(() => {
-                        showToast.error('Failed to copy UPI ID');
-                      });
-                    }
+                    const upiUrl = `upi://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                    window.location.href = upiUrl;
                   }}
                   className="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-semibold shadow-md"
                 >
                   Pay Now
                 </button>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => {
+                      const phonepeUrl = `phonepe://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
+                      window.location.href = phonepeUrl;
+                    }}
+                    className="bg-purple-100 text-purple-700 py-2 px-3 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+                  >
+                    PhonePe
+                  </button>
+                  <button
+                    onClick={() => {
+                      const gpayUrl = `tez://upi/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
+                      window.location.href = gpayUrl;
+                    }}
+                    className="bg-blue-100 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                  >
+                    GPay
+                  </button>
+                  <button
+                    onClick={() => {
+                      const paytmUrl = `paytmmp://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
+                      window.location.href = paytmUrl;
+                    }}
+                    className="bg-cyan-100 text-cyan-700 py-2 px-3 rounded-lg hover:bg-cyan-200 transition-colors text-sm font-medium"
+                  >
+                    Paytm
+                  </button>
+                </div>
                 
                 <button
                   onClick={() => {
@@ -1372,7 +1392,7 @@ const Order = () => {
                       {vendor?.UpiID && (
                         <div className="bg-green-50 p-3 rounded border">
                           <div className="text-sm text-gray-600 mb-1">Payment Info:</div>
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between mb-3">
                             <span className="font-mono text-green-700">{vendor.UpiID}</span>
                             {vendor.scannerImg && (
                               <img 
@@ -1382,6 +1402,18 @@ const Order = () => {
                               />
                             )}
                           </div>
+                          <button
+                            onClick={() => {
+                              setPaymentVendor({
+                                ...vendor,
+                                totalAmount: viewingOrder.totalAmount || 0
+                              });
+                              setShowPaymentModal(true);
+                            }}
+                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
+                          >
+                            Pay Now
+                          </button>
                         </div>
                       )}
                       
