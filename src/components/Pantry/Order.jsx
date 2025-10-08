@@ -845,7 +845,23 @@ const Order = () => {
                 >
                   Invoice
                 </button>
-
+                <button
+                  onClick={() => {
+                    const vendor = vendors.find(v => v._id === order.vendorId);
+                    if (vendor && vendor.UpiID) {
+                      setPaymentVendor({
+                        ...vendor,
+                        totalAmount: order.totalAmount || 0
+                      });
+                      setShowPaymentModal(true);
+                    } else {
+                      showToast.error('Vendor UPI details not available');
+                    }
+                  }}
+                  className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200"
+                >
+                  Pay Now
+                </button>
               </div>
             </div>
           ))
@@ -1445,6 +1461,7 @@ const Order = () => {
                                 ...vendor,
                                 totalAmount: viewingOrder.totalAmount || 0
                               });
+                              setShowViewModal(false);
                               setShowPaymentModal(true);
                             }}
                             className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
