@@ -24,6 +24,7 @@ import OccupancyCard from "./cards/OccupancyCard.jsx";
 import GuestCard from "./cards/GuestCard.jsx";
 import RatingCard from "./cards/RatingCard.jsx";
 import QuickActions from "./cards/QuickActions.jsx";
+import DashboardLoader from "./DashboardLoader";
 import {
   dashboardCards,
   revenueData,
@@ -42,7 +43,7 @@ const Dashboard = () => {
   const [timeFrame, setTimeFrame] = useState("weekly");
   const [showCalendar, setShowCalendar] = useState(false);
   const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const handleCalendarClick = () => {
     setShowCalendar(true);
   };
@@ -188,6 +189,10 @@ const Dashboard = () => {
         return null;
     }
   };
+
+  if (loading) {
+    return <DashboardLoader />;
+  }
 
   return (
     <div className="p-4 sm:p-6 overflow-auto h-full bg-background">

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Bed, AlertTriangle, Clock, CalendarCheck, DoorOpen, DollarSign, Users, TrendingUp, ChevronRight, Loader2, User, Package, MapPin, ChefHat, RefreshCw } from 'lucide-react';
+import DashboardLoader from '../DashboardLoader';
 
 // --- Configuration ---
 const BACKEND_URL = 'https://ashoka-backend.vercel.app';
@@ -503,14 +504,7 @@ const EasyDashboard = () => {
     
     // --- Render Logic ---
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="flex flex-col items-center text-gray-600">
-                    <Loader2 className="animate-spin mb-4" size={48} style={{color: 'var(--color-primary)'}}/>
-                    <p className="text-xl font-light">Loading...</p>
-                </div>
-            </div>
-        );
+        return <DashboardLoader />;
     }
 
     if (error) {

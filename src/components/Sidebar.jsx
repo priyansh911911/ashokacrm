@@ -20,6 +20,7 @@ import {
   Package,
   Bell,
   Warehouse,
+  Book,
 } from "lucide-react";
 import logoImage from "../assets/Lakeview Rooftop.png";
 
@@ -180,10 +181,18 @@ const Sidebar = () => {
       items.push({ icon: FileText, label: "Room Inspection", path: "/room-inspection" });
     }
 
-    // Reception and Admin items
+    // Reception and Admin items - Book dropdown
     if (role === "admin" || (role === "staff" && hasReception)) {
-      items.push({ icon: FileText, label: "Booking", path: "/booking" });
-      items.push({ icon: FileText, label: "Reservation", path: "/reservation" });
+      items.push({
+        icon: Book,
+        label: "Book",
+        path: "/booking",
+        isDropdown: true,
+        children: [
+          { label: "Booking", path: "/booking", icon: FileText },
+          { label: "Reservation", path: "/reservation", icon: FileText },
+        ],
+      });
     }
 
     // Task management - admin and housekeeping staff
