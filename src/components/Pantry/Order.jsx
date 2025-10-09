@@ -933,59 +933,6 @@ const Order = () => {
                   Pay Now
                 </button>
                 
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => {
-                      const phonepeUrl = `phonepe://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
-                      try {
-                        window.location.href = phonepeUrl;
-                        setTimeout(() => {
-                          window.open(`https://phon.pe/ru_${paymentVendor.UpiID}`, '_blank');
-                        }, 2000);
-                      } catch (error) {
-                        window.open(`https://phon.pe/ru_${paymentVendor.UpiID}`, '_blank');
-                      }
-                    }}
-                    className="bg-purple-100 text-purple-700 py-2 px-3 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
-                  >
-                    PhonePe
-                  </button>
-                  <button
-                    onClick={() => {
-                      const gpayUrl = `tez://upi/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
-                      try {
-                        window.location.href = gpayUrl;
-                        setTimeout(() => {
-                          const webUrl = `https://pay.google.com/gp/p/ui/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
-                          window.open(webUrl, '_blank');
-                        }, 2000);
-                      } catch (error) {
-                        const webUrl = `https://pay.google.com/gp/p/ui/pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
-                        window.open(webUrl, '_blank');
-                      }
-                    }}
-                    className="bg-blue-100 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
-                  >
-                    GPay
-                  </button>
-                  <button
-                    onClick={() => {
-                      const paytmUrl = `paytmmp://pay?pa=${paymentVendor.UpiID}&pn=${encodeURIComponent(paymentVendor.name)}&am=${paymentVendor.totalAmount}&cu=INR`;
-                      try {
-                        window.location.href = paytmUrl;
-                        setTimeout(() => {
-                          window.open(`https://paytm.com/papi/v1/pay?pa=${paymentVendor.UpiID}&am=${paymentVendor.totalAmount}`, '_blank');
-                        }, 2000);
-                      } catch (error) {
-                        window.open(`https://paytm.com/papi/v1/pay?pa=${paymentVendor.UpiID}&am=${paymentVendor.totalAmount}`, '_blank');
-                      }
-                    }}
-                    className="bg-cyan-100 text-cyan-700 py-2 px-3 rounded-lg hover:bg-cyan-200 transition-colors text-sm font-medium"
-                  >
-                    Paytm
-                  </button>
-                </div>
-                
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(paymentVendor.UpiID).then(() => {
