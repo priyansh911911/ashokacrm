@@ -110,6 +110,13 @@ function Item() {
     }, 2000);
     fetchItems();
     fetchCategories();
+    
+    // Check if accessed from sidebar for category creation
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('action') === 'create-category') {
+      setShowCategoryForm(true);
+    }
+    
     return () => clearTimeout(timer);
   }, []);
 
@@ -202,14 +209,7 @@ function Item() {
           </div>
         )}
         
-        <div className="flex justify-end mb-6 gap-3">
-          <button 
-            onClick={() => setShowCategoryForm(true)}
-            className="font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
-            style={{ backgroundColor: 'hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)' }}
-          >
-            Add Category
-          </button>
+        <div className="flex justify-end mb-6">
           <button 
             onClick={() => setShowForm(true)}
             className="font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
