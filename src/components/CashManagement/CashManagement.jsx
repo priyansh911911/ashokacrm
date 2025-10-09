@@ -35,7 +35,7 @@ const CashManagement = () => {
   const fetchCashData = async (filter = dateFilter, date = customDate, source = sourceFilter) => {
     setLoading(true);
     try {
-      let url = `/api/cash-transactions/cash-at-reception?filter=${filter}`;
+      let url = `/api/cash-transactions/all-transactions?filter=${filter}`;
       if (filter === 'date' && date) {
         url += `&date=${date}`;
       }
@@ -47,31 +47,47 @@ const CashManagement = () => {
       const data = response.data;
       console.log('🔍 Cash Management - Raw API Data:', data);
       
-      // Calculate totals from all sources
+      // Process transactions data
+      const transactions = data.transactions || [];
       let totalReceived = 0;
       let totalSent = 0;
-      let cashInReception = 0;
-      let allTransactions = [];
       let sourceBreakdown = [];
       
-      Object.entries(data.cards || {}).forEach(([source, sourceData]) => {
-        console.log(`📊 Processing ${source}:`, sourceData.summary);
-        totalReceived += sourceData.summary?.totalReceived || 0;
-        totalSent += sourceData.summary?.totalSent || 0;
-        cashInReception += sourceData.summary?.cashInReception || 0;
-        allTransactions = [...allTransactions, ...(sourceData.transactions || [])];
-        
-        // Add to source breakdown (show all sources)
-        const receivedTotal = sourceData.summary?.totalReceived || 0;
-        sourceBreakdown.push({ _id: source, total: receivedTotal });
+      // Calculate totals from transactions
+      transactions.forEach(transaction => {
+        if (transaction.type === 'KEEP') {
+          totalReceived += transaction.amount || 0;
+        } else if (transaction.type === 'SENT') {
+          totalSent += transaction.amount || 0;
+        }
       });
+      
+      // Calculate cash in hand
+      const cashInReception = totalReceived - totalSent;
+      
+      // Group by source for breakdown
+      const sourceMap = {};
+      transactions.forEach(transaction => {
+        const source = transaction.source || 'OTHER';
+        if (!sourceMap[source]) {
+          sourceMap[source] = 0;
+        }
+        if (transaction.type === 'KEEP') {
+          sourceMap[source] += transaction.amount || 0;
+        }
+      });
+      
+      sourceBreakdown = Object.entries(sourceMap).map(([source, total]) => ({
+        _id: source,
+        total
+      }));
       
       const finalData = {
         todayRevenue: totalReceived,
         cashInHand: cashInReception,
         cardPayments: 0,
         upiPayments: 0,
-        recentTransactions: allTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+        recentTransactions: transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
         expenses: [],
         sentToOffice: totalSent,
         sourceBreakdown
@@ -158,71 +174,82 @@ const CashManagement = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-yellow-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-lg font-semibold text-gray-700">Loading Cash Management...</p>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-amber-200 border-t-amber-500 mx-auto mb-6"></div>
+            <IndianRupee className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-amber-600" />
+          </div>
+          <p className="text-xl font-bold text-gray-800 mb-2">Loading Cash Management</p>
+          <p className="text-sm text-gray-600">Please wait while we fetch your data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-yellow-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <div className="p-2 rounded-lg" style={{backgroundColor: 'hsl(45, 43%, 58%)'}}>
-                  <IndianRupee className="h-8 w-8 text-white" />
+      <div className="bg-white/80 backdrop-blur-sm shadow-lg border-b" style={{borderColor: '#c3ad6b'}}>
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6">
+            <div className="w-full lg:w-auto">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4" style={{color: '#5D4037'}}>
+                <div className="p-2 sm:p-3 rounded-xl shadow-lg" style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)'}}>
+                  <IndianRupee className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-white" />
                 </div>
-                Cash Management
+                <span className="text-xl sm:text-2xl lg:text-4xl" style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                  Cash Management
+                </span>
               </h1>
-              <p className="text-gray-600 mt-1">Monitor and manage your cash flow operations</p>
+              <p className="text-gray-600 mt-2 text-sm sm:text-base lg:text-lg">Monitor and manage your cash flow operations</p>
             </div>
             <button 
               onClick={() => setShowTransactionForm(true)}
-              className="text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
-              style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-              onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
+              className="w-full sm:w-auto text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+              style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)'}}
+              onMouseEnter={(e) => e.target.style.background = 'linear-gradient(to right, #b39b5a, #c3ad6b)'}
+              onMouseLeave={(e) => e.target.style.background = 'linear-gradient(to right, #c3ad6b, #d4c078)'}
             >
-              <IndianRupee className="h-5 w-5" />
-              Add Transaction
+              <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="hidden sm:inline">Add Transaction</span>
+              <span className="sm:hidden">Add</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-10">
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #c3ad6b'}}>
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide truncate" style={{color: '#5D4037'}}>
                   {dateFilter === 'today' ? "Today's Revenue" : 
                    dateFilter === 'week' ? "This Week's Revenue" :
                    dateFilter === 'month' ? "This Month's Revenue" :
                    dateFilter === 'year' ? "This Year's Revenue" : "Revenue"}
                 </p>
-                <p className="text-3xl font-bold text-green-600 mt-2">₹{cashData.todayRevenue.toLocaleString()}</p>
-                <p className="text-sm text-gray-500 mt-1">Total received</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-2 sm:mt-3" style={{background: 'linear-gradient(to right, #16a34a, #059669)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                  ₹{cashData.todayRevenue.toLocaleString()}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 font-medium">Total received</p>
               </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl shadow-lg ml-2 sm:ml-4" style={{background: 'linear-gradient(to right, #16a34a, #059669)'}}>
+                <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #c3ad6b'}}>
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Cash At Reception</p>
-                <p className="text-3xl font-bold mt-2" style={{
-                  color: cashData.cashInHand >= 0 ? 'hsl(45, 43%, 58%)' : '#dc2626'
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide truncate" style={{color: '#5D4037'}}>Cash At Reception</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-2 sm:mt-3" style={{
+                  background: cashData.cashInHand >= 0 ? 'linear-gradient(to right, #c3ad6b, #d4c078)' : 'linear-gradient(to right, #dc2626, #ef4444)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
                 }}>
                   ₹{Math.abs(cashData.cashInHand).toLocaleString()}
                 </p>
@@ -241,48 +268,43 @@ const CashManagement = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 sm:col-span-2 lg:col-span-1" style={{border: '1px solid #c3ad6b'}}>
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Cash In Office</p>
-                <p className="text-3xl font-bold mt-2" style={{color: 'hsl(45, 43%, 58%)'}}>₹{cashData.sentToOffice.toLocaleString()}</p>
-                <p className="text-sm text-gray-500 mt-1">Sent to office</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide truncate" style={{color: '#5D4037'}}>Cash In Office</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-2 sm:mt-3" style={{background: 'linear-gradient(to right, #5D4037, #4A2C20)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                  ₹{cashData.sentToOffice.toLocaleString()}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 font-medium">Sent to office</p>
               </div>
-              <div className="p-3 rounded-full" style={{backgroundColor: 'hsl(45, 100%, 90%)'}}>
-                <IndianRupee className="h-6 w-6" style={{color: 'hsl(45, 43%, 58%)'}} />
+              <div className="p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl shadow-lg ml-2 sm:ml-4" style={{background: 'linear-gradient(to right, #5D4037, #4A2C20)'}}>
+                <TrendingDown className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Source Breakdown Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {['RESTAURANT', 'ROOM_BOOKING', 'BANQUET + PARTY', 'OTHER'].map(source => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
+          {['RESTAURANT', 'ROOM_BOOKING', 'BANQUET + PARTY', 'OTHER'].map((source, index) => {
             const sourceData = (cashData.sourceBreakdown || []).find(s => s._id === source) || { total: 0 };
-            const colors = {
-              'RESTAURANT': { bg: 'hsl(45, 100%, 90%)', text: 'hsl(45, 43%, 58%)', border: 'hsl(45, 43%, 58%)' },
-              'ROOM_BOOKING': { bg: 'hsl(45, 100%, 90%)', text: 'hsl(45, 43%, 58%)', border: 'hsl(45, 43%, 58%)' },
-              'BANQUET + PARTY': { bg: 'hsl(45, 100%, 90%)', text: 'hsl(45, 43%, 58%)', border: 'hsl(45, 43%, 58%)' },
-              'OTHER': { bg: 'hsl(45, 100%, 90%)', text: 'hsl(45, 43%, 58%)', border: 'hsl(45, 43%, 58%)' }
-            };
-            const color = colors[source];
             
             return (
-              <div key={source} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div key={source} className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #c3ad6b'}}>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide truncate" style={{color: '#5D4037'}}>
                       {source.replace('_', ' ').replace(' + ', ' & ')}
                     </p>
-                    <p className="text-2xl font-bold mt-2" style={{color: color.text}}>
+                    <p className="text-xl sm:text-2xl font-bold mt-2" style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
                       ₹{sourceData.total.toLocaleString()}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Revenue from {source.toLowerCase().replace('_', ' ')}
+                    <p className="text-xs text-gray-600 mt-1 font-medium">
+                      Revenue source
                     </p>
                   </div>
-                  <div className="p-3 rounded-full" style={{backgroundColor: color.bg}}>
-                    <IndianRupee className="h-5 w-5" style={{color: color.text}} />
+                  <div className="p-2 sm:p-3 rounded-xl ml-2" style={{backgroundColor: '#f5f1e8'}}>
+                    <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6" style={{color: '#c3ad6b'}} />
                   </div>
                 </div>
               </div>
@@ -291,7 +313,7 @@ const CashManagement = () => {
         </div>
 
         {/* Recent Transactions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 p-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-gray-900">Recent Transactions</h3>
             <div className="flex gap-2 items-center">
@@ -391,8 +413,8 @@ const CashManagement = () => {
 
       {/* Transaction Form Modal */}
       {showTransactionForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 w-full max-w-md border border-amber-200">
             <h3 className="text-xl font-bold mb-4 text-gray-900">Add Cash Transaction</h3>
             <form onSubmit={handleTransactionSubmit} className="space-y-4">
               <div>
