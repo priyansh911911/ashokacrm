@@ -29,7 +29,7 @@ import PantryOrders from "./components/Pantry/Order.jsx";
 import PantryVendors from "./components/Pantry/Vendor.jsx";
 import Resturant from "./components/Resturant/Resturant.jsx";
 import StaffWorkTask from "./components/StaffWorkTask";
-import Orders from "./components/orders/Orders.jsx";
+import Orders from "./components/Resturant/Allorders.jsx";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Menu from "./components/Resturant/Menu.jsx";
 import Table from "./components/Resturant/Table.jsx";
@@ -161,7 +161,7 @@ const App = () => {
                           </ProtectedRoute>
                         } 
                       />
-                      <Route path="/orders" element={<Orders />} />
+
                       <Route path="/menu" element={<Menu />} />
                       <Route path="/table" element={<Table />} />
                       <Route path="/resturant/bookings" element={<RestaurantBooking />} />
@@ -169,6 +169,7 @@ const App = () => {
                       <Route path="/book-table" element={<BookTable />} />
                       <Route path="/customers" element={<Customer />} />
                       <Route path="/resturant/order-table" element={<BookTable />} />
+                      <Route path="/resturant/all-orders" element={<Orders />} />
                       <Route path="/kot" element={<KOT />} />
                       <Route path="/resturant/reservation" element={<Resturantreservation />} />
                       <Route path="/billing" element={<Billing />} />

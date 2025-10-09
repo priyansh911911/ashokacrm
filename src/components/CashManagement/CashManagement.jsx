@@ -16,6 +16,7 @@ const CashManagement = () => {
     sourceBreakdown: []
   });
   const [loading, setLoading] = useState(true);
+  const [filterLoading, setFilterLoading] = useState(false);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
@@ -32,8 +33,12 @@ const CashManagement = () => {
   const [customDate, setCustomDate] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
 
-  const fetchCashData = async (filter = dateFilter, date = customDate, source = sourceFilter) => {
-    setLoading(true);
+  const fetchCashData = async (filter = dateFilter, date = customDate, source = sourceFilter, isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    } else {
+      setFilterLoading(true);
+    }
     try {
       let url = `/api/cash-transactions/all-transactions?filter=${filter}`;
       if (filter === 'date' && date) {
@@ -109,12 +114,31 @@ const CashManagement = () => {
       });
     } finally {
       setLoading(false);
+      setFilterLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCashData();
+    fetchCashData(dateFilter, customDate, sourceFilter, true);
   }, [axios]);
+
+  const handleDateFilterChange = (newFilter) => {
+    setDateFilter(newFilter);
+    if (newFilter !== 'date') {
+      setCustomDate('');
+      fetchCashData(newFilter, '', sourceFilter, false);
+    }
+  };
+
+  const handleCustomDateChange = (date) => {
+    setCustomDate(date);
+    fetchCashData('date', date, sourceFilter, false);
+  };
+
+  const handleSourceFilterChange = (newSource) => {
+    setSourceFilter(newSource);
+    fetchCashData(dateFilter, customDate, newSource, false);
+  };
 
   const handleTransactionSubmit = async (e) => {
     e.preventDefault();
@@ -226,7 +250,8 @@ const CashManagement = () => {
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide truncate" style={{color: '#5D4037'}}>
-                  {dateFilter === 'today' ? "Today's Revenue" : 
+                  {dateFilter === 'all' ? "Total Revenue" :
+                   dateFilter === 'today' ? "Today's Revenue" : 
                    dateFilter === 'week' ? "This Week's Revenue" :
                    dateFilter === 'month' ? "This Month's Revenue" :
                    dateFilter === 'year' ? "This Year's Revenue" : "Revenue"}
@@ -315,15 +340,18 @@ const CashManagement = () => {
         {/* Recent Transactions */}
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 p-8">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Recent Transactions</h3>
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-bold text-gray-900">Recent Transactions</h3>
+              {filterLoading && (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-200 border-t-amber-500"></div>
+              )}
+            </div>
             <div className="flex gap-2 items-center">
               <select 
                 value={dateFilter} 
-                onChange={(e) => {
-                  setDateFilter(e.target.value);
-                  fetchCashData(e.target.value, customDate, sourceFilter);
-                }}
+                onChange={(e) => handleDateFilterChange(e.target.value)}
                 className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                <option value="all">All</option>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
@@ -334,19 +362,13 @@ const CashManagement = () => {
                 <input 
                   type="date" 
                   value={customDate}
-                  onChange={(e) => {
-                    setCustomDate(e.target.value);
-                    fetchCashData('date', e.target.value, sourceFilter);
-                  }}
+                  onChange={(e) => handleCustomDateChange(e.target.value)}
                   className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
                 />
               )}
               <select 
                 value={sourceFilter} 
-                onChange={(e) => {
-                  setSourceFilter(e.target.value);
-                  fetchCashData(dateFilter, customDate, e.target.value);
-                }}
+                onChange={(e) => handleSourceFilterChange(e.target.value)}
                 className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
                 <option value="all">All Sources</option>
                 <option value="RESTAURANT">Restaurant</option>
@@ -363,7 +385,7 @@ const CashManagement = () => {
                 <thead>
                   <tr style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
                     <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Amount</th>
-                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Type</th>
+                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Transaction Type</th>
                     <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Source</th>
                     <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Description</th>
                     <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Time</th>

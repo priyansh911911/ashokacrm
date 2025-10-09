@@ -256,7 +256,7 @@ const Sidebar = () => {
           isDropdown: true,
           children: [
             {
-              label: "Order Management",
+              label: "Create Order",
               path: "/laundry/ordermanagement",
               icon: ListChecks,
             },
@@ -324,14 +324,16 @@ const Sidebar = () => {
               } else if (restRole === 'cashier') {
                 console.log('Cashier menu selected - showing Order, Billing, KOT');
                 return [
-                  { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                  { label: "Create Order", path: "/resturant/order-table", icon: ShoppingCart },
+                  { label: "All Orders", path: "/resturant/all-orders", icon: ListChecks },
                   { label: "Billing", path: "/billing", icon: FileText },
                   { label: "KOT", path: "/kot", icon: ListChecks },
                 ];
               } else if (restRole === 'staff') {
                 console.log('Restaurant staff menu selected');
                 return [
-                  { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                  { label: "Create Order", path: "/resturant/order-table", icon: ShoppingCart },
+                  { label: "All Orders", path: "/resturant/all-orders", icon: ListChecks },
                   { label: "Reservation", path: "/resturant/reservation", icon: FileText },
                 ];
               }
@@ -344,7 +346,8 @@ const Sidebar = () => {
             if (mainRole === 'staff') {
               console.log('Staff menu selected - showing Order, Reservation, KOT');
               return [
-                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                { label: "Create Order", path: "/resturant/order-table", icon: ShoppingCart },
+                { label: "All Orders", path: "/resturant/all-orders", icon: ListChecks },
                 { label: "Reservation", path: "/resturant/reservation", icon: FileText },
                 { label: "KOT", path: "/kot", icon: ListChecks },
               ];
@@ -355,7 +358,8 @@ const Sidebar = () => {
               console.log('Admin menu selected - showing all options');
               return [
                 { label: "Dashboard", path: "/resturant/dashboard", icon: LayoutDashboard },
-                { label: "Order", path: "/resturant/order-table", icon: ShoppingCart },
+                { label: "Create Order", path: "/resturant/order-table", icon: ShoppingCart },
+                { label: "All Orders", path: "/resturant/all-orders", icon: ListChecks },
                 { label: "Reservation", path: "/resturant/reservation", icon: FileText },
                 { label: "KOT", path: "/kot", icon: ListChecks },
                 { label: "Billing", path: "/billing", icon: FileText },

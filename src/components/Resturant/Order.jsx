@@ -355,7 +355,7 @@ const Order = () => {
 
 
   return (
-    <div className="min-h-screen font-sans flex flex-col items-center p-2 sm:p-4" style={{ backgroundColor: 'hsl(45, 100%, 95%)' }}>
+    <div className="min-h-screen font-sans flex flex-col items-center p-4 sm:p-6">
       {/* Staff Notification */}
       {staffNotification && (
         <div className="fixed top-4 left-4 z-50 bg-blue-500 text-white p-4 rounded-lg shadow-lg animate-pulse max-w-sm">
@@ -384,46 +384,43 @@ const Order = () => {
         </div>
       )}
 
-      <div className="w-full max-w-7xl shadow-md rounded-lg p-4 sm:p-6 mb-6" style={{ backgroundColor: 'white', border: '1px solid hsl(45, 100%, 85%)' }}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-            <label className="font-semibold text-sm sm:text-base" style={{ color: 'hsl(45, 100%, 20%)' }}>Order Type:</label>
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-2">
+      <div className="w-full max-w-7xl bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-orange-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
+            <label className="font-bold text-lg text-orange-800">Order Type:</label>
+            <div className="flex items-center space-x-6">
+              <label className="flex items-center space-x-3 cursor-pointer">
                 <input
                   type="radio"
                   name="orderType"
                   checked={!isInHouse}
                   onChange={() => setIsInHouse(false)}
-                  className="focus:ring-2"
-                  style={{ accentColor: 'hsl(45, 43%, 58%)' }}
+                  className="w-5 h-5 text-orange-500 focus:ring-orange-500 focus:ring-2"
                 />
-                <span className="text-sm sm:text-base">Regular</span>
+                <span className="text-base font-medium text-gray-700">Regular</span>
               </label>
-              <label className="flex items-center space-x-2">
+              <label className="flex items-center space-x-3 cursor-pointer">
                 <input
                   type="radio"
                   name="orderType"
                   checked={isInHouse}
                   onChange={() => setIsInHouse(true)}
-                  className="focus:ring-2"
-                  style={{ accentColor: 'hsl(45, 43%, 58%)' }}
+                  className="w-5 h-5 text-orange-500 focus:ring-orange-500 focus:ring-2"
                 />
-                <span className="text-sm sm:text-base">In-House</span>
+                <span className="text-base font-medium text-gray-700">In-House</span>
               </label>
             </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-          <div className="flex flex-col space-y-2">
-            <label htmlFor="table-number" className="font-semibold text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Table Number</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+          <div className="flex flex-col space-y-3">
+            <label htmlFor="table-number" className="font-bold text-orange-800">Table Number</label>
             <select 
               id="table-number" 
               value={orderData.tableNo}
               onChange={(e) => setOrderData({...orderData, tableNo: e.target.value})}
-              className="w-full rounded-md p-2 sm:p-3 focus:outline-none focus:ring-2 text-sm sm:text-base"
-              style={{ border: '1px solid hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)', focusRingColor: 'hsl(45, 43%, 58%)' }}
+              className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
             >
               <option value="">Select Table</option>
               {tables.map(table => (
@@ -433,8 +430,8 @@ const Order = () => {
               ))}
             </select>
           </div>
-          <div className="flex flex-col space-y-2">
-            <label htmlFor="staff" className="font-semibold text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Staff</label>
+          <div className="flex flex-col space-y-3">
+            <label htmlFor="staff" className="font-bold text-orange-800">Staff</label>
             <select 
               id="staff" 
               value={orderData.staffId}
@@ -442,8 +439,7 @@ const Order = () => {
                 const selectedStaff = staff.find(s => s._id === e.target.value);
                 setOrderData({...orderData, staffId: e.target.value, staffName: selectedStaff?.name || selectedStaff?.username || ''});
               }}
-              className="w-full rounded-md p-2 sm:p-3 focus:outline-none focus:ring-2 text-sm sm:text-base"
-              style={{ border: '1px solid hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)', focusRingColor: 'hsl(45, 43%, 58%)' }}
+              className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
             >
               <option value="">Select Staff</option>
               {staff.map(member => (
@@ -454,8 +450,8 @@ const Order = () => {
             </select>
           </div>
           {isInHouse ? (
-            <div className="flex flex-col space-y-2">
-              <label htmlFor="booking" className="font-semibold text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Booking</label>
+            <div className="flex flex-col space-y-3">
+              <label htmlFor="booking" className="font-bold text-orange-800">Booking</label>
               <select 
                 id="booking" 
                 value={orderData.bookingId}
@@ -473,8 +469,7 @@ const Order = () => {
                     });
                   }
                 }}
-                className="w-full rounded-md p-2 sm:p-3 focus:outline-none focus:ring-2 text-sm sm:text-base"
-                style={{ border: '1px solid hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)', focusRingColor: 'hsl(45, 43%, 58%)' }}
+                className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
               >
                 <option value="">Select Booking ({bookings.length} available)</option>
                 {bookings.map(booking => (
@@ -485,15 +480,14 @@ const Order = () => {
               </select>
             </div>
           ) : (
-            <div className="flex flex-col space-y-2">
-              <label htmlFor="phone" className="font-semibold text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Phone</label>
+            <div className="flex flex-col space-y-3">
+              <label htmlFor="phone" className="font-bold text-orange-800">Phone</label>
               <input
                 id="phone"
                 type="tel"
                 value={orderData.phoneNumber}
                 onChange={(e) => setOrderData({...orderData, phoneNumber: e.target.value})}
-                className="w-full rounded-md p-2 sm:p-3 focus:outline-none focus:ring-2 text-sm sm:text-base"
-                style={{ border: '1px solid hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)', focusRingColor: 'hsl(45, 43%, 58%)' }}
+                className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
                 placeholder="Phone Number"
               />
             </div>
@@ -501,24 +495,33 @@ const Order = () => {
         </div>
         
         {isInHouse && orderData.bookingId && (
-          <div className="mt-4 p-3 sm:p-4 rounded-lg" style={{ backgroundColor: 'hsl(45, 100%, 80%)' }}>
-            <h3 className="font-semibold mb-2 text-sm sm:text-base" style={{ color: 'hsl(45, 100%, 20%)' }}>Guest Information:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
-              <div><span className="font-medium">GRC:</span> {orderData.grcNo}</div>
-              <div><span className="font-medium">Room:</span> {orderData.roomNumber}</div>
-              <div><span className="font-medium">Guest:</span> {orderData.guestName}</div>
-              <div><span className="font-medium">Phone:</span> {orderData.guestPhone}</div>
+          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200">
+            <h3 className="font-bold mb-4 text-lg text-orange-800">Guest Information:</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-orange-700">GRC:</span>
+                <span className="text-gray-700">{orderData.grcNo}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-orange-700">Room:</span>
+                <span className="text-gray-700">{orderData.roomNumber}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-orange-700">Guest:</span>
+                <span className="text-gray-700">{orderData.guestName}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-orange-700">Phone:</span>
+                <span className="text-gray-700">{orderData.guestPhone}</span>
+              </div>
             </div>
           </div>
         )}
         
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-end mt-6">
           <div className="relative">
             <button
-              className="p-2 sm:p-3 rounded-full shadow-lg transition-transform duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"
-              style={{ backgroundColor: 'hsl(45, 43%, 58%)', color: 'white' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
+              className="p-4 rounded-full shadow-xl bg-gradient-to-r from-orange-500 to-red-500 text-white transition-all duration-300 transform hover:scale-110 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-orange-300"
               onClick={() => setIsCartOpen(true)}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -526,7 +529,7 @@ const Order = () => {
               </svg>
             </button>
             {cartItems.length > 0 && (
-              <span className="absolute -top-1 -right-1 text-xs font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full" style={{ backgroundColor: 'hsl(45, 71%, 69%)', color: 'hsl(45, 100%, 20%)' }}>
+              <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-lg animate-pulse">
                 {cartItems.length}
               </span>
             )}
@@ -535,8 +538,8 @@ const Order = () => {
       </div>
 
       {/* Search bar section */}
-      <div className="w-full max-w-7xl shadow-md rounded-lg p-4 sm:p-6 mb-4 sm:mb-6" style={{ backgroundColor: 'white', border: '1px solid hsl(45, 100%, 85%)' }}>
-        <label htmlFor="search-menu" className="block font-semibold mb-2 text-sm sm:text-base" style={{ color: 'hsl(45, 100%, 20%)' }}>Search Menu</label>
+      <div className="w-full max-w-7xl bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-orange-200">
+        <label htmlFor="search-menu" className="block font-bold mb-4 text-lg text-orange-800">Search Menu</label>
         <div className="relative">
           <input
             id="search-menu"
@@ -544,22 +547,21 @@ const Order = () => {
             placeholder="Search menu items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-md pl-10 pr-4 py-2 sm:py-3 focus:outline-none focus:ring-2 text-sm sm:text-base"
-            style={{ border: '1px solid hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)', focusRingColor: 'hsl(45, 43%, 58%)' }}
+            className="w-full rounded-xl pl-12 pr-4 py-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200 text-base"
           />
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'hsl(45, 43%, 58%)' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 absolute left-4 top-1/2 transform -translate-y-1/2 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
       </div>
 
       {/* Menu grid */}
-      <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredMenu.map(item => (
-          <div key={item._id} className="p-3 sm:p-4 lg:p-6 rounded-lg shadow-md border-2 transition-colors duration-200" style={{ backgroundColor: 'white', borderColor: 'hsl(45, 100%, 85%)' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = 'hsl(45, 43%, 58%)'} onMouseLeave={(e) => e.currentTarget.style.borderColor = 'hsl(45, 100%, 85%)'}>
-            <h3 className="text-lg sm:text-xl font-bold truncate" style={{ color: 'hsl(45, 100%, 20%)' }}>{item.name}</h3>
-            <p className="text-xs sm:text-sm mb-2 sm:mb-4" style={{ color: 'hsl(45, 43%, 58%)' }}>{item.category}</p>
-            <p className="mb-2 sm:mb-3 font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>₹{(item.Price || item.price || 0).toFixed(2)}</p>
+          <div key={item._id} className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-2 border-orange-200 hover:border-orange-500 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+            <h3 className="text-xl font-bold truncate text-orange-800 mb-2">{item.name}</h3>
+            <p className="text-sm mb-4 text-orange-600 font-medium">{item.category}</p>
+            <p className="mb-4 font-bold text-lg text-gray-800">₹{(item.Price || item.price || 0).toFixed(2)}</p>
 
             {cartItems.some(i => i._id === item._id) ? (
               // If item is in cart, show the quantity controls
@@ -591,7 +593,7 @@ const Order = () => {
             ) : (
               // If item is not in cart, show the "Add to Order" button
               <button
-                className="w-full bg-primary text-background py-2 sm:py-3 rounded-md font-semibold hover:bg-hover transition-colors duration-200 text-sm sm:text-base"
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
                 onClick={() => handleAddToCart(item)}
               >
                 Add to Order
