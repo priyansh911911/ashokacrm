@@ -27,19 +27,6 @@ const Vendor = () => {
     isActive: true
   });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPageLoading(false);
-    }, 2000);
-    fetchVendors();
-    fetchOrders();
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (pageLoading) {
-    return <DashboardLoader pageName="Pantry Vendors" />;
-  }
-
   const fetchVendors = async () => {
     setLoading(true);
     try {
@@ -70,6 +57,19 @@ const Vendor = () => {
       setOrders([]);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
+    fetchVendors();
+    fetchOrders();
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Pantry Vendors" />;
+  }
 
   const handleVendorChange = (e) => {
     const { name, value, type, checked } = e.target;
