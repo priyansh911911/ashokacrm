@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Edit, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import DashboardLoader from '../DashboardLoader';
 
 const InventoryTable = ({ onEdit, refreshTable }) => {
   const [inventoryData, setInventoryData] = useState([]);
   const [debugStats, setDebugStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
-    fetchInventoryData();
-    fetchDebugStats();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([
+        fetchInventoryData(),
+        fetchDebugStats()
+      ]);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, [refreshTable]);
 
   const fetchInventoryData = async () => {
@@ -118,6 +127,10 @@ const InventoryTable = ({ onEdit, refreshTable }) => {
       }
     }
   };
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Inventory Management" />;
+  }
 
   if (loading) {
     return (

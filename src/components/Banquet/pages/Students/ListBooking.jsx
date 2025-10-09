@@ -2,6 +2,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useEffect, useRef, useState } from "react";
+import DashboardLoader from '../../../DashboardLoader';
 
 import { AiFillFileExcel } from "react-icons/ai";
 import { CSVLink } from "react-csv";
@@ -22,6 +23,7 @@ const ListBooking = () => {
   const debounceTimeoutRef = useRef(null);
   const [userData, setUserData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -99,6 +101,13 @@ const ListBooking = () => {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -106,6 +115,10 @@ const ListBooking = () => {
     fetchAllData();
     fetchUsers();
   }, [currentPage]);
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Booking List" />;
+  }
 
   //   DELETE
   const handleDelete = async (id) => {

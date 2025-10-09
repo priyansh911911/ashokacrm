@@ -1372,6 +1372,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useAppContext } from "../../../../context/AppContext";
 import MenuSelector from "../Menu/MenuSelector";
+import DashboardLoader from "../../../DashboardLoader";
 import {
   FaUser,
   FaArrowLeft,
@@ -1438,6 +1439,7 @@ const AddBooking = () => {
   };
   const selectedDateFromCalendar = location.state?.selectedDate || "";
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [showMenuSelector, setShowMenuSelector] = useState(false);
   const [errors, setErrors] = useState({});
   const [progress, setProgress] = useState(0); // For progress bar
@@ -1579,10 +1581,21 @@ const AddBooking = () => {
 
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     // Calculate progress
     const filled = requiredFields.filter((f) => form[f]);
     setProgress(Math.round((filled.length / requiredFields.length) * 100));
   }, [form]);
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Add Booking" />;
+  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

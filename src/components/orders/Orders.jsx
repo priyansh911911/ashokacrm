@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
+import DashboardLoader from '../DashboardLoader';
 
 const StatusBadge = ({ status }) => {
   let colorClass = "";
@@ -159,6 +160,7 @@ const Orders = () => {
   const [staff, setStaff] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -226,9 +228,16 @@ const Orders = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
-    fetchTables();
-    fetchStaff();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([
+        fetchOrders(),
+        fetchTables(),
+        fetchStaff()
+      ]);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   const filteredOrders = orders.filter(
@@ -236,6 +245,10 @@ const Orders = () => {
       order.staffName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.tableNo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Orders Management" />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8">

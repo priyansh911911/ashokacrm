@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import DashboardLoader from '../DashboardLoader';
 
 // Confirmation Modal Component
 function ConfirmationModal({ message, onConfirm, onCancel }) {
@@ -52,6 +53,7 @@ function Item() {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -101,9 +103,17 @@ function Item() {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
     fetchItems();
     fetchCategories();
+    return () => clearTimeout(timer);
   }, []);
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Pantry Items" />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

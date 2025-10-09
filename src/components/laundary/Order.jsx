@@ -26,6 +26,7 @@ import { useAppContext } from "../../context/AppContext";
 import toast, { Toaster } from 'react-hot-toast';
 import LaundryEditForm from './Editform';
 import AddOrderForm from './AddOrderForm';
+import DashboardLoader from '../DashboardLoader';
 
 // Apply theme styles
 const themeStyles = {
@@ -70,6 +71,7 @@ const App = () => {
   const [laundryRates, setLaundryRates] = useState([]);
   const [itemStatusUpdateAvailable, setItemStatusUpdateAvailable] = useState(true);
   const [bookings, setBookings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const getAuthToken = () => localStorage.getItem("token");
 
@@ -91,9 +93,16 @@ const App = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
-    fetchBookings();
-    fetchLaundryRates();
+    const loadData = async () => {
+      setIsLoading(true);
+      await Promise.all([
+        fetchOrders(),
+        fetchBookings(),
+        fetchLaundryRates()
+      ]);
+      setIsLoading(false);
+    };
+    loadData();
   }, []);
 
   const fetchLaundryRates = async () => {
@@ -522,6 +531,10 @@ const App = () => {
     console.log('Found booking:', booking);
     return booking || null;
   };
+
+  if (isLoading) {
+    return <DashboardLoader pageName="Laundry Orders" />;
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans text-text p-4 sm:p-6 lg:p-8">

@@ -504,7 +504,7 @@ const EasyDashboard = () => {
     
     // --- Render Logic ---
     if (isLoading) {
-        return <DashboardLoader />;
+        return <DashboardLoader pageName="Easy Dashboard" />;
     }
 
     if (error) {

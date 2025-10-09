@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import { showToast } from "../../utils/toaster";
 import Pagination from "../common/Pagination";
+import DashboardLoader from '../DashboardLoader';
 
 // Inline ReservationEdit for simplicity
 const ReservationEdit = ({ reservation, onSave, onCancel }) => {
@@ -156,6 +157,7 @@ const ReservationPage = () => {
   const [bookingData, setBookingData] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Fetch reservations from the API
   const fetchReservations = async () => {
@@ -202,7 +204,12 @@ const ReservationPage = () => {
   };
   // useeffect
   useEffect(() => {
-    fetchReservations();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await fetchReservations();
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   // Modal handler
@@ -276,6 +283,10 @@ const ReservationPage = () => {
 
   const inputStyle =
     "rounded-lg pl-4 pr-4 py-2 focus:outline-none focus:ring-2";
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Reservations" />;
+  }
 
   return (
     <div className="p-6 overflow-auto h-full bg-background">

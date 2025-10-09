@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { showToast } from '../../utils/toaster';
 import { validateRequired, validatePositiveNumber } from '../../utils/validation';
+import DashboardLoader from '../DashboardLoader';
 
 const Payment = () => {
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [payments, setPayments] = useState([
     {
       _id: '1',
@@ -95,6 +97,13 @@ const Payment = () => {
   const paymentModes = ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Cheque', 'Other'];
   const statusOptions = ['Pending', 'Paid', 'Failed'];
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const generatePaymentNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
     return `PAY-${timestamp}`;
@@ -182,6 +191,10 @@ const Payment = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Payment Management" />;
+  }
 
   return (
     <div className="p-6 bg-background min-h-screen">

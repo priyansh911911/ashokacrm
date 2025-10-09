@@ -4,11 +4,13 @@ import { useAppContext } from "../../context/AppContext";
 import { showToast } from "../../utils/toaster";
 import StaffForm from "../staff/StaffForm";
 import Pagination from "../common/Pagination";
+import DashboardLoader from "../DashboardLoader";
 
 const StaffList = () => {
   const { axios } = useAppContext();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -28,10 +30,6 @@ const StaffList = () => {
   const getAuthToken = () => {
     return localStorage.getItem("token");
   };
-
-  useEffect(() => {
-    fetchStaff();
-  }, []);
 
   const fetchStaff = async () => {
     try {
@@ -91,6 +89,18 @@ const StaffList = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
+    fetchStaff();
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Staff Management" />;
+  }
 
   const handleAddStaff = () => {
     setEditMode(false);

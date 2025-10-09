@@ -3,6 +3,7 @@ import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import Pagination from '../common/Pagination';
 import RegisterForm from '../auth/RegisterForm';
+import DashboardLoader from '../DashboardLoader';
 
 const Users = () => {
   const { axios } = useAppContext();
@@ -17,9 +18,17 @@ const Users = () => {
   const [showEdit, setShowEdit] = useState(null);
   const [editUser, setEditUser] = useState({});
   const [showRegister, setShowRegister] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
-    fetchUsers(currentPage);
+    const loadInitialData = async () => {
+      if (currentPage === 1) {
+        setIsInitialLoading(true);
+      }
+      await fetchUsers(currentPage);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, [currentPage]);
 
   const fetchUsers = async (page = 1) => {
@@ -175,6 +184,10 @@ const Users = () => {
       }
     }
   };
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="User Management" />;
+  }
 
   return (
     <div className="p-6 bg-background min-h-screen">

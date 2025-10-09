@@ -2,6 +2,7 @@ import React from 'react';
 import { Settings } from 'lucide-react';
 
 const SettingsPage = () => {
+
     return (
         <div className="p-6" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
             <div className="bg-white rounded-lg shadow-sm p-8 text-center" style={{border: '1px solid hsl(45, 100%, 85%)'}}>

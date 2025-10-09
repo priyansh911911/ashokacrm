@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ClipboardList,
   Search,
@@ -21,6 +21,7 @@ import HousekeepingCard from "../components/taskcard/housekeeping/HousekeepingCa
 // import ReceptionCard from "../components/taskcard/ReceptionCard.jsx";
 
 import HousekeepingForm from "../components/taskcard/housekeeping/HousekeepingForm.jsx";
+import DashboardLoader from "./DashboardLoader";
 
 const TaskAssign = () => {
   const [tasks, setTasks] = useState(initialTasks);
@@ -34,6 +35,14 @@ const TaskAssign = () => {
     staff: "",
     priority: "medium",
   });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const departmentTaskCounts = {
     Housekeeping: tasks.filter((t) => t.department === "Housekeeping").length,
@@ -80,6 +89,10 @@ const TaskAssign = () => {
   };
 
   // Rest of your component code...
+
+  if (isLoading) {
+    return <DashboardLoader pageName="Task Assignment" />;
+  }
 
   return (
     <div className="p-6 overflow-auto h-full bg-background">

@@ -5,6 +5,7 @@ import { useAppContext } from "../../context/AppContext";
 import { showToast } from "../../utils/toaster";
 import CategoryForm from "./CategoryForm";
 import Pagination from "../common/Pagination";
+import DashboardLoader from '../DashboardLoader';
 
 const CategoryList = () => {
   const { axios } = useAppContext();
@@ -21,10 +22,16 @@ const CategoryList = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Fetch all categories
   useEffect(() => {
-    fetchCategories();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await fetchCategories();
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   const fetchCategories = async () => {
@@ -128,6 +135,10 @@ const CategoryList = () => {
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Room Categories" />;
+  }
 
   return (
     <div className="p-6 overflow-auto h-full bg-background">

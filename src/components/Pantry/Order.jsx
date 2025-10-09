@@ -3,6 +3,7 @@ import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import { Plus, Edit, Trash2, Package, Clock, User, MapPin } from 'lucide-react';
 import PantryInvoice from './PantryInvoice';
+import DashboardLoader from '../DashboardLoader';
 
 const Order = () => {
   const { axios } = useAppContext();
@@ -25,6 +26,7 @@ const Order = () => {
   const [viewingOrder, setViewingOrder] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentVendor, setPaymentVendor] = useState(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -40,9 +42,16 @@ const Order = () => {
 
 
   useEffect(() => {
-    fetchOrders();
-    fetchPantryItems();
-    fetchVendors();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([
+        fetchOrders(),
+        fetchPantryItems(),
+        fetchVendors()
+      ]);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   const fetchVendors = async () => {
@@ -416,6 +425,10 @@ const Order = () => {
     setViewingOrder(order);
     setShowViewModal(true);
   };
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Pantry Orders" />;
+  }
 
   return (
     <div className="p-4 sm:p-6 overflow-auto h-full bg-background">

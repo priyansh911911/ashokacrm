@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { IndianRupee, CreditCard, Smartphone, TrendingUp, TrendingDown, Clock, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import DashboardLoader from '../DashboardLoader';
 
 const CashManagement = () => {
   const { axios } = useAppContext();
@@ -207,18 +208,7 @@ const CashManagement = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-yellow-50">
-        <div className="text-center">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-20 w-20 border-4 border-amber-200 border-t-amber-500 mx-auto mb-6"></div>
-            <IndianRupee className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-amber-600" />
-          </div>
-          <p className="text-xl font-bold text-gray-800 mb-2">Loading Cash Management</p>
-          <p className="text-sm text-gray-600">Please wait while we fetch your data...</p>
-        </div>
-      </div>
-    );
+    return <DashboardLoader pageName="Cash Management" />;
   }
 
   return (

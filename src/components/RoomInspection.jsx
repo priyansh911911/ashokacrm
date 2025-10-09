@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
+import DashboardLoader from './DashboardLoader';
 
 const RoomInspection = () => {
   const { axios } = useAppContext();
@@ -15,9 +16,11 @@ const RoomInspection = () => {
   const [inspectionType, setInspectionType] = useState('checkout');
   const [checklist, setChecklist] = useState([]);
   const [editingInspection, setEditingInspection] = useState(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
+      setIsInitialLoading(true);
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
@@ -33,6 +36,7 @@ const RoomInspection = () => {
         console.error('Error loading data:', error);
       } finally {
         setLoading(false);
+        setIsInitialLoading(false);
       }
     };
     loadData();
@@ -381,6 +385,10 @@ const RoomInspection = () => {
       </div>
     </div>
   );
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Room Inspection" />;
+  }
 
   return (
     <div className="min-h-screen" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>

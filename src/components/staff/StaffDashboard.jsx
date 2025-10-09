@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Users, Calendar, DollarSign, Clock, UserPlus } from 'lucide-react';
 import StaffForm from './StaffForm';
 import AttendanceForm from './AttendanceForm';
 import PayrollForm from './PayrollForm';
+import DashboardLoader from '../DashboardLoader';
 
 const StaffDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showStaffForm, setShowStaffForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentStaff, setCurrentStaff] = useState({
     username: '',
     email: '',
@@ -17,6 +19,13 @@ const StaffDashboard = () => {
     salary: ''
   });
   const [editMode, setEditMode] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Users },
@@ -171,6 +180,10 @@ const StaffDashboard = () => {
         return null;
     }
   };
+
+  if (isLoading) {
+    return <DashboardLoader pageName="Staff Management" />;
+  }
 
   return (
     <div className="p-4 sm:p-6 bg-background min-h-screen">

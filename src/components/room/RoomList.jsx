@@ -14,6 +14,7 @@ import { useAppContext } from "../../context/AppContext";
 import { showToast } from "../../utils/toaster";
 import RoomForm from "./RoomForm";
 import Pagination from "../common/Pagination";
+import DashboardLoader from '../DashboardLoader';
 
 const RoomList = () => {
   const { axios } = useAppContext();
@@ -46,6 +47,7 @@ const RoomList = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const getAuthToken = () => {
     return localStorage.getItem("token");
@@ -66,9 +68,13 @@ const RoomList = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (page === 1 && statusFilter === 'all' && !categoryFilter && !searchTerm) {
+        setIsInitialLoading(true);
+      }
       setLoading(true);
       await Promise.all([fetchRooms(), fetchCategories()]);
       setLoading(false);
+      setIsInitialLoading(false);
     };
 
     fetchData();
@@ -386,7 +392,9 @@ const RoomList = () => {
 
       {error && <div className="text-red-500 text-sm">{error}</div>}
 
-      {loading ? (
+      {isInitialLoading ? (
+        <DashboardLoader pageName="Room Management" />
+      ) : loading ? (
         <div className="flex justify-center items-center py-12">
           <Loader className="w-8 h-8 text-secondary animate-spin" />
           <span className="ml-2 text-dark">Loading rooms...</span>

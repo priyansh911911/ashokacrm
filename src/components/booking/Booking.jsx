@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Edit, XCircle, CheckCircle, Search, X, FileText, Trash2 } from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 import Pagination from "../common/Pagination";
+import DashboardLoader from '../DashboardLoader';
 
 const BookingEdit = ({ booking, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -215,6 +216,7 @@ const BookingPage = () => {
   const [grcSearchResult, setGrcSearchResult] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const getAuthToken = () => localStorage.getItem("token");
 
@@ -273,7 +275,12 @@ const BookingPage = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await fetchData();
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   const fetchBookingByGrc = async (grcNo) => {
@@ -511,6 +518,10 @@ const BookingPage = () => {
       console.error("Status update error:", error);
     }
   };
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Bookings" />;
+  }
 
   return (
     <div className="p-6 overflow-auto h-full bg-background">

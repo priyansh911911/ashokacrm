@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { showToast } from '../utils/toaster';
 import Pagination from './common/Pagination';
+import DashboardLoader from './DashboardLoader';
 
 const backendAxios = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
@@ -57,6 +58,7 @@ function SuccessModal({ message, onClose }) {
 function Customer() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -124,7 +126,12 @@ function Customer() {
   };
 
   useEffect(() => {
-    fetchCustomers();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await fetchCustomers();
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -236,6 +243,10 @@ function Customer() {
       [name]: type === 'checkbox' ? checked : value
     }));
   };
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Customer Management" />;
+  }
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 font-sans bg-background">

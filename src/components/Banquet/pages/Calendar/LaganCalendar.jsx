@@ -7,9 +7,11 @@ import {
   FaRegCalendarAlt,
 } from "react-icons/fa";
 import { useAppContext } from '../../../../context/AppContext';
+import DashboardLoader from '../../../DashboardLoader';
 
 function LaganCalendar() {
   const { axios } = useAppContext();
+  const [pageLoading, setPageLoading] = useState(true);
   // Detect mobile view
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth <= 600 : false
@@ -18,6 +20,13 @@ function LaganCalendar() {
     const handleResize = () => setIsMobile(window.innerWidth <= 600);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
   // Get user role from localStorage
   const userRole = localStorage.getItem("role") || "Staff";
@@ -418,6 +427,10 @@ function LaganCalendar() {
     searchTerm.trim() && searchResults !== null
       ? searchResults
       : filteredBookingsForDate;
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Event Calendar" />;
+  }
 
   return (
     <div

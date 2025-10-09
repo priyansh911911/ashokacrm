@@ -1,9 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MenuItemManager from './MenuItemManager';
 import PlanLimitManager from './PlanLimitManager';
+import DashboardLoader from '../../DashboardLoader';
 
 const MenuPlanManager = () => {
   const [activeTab, setActiveTab] = useState('menu');
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Menu & Plans" />;
+  }
 
   return (
     <div className="min-h-screen" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>

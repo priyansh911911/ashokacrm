@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import { Plus, Edit, Trash2, BarChart3, X } from 'lucide-react';
+import DashboardLoader from '../DashboardLoader';
 
 const Vendor = () => {
   const { axios } = useAppContext();
   const [vendors, setVendors] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [showVendorAnalytics, setShowVendorAnalytics] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -26,9 +28,17 @@ const Vendor = () => {
   });
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
     fetchVendors();
     fetchOrders();
+    return () => clearTimeout(timer);
   }, []);
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Pantry Vendors" />;
+  }
 
   const fetchVendors = async () => {
     setLoading(true);

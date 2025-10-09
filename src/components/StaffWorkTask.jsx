@@ -15,6 +15,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import DashboardLoader from "./DashboardLoader";
 
 const StaffWorkTask = () => {
   const { axios } = useAppContext();
@@ -32,12 +33,18 @@ const StaffWorkTask = () => {
   const [issueText, setIssueText] = useState("");
   const [currentTaskId, setCurrentTaskId] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const webcamRef = useRef(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    fetchUserTasks();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await fetchUserTasks();
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   const fetchUserTasks = async () => {
@@ -242,6 +249,10 @@ const StaffWorkTask = () => {
         return "bg-accent text-text";
     }
   };
+
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="My Tasks" />;
+  }
 
   if (loading) {
     return (

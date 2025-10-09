@@ -3,9 +3,22 @@ import { useAppContext } from "../../context/AppContext";
 import Table from "./Table";
 import Menu from "./Menu";
 import Order from "./Order";
+import DashboardLoader from '../DashboardLoader';
 
 const Restaurant = () => {
   const [activeTab, setActiveTab] = useState("menu");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return <DashboardLoader pageName="Restaurant Management" />;
+  }
 
   return (
     <div className="p-6">
