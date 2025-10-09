@@ -723,7 +723,7 @@ const App = () => {
                               {item.quantity}x {item.itemName}
                             </div>
                             <div className="flex justify-between items-center mt-1">
-                              <span className="text-green-600">${item.calculatedAmount}</span>
+                              <span className="text-green-600">₹{item.calculatedAmount}</span>
                               <select
                                 value={item.status || 'pending'}
                                 onChange={(e) => handleUpdateItemStatus(order._id, item._id, e.target.value)}
@@ -758,7 +758,7 @@ const App = () => {
                       )}
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-text">
-                      <div className="font-medium">${order.totalAmount?.toFixed(2)}</div>
+                      <div className="font-medium">₹{order.totalAmount?.toFixed(2)}</div>
                       <div className="text-xs">
                         {order.billStatus === "paid" ? (
                           <span className="text-green-600">Paid <Check size={10} className="inline" /></span>
@@ -884,7 +884,7 @@ const App = () => {
                 {/* Amount & Status */}
                 <div className="flex justify-between items-center mb-3">
                   <div>
-                    <div className="font-medium text-text">${order.totalAmount?.toFixed(2)}</div>
+                    <div className="font-medium text-text">₹{order.totalAmount?.toFixed(2)}</div>
                     <div className="text-xs">
                       {order.billStatus === "paid" ? (
                         <span className="text-green-600">Paid <Check size={10} className="inline" /></span>

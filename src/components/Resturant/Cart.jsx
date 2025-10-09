@@ -10,7 +10,7 @@ const Cart = ({ selectedItems, updateQuantity, getTotalAmount }) => {
             <div key={item._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
               <div className="flex-1">
                 <h5 className="font-medium text-text">{item.name}</h5>
-                <p className="text-sm text-gray-600">${(item.Price || item.price || 0).toFixed(2)} each</p>
+                <p className="text-sm text-gray-600">₹{(item.Price || item.price || 0).toFixed(2)} each</p>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <div className="flex items-center gap-2">
@@ -31,7 +31,7 @@ const Cart = ({ selectedItems, updateQuantity, getTotalAmount }) => {
                   </button>
                 </div>
                 <div className="text-right flex-1 sm:flex-none">
-                  <p className="font-semibold text-text">${((item.Price || item.price || 0) * item.quantity).toFixed(2)}</p>
+                  <p className="font-semibold text-text">₹{((item.Price || item.price || 0) * item.quantity).toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -39,7 +39,7 @@ const Cart = ({ selectedItems, updateQuantity, getTotalAmount }) => {
           <div className="border-t pt-3">
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-text">Total:</span>
-              <span className="text-xl font-bold text-primary">${getTotalAmount().toFixed(2)}</span>
+              <span className="text-xl font-bold text-primary">₹{getTotalAmount().toFixed(2)}</span>
             </div>
           </div>
         </div>

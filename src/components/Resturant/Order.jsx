@@ -559,7 +559,7 @@ const Order = () => {
           <div key={item._id} className="p-3 sm:p-4 lg:p-6 rounded-lg shadow-md border-2 transition-colors duration-200" style={{ backgroundColor: 'white', borderColor: 'hsl(45, 100%, 85%)' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = 'hsl(45, 43%, 58%)'} onMouseLeave={(e) => e.currentTarget.style.borderColor = 'hsl(45, 100%, 85%)'}>
             <h3 className="text-lg sm:text-xl font-bold truncate" style={{ color: 'hsl(45, 100%, 20%)' }}>{item.name}</h3>
             <p className="text-xs sm:text-sm mb-2 sm:mb-4" style={{ color: 'hsl(45, 43%, 58%)' }}>{item.category}</p>
-            <p className="mb-2 sm:mb-3 font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>${(item.Price || item.price || 0).toFixed(2)}</p>
+            <p className="mb-2 sm:mb-3 font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>₹{(item.Price || item.price || 0).toFixed(2)}</p>
 
             {cartItems.some(i => i._id === item._id) ? (
               // If item is in cart, show the quantity controls
@@ -621,7 +621,7 @@ const Order = () => {
                   <div className="text-center">
                     <h3 className="font-semibold text-text text-xs sm:text-sm truncate">{item.name}</h3>
                     <p className="text-xs text-primary">{item.category}</p>
-                    <p className="text-xs text-text">${(item.Price || item.price || 0).toFixed(2)}</p>
+                    <p className="text-xs text-text">₹{(item.Price || item.price || 0).toFixed(2)}</p>
                   </div>
                   <div className="flex items-center justify-center space-x-2 mt-2">
                     <button
@@ -652,7 +652,7 @@ const Order = () => {
             {cartItems.length > 0 && (
               <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-3 sm:mb-4">
-                  <span className="font-bold text-base sm:text-lg">Total: ${getTotalAmount().toFixed(2)}</span>
+                  <span className="font-bold text-base sm:text-lg">Total: ₹{getTotalAmount().toFixed(2)}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2">
                   <button
