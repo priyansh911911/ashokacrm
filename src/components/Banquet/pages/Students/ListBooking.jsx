@@ -101,13 +101,6 @@ const ListBooking = () => {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPageLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -116,9 +109,12 @@ const ListBooking = () => {
     fetchUsers();
   }, [currentPage]);
 
-  if (pageLoading) {
-    return <DashboardLoader pageName="Booking List" />;
-  }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   //   DELETE
   const handleDelete = async (id) => {
@@ -413,6 +409,10 @@ const ListBooking = () => {
       bookingStatus: getStringValue(item.bookingStatus),
     };
   });
+
+  if (pageLoading) {
+    return <DashboardLoader pageName="Booking List" />;
+  }
 
   return (
     <div className="min-h-screen" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>

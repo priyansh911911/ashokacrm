@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import DashboardLoader from '../DashboardLoader';
+import CategoryForm from './CategoryForm';
 
 // Confirmation Modal Component
 function ConfirmationModal({ message, onConfirm, onCancel }) {
@@ -56,6 +57,7 @@ function Item() {
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(() => () => {});
@@ -200,7 +202,14 @@ function Item() {
           </div>
         )}
         
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end mb-6 gap-3">
+          <button 
+            onClick={() => setShowCategoryForm(true)}
+            className="font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+            style={{ backgroundColor: 'hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)' }}
+          >
+            Add Category
+          </button>
           <button 
             onClick={() => setShowForm(true)}
             className="font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
@@ -434,6 +443,12 @@ function Item() {
             onClose={() => setShowSuccessModal(false)}
           />
         )}
+        
+        <CategoryForm 
+          showModal={showCategoryForm}
+          setShowModal={setShowCategoryForm}
+          onCategoryAdded={fetchCategories}
+        />
       </div>
     </div>
   );
