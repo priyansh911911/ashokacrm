@@ -91,7 +91,7 @@ function Item() {
   const fetchCategories = async () => {
     try {
       const token = getAuthToken();
-      const { data } = await axios.get('/api/restaurant-categories/all', {
+      const { data } = await axios.get('/api/pantry-categories/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategories(data || []);
@@ -236,7 +236,7 @@ function Item() {
                     >
                       <option value="">Select Category</option>
                       {categories.map((category) => (
-                        <option key={category._id} value={category.name}>
+                        <option key={category._id} value={category._id}>
                           {category.name}
                         </option>
                       ))}
@@ -363,7 +363,7 @@ function Item() {
                     items.map((item) => (
                       <tr key={item._id} className="hover:bg-gray-50">
                         <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.name}</td>
-                        <td className="px-6 py-3 text-sm text-gray-500">{item.category}</td>
+                        <td className="px-6 py-3 text-sm text-gray-500">{item.category?.name || item.category}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">₹{item.price}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">
                           <span className={item.stockQuantity <= item.minStockLevel ? 'text-red-600 font-semibold' : ''}>
