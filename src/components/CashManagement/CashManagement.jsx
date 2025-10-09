@@ -13,6 +13,7 @@ const CashManagement = () => {
     recentTransactions: [],
     expenses: [],
     sentToOffice: 0,
+    officeToReception: 0,
     sourceBreakdown: []
   });
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ const CashManagement = () => {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
-    type: 'KEEP',
+    type: 'KEEP AT RECEPTION',
     source: 'OTHER',
     description: '',
     isCustomerPayment: false,
@@ -30,10 +31,11 @@ const CashManagement = () => {
   const [showReport, setShowReport] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [dateFilter, setDateFilter] = useState('today');
-  const [customDate, setCustomDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
 
-  const fetchCashData = async (filter = dateFilter, date = customDate, source = sourceFilter, isInitialLoad = false) => {
+  const fetchCashData = async (filter = dateFilter, source = sourceFilter, startDt = startDate, endDt = endDate, isInitialLoad = false) => {
     if (isInitialLoad) {
       setLoading(true);
     } else {
@@ -41,8 +43,8 @@ const CashManagement = () => {
     }
     try {
       let url = `/api/cash-transactions/all-transactions?filter=${filter}`;
-      if (filter === 'date' && date) {
-        url += `&date=${date}`;
+      if (filter === 'range' && startDt && endDt) {
+        url += `&startDate=${startDt}&endDate=${endDt}`;
       }
       if (source && source !== 'all') {
         url += `&source=${source}`;
@@ -56,13 +58,17 @@ const CashManagement = () => {
       const transactions = data.transactions || [];
       let totalReceived = 0;
       let totalSent = 0;
+      let officeToReception = 0;
       let sourceBreakdown = [];
       
       // Calculate totals from transactions
       transactions.forEach(transaction => {
-        if (transaction.type === 'KEEP') {
+        if (transaction.type === 'KEEP AT RECEPTION') {
           totalReceived += transaction.amount || 0;
-        } else if (transaction.type === 'SENT') {
+        } else if (transaction.type === 'OFFICE TO RECEPTION') {
+          totalReceived += transaction.amount || 0;
+          officeToReception += transaction.amount || 0;
+        } else if (transaction.type === 'SENT TO OFFICE') {
           totalSent += transaction.amount || 0;
         }
       });
@@ -77,7 +83,7 @@ const CashManagement = () => {
         if (!sourceMap[source]) {
           sourceMap[source] = 0;
         }
-        if (transaction.type === 'KEEP') {
+        if (transaction.type === 'KEEP AT RECEPTION' || transaction.type === 'OFFICE TO RECEPTION') {
           sourceMap[source] += transaction.amount || 0;
         }
       });
@@ -95,6 +101,7 @@ const CashManagement = () => {
         recentTransactions: transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
         expenses: [],
         sentToOffice: totalSent,
+        officeToReception: officeToReception,
         sourceBreakdown
       };
       
@@ -110,6 +117,7 @@ const CashManagement = () => {
         recentTransactions: [],
         expenses: [],
         sentToOffice: 0,
+        officeToReception: 0,
         sourceBreakdown: []
       });
     } finally {
@@ -119,25 +127,27 @@ const CashManagement = () => {
   };
 
   useEffect(() => {
-    fetchCashData(dateFilter, customDate, sourceFilter, true);
+    fetchCashData(dateFilter, sourceFilter, startDate, endDate, true);
   }, [axios]);
 
   const handleDateFilterChange = (newFilter) => {
     setDateFilter(newFilter);
-    if (newFilter !== 'date') {
-      setCustomDate('');
-      fetchCashData(newFilter, '', sourceFilter, false);
+    if (newFilter !== 'range') {
+      setStartDate('');
+      setEndDate('');
+      fetchCashData(newFilter, sourceFilter, '', '', false);
     }
   };
 
-  const handleCustomDateChange = (date) => {
-    setCustomDate(date);
-    fetchCashData('date', date, sourceFilter, false);
+  const handleDateRangeChange = () => {
+    if (startDate && endDate) {
+      fetchCashData('range', sourceFilter, startDate, endDate, false);
+    }
   };
 
   const handleSourceFilterChange = (newSource) => {
     setSourceFilter(newSource);
-    fetchCashData(dateFilter, customDate, newSource, false);
+    fetchCashData(dateFilter, newSource, startDate, endDate, false);
   };
 
   const handleTransactionSubmit = async (e) => {
@@ -157,7 +167,7 @@ const CashManagement = () => {
         if (keepAmount > 0) {
           await axios.post('/api/cash-transactions/add-transaction', {
             amount: keepAmount,
-            type: 'KEEP',
+            type: 'KEEP AT RECEPTION',
             source: formData.source,
             description: `Customer Payment - Kept (${formData.keepPercentage}%)`
           });
@@ -166,7 +176,7 @@ const CashManagement = () => {
         if (sendAmount > 0) {
           await axios.post('/api/cash-transactions/add-transaction', {
             amount: sendAmount,
-            type: 'SENT',
+            type: 'SENT TO OFFICE',
             source: formData.source,
             description: `Customer Payment - Sent (${100 - formData.keepPercentage}%)`
           });
@@ -181,10 +191,10 @@ const CashManagement = () => {
           description: formData.description
         });
         
-        toast.success(formData.type === 'SENT' ? `₹${formData.amount} sent to office` : 'Transaction added');
+        toast.success(formData.type === 'SENT TO OFFICE' ? `₹${formData.amount} sent to office` : 'Transaction added');
       }
       
-      setFormData({ amount: '', type: 'KEEP', source: 'OTHER', description: '', isCustomerPayment: false, keepPercentage: 30 });
+      setFormData({ amount: '', type: 'KEEP AT RECEPTION', source: 'OTHER', description: '', isCustomerPayment: false, keepPercentage: 30 });
       setShowTransactionForm(false);
       
       // Refresh data
@@ -245,7 +255,7 @@ const CashManagement = () => {
 
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-10">
           <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #c3ad6b'}}>
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
@@ -293,7 +303,7 @@ const CashManagement = () => {
             </div>
           </div>
 
-          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 sm:col-span-2 lg:col-span-1" style={{border: '1px solid #c3ad6b'}}>
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #c3ad6b'}}>
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide truncate" style={{color: '#5D4037'}}>Cash In Office</p>
@@ -304,6 +314,21 @@ const CashManagement = () => {
               </div>
               <div className="p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl shadow-lg ml-2 sm:ml-4" style={{background: 'linear-gradient(to right, #5D4037, #4A2C20)'}}>
                 <TrendingDown className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #c3ad6b'}}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide truncate" style={{color: '#5D4037'}}>Office to Reception</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-2 sm:mt-3" style={{background: 'linear-gradient(to right, #059669, #16a34a)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                  ₹{cashData.officeToReception.toLocaleString()}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 font-medium">Received from office</p>
+              </div>
+              <div className="p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl shadow-lg ml-2 sm:ml-4" style={{background: 'linear-gradient(to right, #059669, #16a34a)'}}>
+                <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
               </div>
             </div>
           </div>
@@ -356,15 +381,33 @@ const CashManagement = () => {
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
                 <option value="year">This Year</option>
-                <option value="date">Custom Date</option>
+                <option value="range">Date Range</option>
               </select>
-              {dateFilter === 'date' && (
-                <input 
-                  type="date" 
-                  value={customDate}
-                  onChange={(e) => handleCustomDateChange(e.target.value)}
-                  className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
-                />
+              {dateFilter === 'range' && (
+                <>
+                  <input 
+                    type="date" 
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    placeholder="Start Date"
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                  />
+                  <input 
+                    type="date" 
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    placeholder="End Date"
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                  />
+                  <button
+                    onClick={handleDateRangeChange}
+                    disabled={!startDate || !endDate}
+                    className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                    style={{backgroundColor: 'hsl(45, 43%, 58%)', color: 'white'}}
+                  >
+                    Apply
+                  </button>
+                </>
               )}
               <select 
                 value={sourceFilter} 
@@ -397,16 +440,24 @@ const CashManagement = () => {
                     .slice(0, 10).map((transaction, index) => (
                     <tr key={index} className="border-b border-gray-100">
                       <td className="p-3">
-                        <span className="font-semibold" style={{color: transaction.type === 'KEEP' ? '#16a34a' : 'hsl(45, 43%, 58%)'}}>
+                        <span className="font-semibold" style={{color: (transaction.type === 'KEEP AT RECEPTION' || transaction.type === 'OFFICE TO RECEPTION') ? '#16a34a' : 'hsl(45, 43%, 58%)'}}>
                           ₹{transaction.amount?.toLocaleString()}
                         </span>
                       </td>
                       <td className="p-3">
                         <span className="px-2 py-1 rounded-full text-xs font-medium" style={{
-                          backgroundColor: transaction.type === 'KEEP' ? '#dcfce7' : 'hsl(45, 100%, 90%)',
-                          color: transaction.type === 'KEEP' ? '#166534' : 'hsl(45, 100%, 20%)'
+                          backgroundColor: 
+                            transaction.type === 'KEEP AT RECEPTION' ? '#dcfce7' :
+                            transaction.type === 'OFFICE TO RECEPTION' ? '#dbeafe' :
+                            'hsl(45, 100%, 90%)',
+                          color: 
+                            transaction.type === 'KEEP AT RECEPTION' ? '#166534' :
+                            transaction.type === 'OFFICE TO RECEPTION' ? '#1e40af' :
+                            'hsl(45, 100%, 20%)'
                         }}>
-                          {transaction.type === 'KEEP' ? 'Keep' : 'Sent'}
+                          {transaction.type === 'KEEP AT RECEPTION' ? 'Keep at Reception' :
+                           transaction.type === 'OFFICE TO RECEPTION' ? 'Office to Reception' :
+                           'Sent to Office'}
                         </span>
                       </td>
                       <td className="p-3 text-gray-600">
@@ -460,8 +511,9 @@ const CashManagement = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={formData.isCustomerPayment}
                 >
-                  <option value="KEEP">Keep at Reception</option>
-                  <option value="SENT">Send to Office</option>
+                  <option value="KEEP AT RECEPTION">Keep at Reception</option>
+                  <option value="SENT TO OFFICE">Send to Office</option>
+                  <option value="OFFICE TO RECEPTION">Office to Reception</option>
                 </select>
               </div>
               <div>
@@ -535,7 +587,7 @@ const CashManagement = () => {
                   type="button"
                   onClick={() => {
                     setShowTransactionForm(false);
-                    setFormData({ amount: '', type: 'KEEP', source: 'OTHER', description: '', isCustomerPayment: false, keepPercentage: 30 });
+                    setFormData({ amount: '', type: 'KEEP AT RECEPTION', source: 'OTHER', description: '', isCustomerPayment: false, keepPercentage: 30 });
                   }}
                   className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
                 >
