@@ -49,12 +49,19 @@ const ListBooking = () => {
         )
         .then((res) => {
           if (res.data) {
-            const processedData = res.data.data.map((item) => ({
-              ...item,
-              advance: item.advance ?? 0,
-              total: item.total ?? 0,
-              balance: item.balance ?? 0,
-            })).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+            const processedData = res.data.data.map((item) => {
+              // Calculate total advance from array
+              const totalAdvance = Array.isArray(item.advance) 
+                ? item.advance.reduce((sum, payment) => sum + (payment.amount || 0), 0)
+                : (typeof item.advance === 'number' ? item.advance : 0);
+              
+              return {
+                ...item,
+                advance: totalAdvance,
+                total: item.total ?? 0,
+                balance: item.balance ?? 0,
+              };
+            }).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
             console.log(processedData);
             setUserData(processedData);
@@ -362,27 +369,37 @@ const ListBooking = () => {
     { label: "Customer Reference", key: "customerRef" },
     { label: "Status", key: "bookingStatus" },
   ];
-  const csvData = allData.map((item) => ({
-    name: item.name || "",
-    number: item.number || "",
-    whatsapp: item.whatsapp || "",
-    pax: item.pax || "",
-    startDate: item.startDate
-      ? new Date(item.startDate).toLocaleDateString('en-GB')
-      : "",
-    foodType: item.foodType || "",
-    ratePlan: item.ratePlan || "",
-    advance: item.advance || "",
-    gst: item.gst || "",
-    total: item.total || "",
-    balance: item.balance || "",
-    ratePerPax: item.ratePerPax || "",
-    hall: item.hall || "",
-    time: item.time || "",
-    discount: item.discount || "",
-    customerRef: item.customerRef || "",
-    bookingStatus: item.bookingStatus || "",
-  }));
+  const csvData = allData.map((item) => {
+    // Safely extract values, handling objects
+    const getStringValue = (value) => {
+      if (typeof value === 'object' && value !== null) {
+        return value.amount || value.value || JSON.stringify(value) || "";
+      }
+      return value || "";
+    };
+    
+    return {
+      name: getStringValue(item.name),
+      number: getStringValue(item.number),
+      whatsapp: getStringValue(item.whatsapp),
+      pax: getStringValue(item.pax),
+      startDate: item.startDate
+        ? new Date(item.startDate).toLocaleDateString('en-GB')
+        : "",
+      foodType: getStringValue(item.foodType),
+      ratePlan: getStringValue(item.ratePlan),
+      advance: getStringValue(item.advance),
+      gst: getStringValue(item.gst),
+      total: getStringValue(item.total),
+      balance: getStringValue(item.balance),
+      ratePerPax: getStringValue(item.ratePerPax),
+      hall: getStringValue(item.hall),
+      time: getStringValue(item.time),
+      discount: getStringValue(item.discount),
+      customerRef: getStringValue(item.customerRef),
+      bookingStatus: getStringValue(item.bookingStatus),
+    };
+  });
 
   return (
     <div className="min-h-screen" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
@@ -502,13 +519,13 @@ const ListBooking = () => {
                       </div>
                       <div>
                         <span className="font-semibold">Advance:</span>{" "}
-                        {item?.advance !== null && item?.advance !== undefined
+                        ₹{item?.advance !== null && item?.advance !== undefined
                           ? item?.advance
                           : 0}
                       </div>
                       <div>
                         <span className="font-semibold">Total Amount:</span>{" "}
-                        {item.total}
+                        ₹{item.total || 0}
                       </div>
                       <div>
                         <span className="font-semibold">Status:</span>{" "}
@@ -608,11 +625,11 @@ const ListBooking = () => {
                         {item.foodType}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {item.advance}
+                        ₹{item.advance || 0}
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {item.total || 0}
+                        ₹{item.total || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {item.hall}
@@ -671,6 +688,13 @@ const ListBooking = () => {
                             const decorationCharge = item.decorationCharge && item.decorationCharge > 0 ? item.decorationCharge : 0;
                             const musicCharge = item.musicCharge && item.musicCharge > 0 ? item.musicCharge : 0;
                             
+                            // Calculate advance amount from array or use number
+                            const advanceAmount = Array.isArray(item.advance) 
+                              ? item.advance.reduce((sum, payment) => sum + (payment.amount || 0), 0)
+                              : (typeof item.advance === 'number' ? item.advance : 0);
+                            const totalAmount = typeof item.total === 'object' ? (item.total?.amount || 0) : (item.total || 0);
+                            const balanceAmount = typeof item.balance === 'object' ? (item.balance?.amount || 0) : (item.balance || 0);
+                            
                             const message =
                               `🌟 *Welcome to Hotel ASHOKA HOTEL!* 🌟\n\n` +
                               `Here's your booking confirmation:\n\n` +
@@ -696,9 +720,9 @@ const ListBooking = () => {
                               }\n` +
                               `🔄 *Status:* ${item.bookingStatus}\n\n` +
                               `💰 *Payment Details:*\n` +
-                              `💵 *Total Amount:* ₹${item.total || "To be confirmed"}\n` +
-                              `💳 *Advance Paid:* ₹${item.advance || 0}\n` +
-                              `💸 *Balance Due:* ₹${item.balance || (item.total - (item.advance || 0)) || "To be confirmed"}\n\n` +
+                              `💵 *Total Amount:* ₹${totalAmount || "To be confirmed"}\n` +
+                              `💳 *Advance Paid:* ₹${advanceAmount}\n` +
+                              `💸 *Balance Due:* ₹${balanceAmount || (totalAmount - advanceAmount) || "To be confirmed"}\n\n` +
                               `📍 *Venue Address:* Medical Road, Gorakhpur\n\n` +
                               `📌 *Important Notes:*\n` +
                               `- Please arrive 15 minutes before your booking time\n` +

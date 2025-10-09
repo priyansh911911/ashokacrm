@@ -1391,18 +1391,22 @@ const UpdateBooking = () => {
               <div id="advanceHistorySection" style={{display: 'none'}} className="space-y-2 bg-blue-50 p-3 rounded-lg">
                 <h4 className="text-sm font-semibold text-blue-800">Advance Payment History</h4>
                 <div className="max-h-32 overflow-y-auto">
-                  {booking.advanceHistory && booking.advanceHistory.length > 0 ? (
-                    booking.advanceHistory.map((payment, index) => (
-                      <div key={index} className="flex justify-between items-center text-xs bg-white p-2 rounded border">
-                        <span>₹{payment.amount}</span>
-                        <span className="text-gray-500">{new Date(payment.date).toLocaleDateString()} ({payment.method})</span>
-                      </div>
-                    ))
-                  ) : booking.advance > 0 ? (
-                    <div className="flex justify-between items-center text-xs bg-white p-2 rounded border">
-                      <span>₹{booking.advance}</span>
-                      <span className="text-gray-500">Initial Payment (cash)</span>
-                    </div>
+                  {Array.isArray(booking.advance) && booking.advance.length > 0 ? (
+                    booking.advance.map((payment, index) => {
+                      // Safely extract payment object properties
+                      const amount = payment?.amount || 0;
+                      const date = payment?.date || Date.now();
+                      const method = payment?.method || 'cash';
+                      const remarks = payment?.remarks || '';
+                      
+                      return (
+                        <div key={payment._id || index} className="flex justify-between items-center text-xs bg-white p-2 rounded border">
+                          <span>₹{amount}</span>
+                          <span className="text-gray-500">{new Date(date).toLocaleDateString()} ({method})</span>
+                          {remarks && <span className="text-gray-400 text-xs">- {String(remarks)}</span>}
+                        </div>
+                      );
+                    })
                   ) : (
                     <div className="text-xs text-gray-500">No payment history available</div>
                   )}
