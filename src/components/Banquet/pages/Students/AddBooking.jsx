@@ -1467,7 +1467,7 @@ const AddBooking = () => {
     ratePlan: "",
     roomOption: "complimentary",
     complimentaryRooms: 2,
-    advance: "",
+    advance: [],
     gst: "", // GST input (manual)
     total: "",
     balance: "",
@@ -1520,20 +1520,19 @@ const AddBooking = () => {
     }
   }, [form.pax, form.ratePlan, form.foodType, form.gst, form.decorationCharge, form.musicCharge, form.hasDecoration, form.hasMusic, form.useCustomPrice, form.customPlatePrice]);
 
-  // Remove this useEffect for balance calculation
+  // Balance calculation with advance array
   useEffect(() => {
-    const advance = parseFloat(form.advance) || 0;
+    const totalAdvance = form.advance.reduce((sum, adv) => sum + (parseFloat(adv.amount) || 0), 0);
     const total = parseFloat(form.total) || 0;
-    const balance = total - advance;
+    const balance = total - totalAdvance;
     setForm((prev) => ({ ...prev, balance: balance.toFixed(2) }));
   }, [form.advance, form.total]);
 
   // Auto-update bookingStatus based on advance payment
   useEffect(() => {
-    const advance = parseFloat(form.advance) || 0;
-    const total = parseFloat(form.total) || 0;
+    const totalAdvance = form.advance.reduce((sum, adv) => sum + (parseFloat(adv.amount) || 0), 0);
     let newStatus = form.bookingStatus;
-    if (advance > 0) {
+    if (totalAdvance > 0) {
       newStatus = "Confirmed";
     } else {
       newStatus = "Enquiry";
@@ -1545,6 +1544,39 @@ const AddBooking = () => {
       }));
     }
   }, [form.advance, form.total]);
+
+  // Add advance payment
+  const addAdvancePayment = () => {
+    setForm(prev => ({
+      ...prev,
+      advance: [...prev.advance, {
+        amount: 0,
+        date: new Date(),
+        method: "cash",
+        remarks: ""
+      }]
+    }));
+  };
+
+  // Update advance payment
+  const updateAdvancePayment = (index, field, value) => {
+    setForm(prev => ({
+      ...prev,
+      advance: prev.advance.map((adv, i) => 
+        i === index ? { ...adv, [field]: value } : adv
+      )
+    }));
+  };
+
+  // Remove advance payment
+  const removeAdvancePayment = (index) => {
+    setForm(prev => ({
+      ...prev,
+      advance: prev.advance.filter((_, i) => i !== index)
+    }));
+  };
+
+
 
   useEffect(() => {
     // Calculate progress
@@ -2319,21 +2351,89 @@ const AddBooking = () => {
               </div>
 
               <div className="grid md:grid-cols-3 gap-6 mt-4">
-                {/* Advance */}
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Advance Payment
-                  </label>
-                  <div className="relative">
-                    <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="number"
-                      name="advance"
-                      className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
-                      onChange={handleChange}
-                      value={form.advance}
-                    />
+                {/* Advance Payments */}
+                <div className="space-y-3 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Advance Payments
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addAdvancePayment}
+                      className="px-3 py-1 bg-[#c3ad6b] text-white rounded-md text-sm hover:bg-[#b39b5a]"
+                    >
+                      Add Payment
+                    </button>
                   </div>
+                  {form.advance.map((payment, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Amount
+                          </label>
+                          <input
+                            type="number"
+                            value={payment.amount}
+                            onChange={(e) => updateAdvancePayment(index, 'amount', parseFloat(e.target.value) || 0)}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Date
+                          </label>
+                          <input
+                            type="date"
+                            value={payment.date ? new Date(payment.date).toISOString().split('T')[0] : ''}
+                            onChange={(e) => updateAdvancePayment(index, 'date', new Date(e.target.value))}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Method
+                          </label>
+                          <select
+                            value={payment.method}
+                            onChange={(e) => updateAdvancePayment(index, 'method', e.target.value)}
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                          >
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="upi">UPI</option>
+                            <option value="wallet">Wallet</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div className="flex items-end">
+                          <button
+                            type="button"
+                            onClick={() => removeAdvancePayment(index)}
+                            className="px-3 py-2 bg-red-500 text-white rounded-md text-sm hover:bg-red-600"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Remarks
+                        </label>
+                        <input
+                          type="text"
+                          value={payment.remarks}
+                          onChange={(e) => updateAdvancePayment(index, 'remarks', e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                          placeholder="Payment remarks"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {form.advance.length === 0 && (
+                    <p className="text-gray-500 text-sm italic">No advance payments added</p>
+                  )}
                 </div>
 
                 {/* Payment Method */}

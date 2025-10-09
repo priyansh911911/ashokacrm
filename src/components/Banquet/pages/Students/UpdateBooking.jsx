@@ -51,7 +51,7 @@ const UpdateBooking = () => {
     roomOption: "complimentary",
     complimentaryRooms: 2,
 
-    advance: 0,
+    advance: [],
     total: 0,
     balance: 0,
     advanceHistory: [],
@@ -155,12 +155,12 @@ const UpdateBooking = () => {
 
   // Auto-calculate balance and update status if advance is paid
   useEffect(() => {
-    const advance = parseFloat(booking.advance) || 0;
+    const totalAdvance = booking.advance.reduce((sum, adv) => sum + (parseFloat(adv.amount) || 0), 0);
     const total = parseFloat(booking.total) || 0;
-    const balance = total - advance;
+    const balance = total - totalAdvance;
     let newStatus = booking.bookingStatus;
     let statusBool = booking.status;
-    if (advance > 0) {
+    if (totalAdvance > 0) {
       newStatus = "Confirmed";
       statusBool = true;
     } else {
@@ -183,6 +183,37 @@ const UpdateBooking = () => {
       ],
     }));
   }, [booking.advance, booking.total]);
+
+  // Add advance payment
+  const addAdvancePayment = () => {
+    setBooking(prev => ({
+      ...prev,
+      advance: [...prev.advance, {
+        amount: 0,
+        date: new Date(),
+        method: "cash",
+        remarks: ""
+      }]
+    }));
+  };
+
+  // Update advance payment
+  const updateAdvancePayment = (index, field, value) => {
+    setBooking(prev => ({
+      ...prev,
+      advance: prev.advance.map((adv, i) => 
+        i === index ? { ...adv, [field]: value } : adv
+      )
+    }));
+  };
+
+  // Remove advance payment
+  const removeAdvancePayment = (index) => {
+    setBooking(prev => ({
+      ...prev,
+      advance: prev.advance.filter((_, i) => i !== index)
+    }));
+  };
 
   // Fetch booking details when component loads
   useEffect(() => {
@@ -266,12 +297,7 @@ const UpdateBooking = () => {
               bookingData.ratePerPax !== ""
                 ? Number(bookingData.ratePerPax)
                 : "",
-            advance:
-              bookingData.advance !== undefined &&
-              bookingData.advance !== null &&
-              bookingData.advance !== ""
-                ? Number(bookingData.advance)
-                : "",
+
             total:
               bookingData.total !== undefined &&
               bookingData.total !== null &&
@@ -312,7 +338,7 @@ const UpdateBooking = () => {
             hasDecoration: !!(bookingData.decorationCharge && bookingData.decorationCharge > 0),
             hasMusic: !!(bookingData.musicCharge && bookingData.musicCharge > 0),
             showRatePerPax: !!(bookingData.ratePerPax && bookingData.ratePerPax > 0),
-            advanceHistory: bookingData.advanceHistory || (bookingData.advance > 0 ? [{
+            advance: Array.isArray(bookingData.advance) ? bookingData.advance : (bookingData.advance > 0 ? [{
               amount: Number(bookingData.advance),
               date: bookingData.createdAt || new Date().toISOString(),
               method: bookingData.paymentMethod || 'cash'
@@ -369,22 +395,8 @@ const UpdateBooking = () => {
       let isConfirmed = prev.isConfirmed || false;
       let isEnquiry = prev.isEnquiry || false;
       let isTentative = prev.isTentative || false;
-      // If advance is changed and > 0, set Confirmed
-      if (name === "advance" && parseFloat(val) > 0) {
-        newStatus = "Confirmed";
-        isConfirmed = true || prev.isConfirmed;
-        isEnquiry = prev.isEnquiry;
-        isTentative = prev.isTentative;
-        if (
-          newStatusHistory.length === 0 ||
-          newStatusHistory[newStatusHistory.length - 1].status !== "Confirmed"
-        ) {
-          newStatusHistory.push({
-            status: "Confirmed",
-            changedAt: new Date().toISOString(),
-          });
-        }
-      } else if (name !== "advance" && prev.bookingStatus !== "Confirmed") {
+      // Status changes are now handled by useEffect based on advance array
+      if (name !== "advance" && prev.bookingStatus !== "Confirmed") {
         // On any other edit, set Tentative if not already
         newStatus = "Tentative";
         isConfirmed = prev.isConfirmed;
@@ -449,20 +461,13 @@ const UpdateBooking = () => {
         return updated;
       }
       
-      if (name === "advance") {
-        return {
-          ...updated,
-          balance:
-            (prev.total !== "" ? prev.total : 0) -
-            (numValue !== "" ? numValue : 0),
-        };
-      }
+
       if (name === "total") {
         return {
           ...updated,
           balance:
             (numValue !== "" ? numValue : 0) -
-            (prev.advance !== "" ? prev.advance : 0),
+            prev.advance.reduce((sum, adv) => sum + (parseFloat(adv.amount) || 0), 0),
         };
       }
       return updated;
@@ -1212,7 +1217,7 @@ const UpdateBooking = () => {
               </h2>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
               {/* Decoration */}
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
@@ -1344,138 +1349,92 @@ const UpdateBooking = () => {
                 </div>
               </div>
 
-              {/* Advance */}
-              <div className="space-y-1">
+              {/* Advance Payments */}
+              <div className="space-y-3 md:col-span-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-sm font-medium text-gray-700">
-                    Advance Payment
+                    Advance Payments
                   </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const section = document.getElementById('advanceHistorySection');
-                        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                      title="View History"
-                    >
-                      H
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const section = document.getElementById('additionalAdvanceSection');
-                        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-                      }}
-                      className="bg-[#c3ad6b] hover:bg-[#b39b5a] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="number"
-                    name="advance"
-                    className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
-                    onChange={handleNumberInputChange}
-                    value={booking.advance !== "" ? booking.advance : ""}
-                    min="0"
-                  />
-                </div>
-              </div>
-
-              {/* Advance Payment History */}
-              <div id="advanceHistorySection" style={{display: 'none'}} className="space-y-2 bg-blue-50 p-3 rounded-lg">
-                <h4 className="text-sm font-semibold text-blue-800">Advance Payment History</h4>
-                <div className="max-h-32 overflow-y-auto">
-                  {Array.isArray(booking.advance) && booking.advance.length > 0 ? (
-                    booking.advance.map((payment, index) => {
-                      // Safely extract payment object properties
-                      const amount = payment?.amount || 0;
-                      const date = payment?.date || Date.now();
-                      const method = payment?.method || 'cash';
-                      const remarks = payment?.remarks || '';
-                      
-                      return (
-                        <div key={payment._id || index} className="flex justify-between items-center text-xs bg-white p-2 rounded border">
-                          <span>₹{amount}</span>
-                          <span className="text-gray-500">{new Date(date).toLocaleDateString()} ({method})</span>
-                          {remarks && <span className="text-gray-400 text-xs">- {String(remarks)}</span>}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-xs text-gray-500">No payment history available</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Additional Advance Payment */}
-              <div id="additionalAdvanceSection" style={{display: 'none'}} className="space-y-2">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="number"
-                      placeholder="Enter additional amount"
-                      className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          const additionalAmount = e.target.value;
-                          if (additionalAmount && !isNaN(additionalAmount) && Number(additionalAmount) > 0) {
-                            const currentAdvance = Number(booking.advance) || 0;
-                            const newAdvance = currentAdvance + Number(additionalAmount);
-                            const newPayment = {
-                              amount: Number(additionalAmount),
-                              date: new Date().toISOString(),
-                              method: booking.paymentMethod || 'cash'
-                            };
-                            setBooking(prev => ({
-                              ...prev,
-                              advance: newAdvance,
-                              balance: (Number(prev.total) || 0) - newAdvance,
-                              advanceHistory: [...(prev.advanceHistory || []), newPayment]
-                            }));
-                            e.target.value = '';
-                          }
-                        }
-                      }}
-                    />
-                  </div>
                   <button
                     type="button"
-                    onClick={(e) => {
-                      const input = e.target.parentElement.querySelector('input');
-                      const additionalAmount = input.value;
-                      if (additionalAmount && !isNaN(additionalAmount) && Number(additionalAmount) > 0) {
-                        const currentAdvance = Number(booking.advance) || 0;
-                        const newAdvance = currentAdvance + Number(additionalAmount);
-                        const newPayment = {
-                          amount: Number(additionalAmount),
-                          date: new Date().toISOString(),
-                          method: booking.paymentMethod || 'cash'
-                        };
-                        setBooking(prev => ({
-                          ...prev,
-                          advance: newAdvance,
-                          balance: (Number(prev.total) || 0) - newAdvance,
-                          advanceHistory: [...(prev.advanceHistory || []), newPayment]
-                        }));
-                        input.value = '';
-                      }
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm"
+                    onClick={addAdvancePayment}
+                    className="px-3 py-1 bg-[#c3ad6b] text-white rounded-md text-sm hover:bg-[#b39b5a]"
                   >
-                    Add
+                    Add Payment
                   </button>
                 </div>
-                <div className="text-xs text-gray-500">
-                  Enter amount and press Enter or click Add to accept additional advance
-                </div>
+                {booking.advance.map((payment, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Amount
+                        </label>
+                        <input
+                          type="number"
+                          value={payment.amount}
+                          onChange={(e) => updateAdvancePayment(index, 'amount', parseFloat(e.target.value) || 0)}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          value={payment.date ? new Date(payment.date).toISOString().split('T')[0] : ''}
+                          onChange={(e) => updateAdvancePayment(index, 'date', new Date(e.target.value))}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Method
+                        </label>
+                        <select
+                          value={payment.method}
+                          onChange={(e) => updateAdvancePayment(index, 'method', e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="card">Card</option>
+                          <option value="upi">UPI</option>
+                          <option value="wallet">Wallet</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => removeAdvancePayment(index)}
+                          className="px-3 py-2 bg-red-500 text-white rounded-md text-sm hover:bg-red-600"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Remarks
+                      </label>
+                      <input
+                        type="text"
+                        value={payment.remarks}
+                        onChange={(e) => updateAdvancePayment(index, 'remarks', e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        placeholder="Payment remarks"
+                      />
+                    </div>
+                  </div>
+                ))}
+                {booking.advance.length === 0 && (
+                  <p className="text-gray-500 text-sm italic">No advance payments added</p>
+                )}
               </div>
+
+
 
               {/* Balance */}
               <div className="space-y-1">
