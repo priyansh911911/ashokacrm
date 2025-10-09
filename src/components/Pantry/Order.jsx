@@ -491,19 +491,22 @@ const Order = () => {
               <div className="text-sm text-gray-600 mb-2">
                 <strong>UPI ID:</strong> 
                 {vendors.find(v => v._id === filterVendor)?.UpiID ? (
-                  <button
-                    onClick={() => {
-                      const vendor = vendors.find(v => v._id === filterVendor);
-                      setPaymentVendor({
-                        ...vendor,
-                        totalAmount: vendorAnalytics?.total?.amount || 0
-                      });
-                      setShowPaymentModal(true);
-                    }}
-                    className="ml-2 text-blue-600 hover:text-blue-800 underline cursor-pointer"
-                  >
-                    {vendors.find(v => v._id === filterVendor)?.UpiID}
-                  </button>
+                  <span className="ml-2">
+                    <span className="text-blue-600">{vendors.find(v => v._id === filterVendor)?.UpiID}</span>
+                    <button
+                      onClick={() => {
+                        const vendor = vendors.find(v => v._id === filterVendor);
+                        setPaymentVendor({
+                          ...vendor,
+                          totalAmount: 6000.00
+                        });
+                        setShowPaymentModal(true);
+                      }}
+                      className="ml-3 px-3 py-1 bg-orange-500 text-white text-xs rounded-md hover:bg-orange-600 transition-colors"
+                    >
+                      Pay Now
+                    </button>
+                  </span>
                 ) : 'Not provided'}
               </div>
               {vendorAnalytics?.total?.amount > 0 && (
