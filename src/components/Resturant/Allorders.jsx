@@ -461,30 +461,12 @@ const AllBookings = ({ setActiveTab }) => {
 
   return (
     <div className="p-4 sm:p-6 bg-background min-h-screen">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="mb-4 sm:mb-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-text">All Bookings</h2>
         </div>
         
-        <form onSubmit={handleSearch} className="mb-4">
-          <div className="flex flex-col sm:flex-row gap-2 max-w-md">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search bookings..."
-              className="flex-1 p-2 border border-border rounded bg-white text-text focus:border-primary focus:outline-none text-sm"
-            />
-            <button
-              type="submit"
-              className="bg-primary text-text px-4 py-2 rounded hover:bg-hover transition-colors whitespace-nowrap text-sm"
-            >
-              Search
-            </button>
-          </div>
-        </form>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="font-semibold mb-3 text-text text-sm sm:text-base">Transfer Table</h3>
             <form onSubmit={transferTable} className="flex flex-col gap-2">
@@ -516,6 +498,10 @@ const AllBookings = ({ setActiveTab }) => {
                           <div className="text-xs mt-1 text-gray-600">
                             Items: {selectedBooking.items.map(item => {
                               if (typeof item === 'string') return item;
+                              if (item.itemId) {
+                                const foundItem = items.find(i => i._id === item.itemId);
+                                return foundItem ? foundItem.name : (item.name || item.itemName || 'Unknown Item');
+                              }
                               return item.name || item.itemName || 'Unknown Item';
                             }).join(', ')}
                           </div>
@@ -565,6 +551,10 @@ const AllBookings = ({ setActiveTab }) => {
                           <div className="text-xs mt-1 text-gray-600">
                             Items: {selectedBooking.items.map(item => {
                               if (typeof item === 'string') return item;
+                              if (item.itemId) {
+                                const foundItem = items.find(i => i._id === item.itemId);
+                                return foundItem ? foundItem.name : (item.name || item.itemName || 'Unknown Item');
+                              }
                               return item.name || item.itemName || 'Unknown Item';
                             }).join(', ')}
                           </div>
@@ -601,7 +591,7 @@ const AllBookings = ({ setActiveTab }) => {
             </form>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow">
+          {/* <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="font-semibold mb-3 text-text text-sm sm:text-base">Apply Coupon</h3>
             <form onSubmit={applyCoupon} className="flex flex-col gap-2">
               <select
@@ -703,8 +693,26 @@ const AllBookings = ({ setActiveTab }) => {
                 Process Payment
               </button>
             </form>
-          </div>
+          </div> */}
         </div>
+
+        <form onSubmit={handleSearch} className="mb-4">
+          <div className="flex flex-col sm:flex-row gap-2 max-w-md">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search orders..."
+              className="flex-1 p-2 border border-[#c3ad6b]/30 rounded bg-white text-gray-700 focus:border-[#c3ad6b] focus:outline-none text-sm"
+            />
+            <button
+              type="submit"
+              className="bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] text-white px-4 py-2 rounded hover:from-[#b39b5a] hover:to-[#c3ad6b] transition-colors whitespace-nowrap text-sm"
+            >
+              Search
+            </button>
+          </div>
+        </form>
 
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="overflow-x-auto">

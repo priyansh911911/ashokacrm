@@ -355,10 +355,10 @@ const Order = () => {
 
 
   return (
-    <div className="min-h-screen font-sans flex flex-col items-center p-4 sm:p-6">
+    <div className="min-h-screen font-sans p-4 sm:p-6 bg-gradient-to-br from-[#f7f5ef] to-[#c3ad6b]/30">
       {/* Staff Notification */}
       {staffNotification && (
-        <div className="fixed top-4 left-4 z-50 bg-blue-500 text-white p-4 rounded-lg shadow-lg animate-pulse max-w-sm">
+        <div className="fixed top-4 left-4 z-50 bg-[#c3ad6b] text-white p-4 rounded-lg shadow-lg animate-pulse max-w-sm">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h4 className="font-bold flex items-center">
@@ -384,10 +384,10 @@ const Order = () => {
         </div>
       )}
 
-      <div className="w-full max-w-7xl bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-orange-200">
+      <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
           <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
-            <label className="font-bold text-lg text-orange-800">Order Type:</label>
+            <label className="font-bold text-lg text-[#b39b5a]">Order Type:</label>
             <div className="flex items-center space-x-6">
               <label className="flex items-center space-x-3 cursor-pointer">
                 <input
@@ -395,7 +395,7 @@ const Order = () => {
                   name="orderType"
                   checked={!isInHouse}
                   onChange={() => setIsInHouse(false)}
-                  className="w-5 h-5 text-orange-500 focus:ring-orange-500 focus:ring-2"
+                  className="w-5 h-5 text-[#c3ad6b] focus:ring-[#c3ad6b] focus:ring-2"
                 />
                 <span className="text-base font-medium text-gray-700">Regular</span>
               </label>
@@ -405,7 +405,7 @@ const Order = () => {
                   name="orderType"
                   checked={isInHouse}
                   onChange={() => setIsInHouse(true)}
-                  className="w-5 h-5 text-orange-500 focus:ring-orange-500 focus:ring-2"
+                  className="w-5 h-5 text-[#c3ad6b] focus:ring-[#c3ad6b] focus:ring-2"
                 />
                 <span className="text-base font-medium text-gray-700">In-House</span>
               </label>
@@ -415,7 +415,7 @@ const Order = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
           <div className="flex flex-col space-y-3">
-            <label htmlFor="table-number" className="font-bold text-orange-800">Table Number</label>
+            <label htmlFor="table-number" className="font-bold text-[#b39b5a]">Table Number</label>
             <select 
               id="table-number" 
               value={orderData.tableNo}
@@ -431,7 +431,7 @@ const Order = () => {
             </select>
           </div>
           <div className="flex flex-col space-y-3">
-            <label htmlFor="staff" className="font-bold text-orange-800">Staff</label>
+            <label htmlFor="staff" className="font-bold text-[#b39b5a]">Staff</label>
             <select 
               id="staff" 
               value={orderData.staffId}
@@ -451,7 +451,7 @@ const Order = () => {
           </div>
           {isInHouse ? (
             <div className="flex flex-col space-y-3">
-              <label htmlFor="booking" className="font-bold text-orange-800">Booking</label>
+              <label htmlFor="booking" className="font-bold text-[#b39b5a]">Booking</label>
               <select 
                 id="booking" 
                 value={orderData.bookingId}
@@ -481,7 +481,7 @@ const Order = () => {
             </div>
           ) : (
             <div className="flex flex-col space-y-3">
-              <label htmlFor="phone" className="font-bold text-orange-800">Phone</label>
+              <label htmlFor="phone" className="font-bold text-[#b39b5a]">Phone</label>
               <input
                 id="phone"
                 type="tel"
@@ -495,23 +495,23 @@ const Order = () => {
         </div>
         
         {isInHouse && orderData.bookingId && (
-          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200">
-            <h3 className="font-bold mb-4 text-lg text-orange-800">Guest Information:</h3>
+          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-[#f7f5ef] to-[#c3ad6b]/20 border border-[#c3ad6b]/30">
+            <h3 className="font-bold mb-4 text-lg text-[#b39b5a]">Guest Information:</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center space-x-2">
-                <span className="font-semibold text-orange-700">GRC:</span>
+                <span className="font-semibold text-[#b39b5a]">GRC:</span>
                 <span className="text-gray-700">{orderData.grcNo}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="font-semibold text-orange-700">Room:</span>
+                <span className="font-semibold text-[#b39b5a]">Room:</span>
                 <span className="text-gray-700">{orderData.roomNumber}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="font-semibold text-orange-700">Guest:</span>
+                <span className="font-semibold text-[#b39b5a]">Guest:</span>
                 <span className="text-gray-700">{orderData.guestName}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="font-semibold text-orange-700">Phone:</span>
+                <span className="font-semibold text-[#b39b5a]">Phone:</span>
                 <span className="text-gray-700">{orderData.guestPhone}</span>
               </div>
             </div>
@@ -521,7 +521,7 @@ const Order = () => {
         <div className="flex justify-end mt-6">
           <div className="relative">
             <button
-              className="p-4 rounded-full shadow-xl bg-gradient-to-r from-orange-500 to-red-500 text-white transition-all duration-300 transform hover:scale-110 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-orange-300"
+              className="p-4 rounded-full shadow-xl bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] text-white transition-all duration-300 transform hover:scale-110 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-[#c3ad6b]/30"
               onClick={() => setIsCartOpen(true)}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -529,7 +529,7 @@ const Order = () => {
               </svg>
             </button>
             {cartItems.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-lg animate-pulse">
+              <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[#b39b5a] to-[#c3ad6b] text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-lg animate-pulse">
                 {cartItems.length}
               </span>
             )}
@@ -538,8 +538,8 @@ const Order = () => {
       </div>
 
       {/* Search bar section */}
-      <div className="w-full max-w-7xl bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-orange-200">
-        <label htmlFor="search-menu" className="block font-bold mb-4 text-lg text-orange-800">Search Menu</label>
+      <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30">
+        <label htmlFor="search-menu" className="block font-bold mb-4 text-lg text-[#b39b5a]">Search Menu</label>
         <div className="relative">
           <input
             id="search-menu"
@@ -547,20 +547,20 @@ const Order = () => {
             placeholder="Search menu items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl pl-12 pr-4 py-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200 text-base"
+            className="w-full rounded-xl pl-12 pr-4 py-4 border-2 border-[#c3ad6b]/30 focus:border-[#c3ad6b] focus:ring-2 focus:ring-[#c3ad6b]/20 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200 text-base"
           />
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 absolute left-4 top-1/2 transform -translate-y-1/2 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 absolute left-4 top-1/2 transform -translate-y-1/2 text-[#c3ad6b]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
       </div>
 
       {/* Menu grid */}
-      <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
         {filteredMenu.map(item => (
-          <div key={item._id} className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-2 border-orange-200 hover:border-orange-500 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
-            <h3 className="text-xl font-bold truncate text-orange-800 mb-2">{item.name}</h3>
-            <p className="text-sm mb-4 text-orange-600 font-medium">{item.category}</p>
+          <div key={item._id} className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-2 border-[#c3ad6b]/30 hover:border-[#c3ad6b] hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+            <h3 className="text-xl font-bold truncate text-[#b39b5a] mb-2">{item.name}</h3>
+            <p className="text-sm mb-4 text-[#c3ad6b] font-medium">{item.category}</p>
             <p className="mb-4 font-bold text-lg text-gray-800">₹{(item.Price || item.price || 0).toFixed(2)}</p>
 
             {cartItems.some(i => i._id === item._id) ? (
@@ -593,7 +593,7 @@ const Order = () => {
             ) : (
               // If item is not in cart, show the "Add to Order" button
               <button
-                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                className="w-full bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] text-white py-3 rounded-xl font-bold hover:from-[#b39b5a] hover:to-[#c3ad6b] transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
                 onClick={() => handleAddToCart(item)}
               >
                 Add to Order
