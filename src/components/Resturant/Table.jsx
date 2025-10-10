@@ -16,7 +16,7 @@ const App = () => {
   const fetchTables = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/restaurant/tables', {
+      const response = await axios.get('/api/restaurant-tables/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const tablesData = Array.isArray(response.data) ? response.data : (response.data.tables || []);
@@ -29,7 +29,7 @@ const App = () => {
   const getAllTableNumbers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/restaurant/tables', {
+      const response = await axios.get('/api/restaurant-tables/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const tablesData = Array.isArray(response.data) ? response.data : (response.data.tables || []);
@@ -67,7 +67,7 @@ const App = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/restaurant/tables', newTable, {
+      await axios.post('/api/restaurant-tables/create', newTable, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('Table created successfully!');
@@ -89,7 +89,7 @@ const App = () => {
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`/api/restaurant/tables/${id}/status`, {
+      await axios.patch(`/api/restaurant-tables/${id}/status`, {
         status: newStatus
       }, {
         headers: { Authorization: `Bearer ${token}` }
