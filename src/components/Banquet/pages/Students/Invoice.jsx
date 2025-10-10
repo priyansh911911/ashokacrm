@@ -313,7 +313,7 @@ const Invoice = () => {
                     </div>
                     <div className="flex justify-between text-green-600">
                       <span>Advance Paid</span>
-                      <span>₹{booking.advance || 0}</span>
+                      <span>₹{Array.isArray(booking.advance) ? booking.advance.reduce((sum, adv) => sum + (adv.amount || 0), 0) : (booking.advance || 0)}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold text-red-600">
                       <span>Balance Due</span>

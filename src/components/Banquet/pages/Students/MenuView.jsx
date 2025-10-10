@@ -29,16 +29,39 @@ const MenuView = () => {
     const fetchMenu = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get(
-          `https://ashoka-backend.vercel.app/api/banquet-menus/${id}`,
+        
+        // Try to fetch menu first
+        try {
+          const res = await axios.get(
+            `https://ashoka-backend.vercel.app/api/banquet-menus/${id}`,
+            {
+              headers: { Authorization: `Bearer ${token}` }
+            }
+          );
+          console.log('Menu API Response:', res.data);
+          setMenu(res.data.data?.categories || res.data.data || res.data || {});
+          return;
+        } catch (menuError) {
+          console.log('Menu not found, trying booking data...');
+        }
+        
+        // Fallback: try to get menu from booking data
+        const bookingRes = await axios.get(
+          `https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`,
           {
             headers: { Authorization: `Bearer ${token}` }
           }
         );
-        console.log('Menu API Response:', res.data);
-        setMenu(res.data.data?.categories || res.data.data || res.data || {});
+        
+        const bookingData = bookingRes.data.data || bookingRes.data;
+        if (bookingData.categorizedMenu) {
+          setMenu(bookingData.categorizedMenu);
+        } else {
+          setError("No menu found for this booking. The menu may not have been created yet.");
+        }
+        
       } catch (error) {
-        console.error('Menu fetch error:', error);
+        console.error('Fetch error:', error);
         setError("Failed to load menu. Please try again later.");
       } finally {
         setLoading(false);

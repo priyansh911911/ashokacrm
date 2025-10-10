@@ -45,17 +45,20 @@ export default function Invoice() {
             checkInDate: new Date().toLocaleDateString(),
             checkOutDate: new Date().toLocaleDateString()
           },
-          items: orderData.items?.map((item, index) => ({
-            date: new Date().toLocaleDateString(),
-            particulars: typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item'),
-            pax: 1,
-            declaredRate: typeof item === 'object' ? (item.price || item.Price || 0) : 0,
-            hsn: '996331',
-            rate: 12,
-            cgstRate: typeof item === 'object' ? ((item.price || item.Price || 0) * 0.06) : 0,
-            sgstRate: typeof item === 'object' ? ((item.price || item.Price || 0) * 0.06) : 0,
-            amount: typeof item === 'object' ? (item.price || item.Price || 0) : 0
-          })) || [],
+          items: orderData.items?.map((item, index) => {
+            const itemPrice = typeof item === 'object' ? (item.price || item.Price || 0) : 0;
+            return {
+              date: new Date().toLocaleDateString(),
+              particulars: typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item'),
+              pax: 1,
+              declaredRate: itemPrice,
+              hsn: '996331',
+              rate: 12,
+              cgstRate: itemPrice * 0.06,
+              sgstRate: itemPrice * 0.06,
+              amount: itemPrice
+            };
+          }) || [],
           taxes: [{
             taxableAmount: orderData.amount || orderData.advancePayment || 0,
             cgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
@@ -231,15 +234,15 @@ export default function Invoice() {
             <tbody>
               {invoiceData.items?.map((item, index) => (
                 <tr key={index} className="border border-black">
-                  <td className="p-1 border border-black">{item.date}</td>
-                  <td className="p-1 border border-black">{item.particulars}</td>
-                  <td className="p-1 border border-black text-center">{item.pax}</td>
-                  <td className="p-1 border border-black text-right">₹{item.declaredRate?.toFixed(2)}</td>
-                  <td className="p-1 border border-black text-center">{item.hsn}</td>
-                  <td className="p-1 border border-black text-right">{item.rate}%</td>
-                  <td className="p-1 border border-black text-right">₹{item.cgstRate?.toFixed(2)}</td>
-                  <td className="p-1 border border-black text-right">₹{item.sgstRate?.toFixed(2)}</td>
-                  <td className="p-1 border border-black text-right font-bold">₹{item.amount?.toFixed(2)}</td>
+                  <td className="p-1 border border-black">{typeof item === 'object' ? (item.date || 'N/A') : 'N/A'}</td>
+                  <td className="p-1 border border-black">{typeof item === 'object' ? (item.particulars || 'N/A') : String(item)}</td>
+                  <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.pax || 1) : 1}</td>
+                  <td className="p-1 border border-black text-right">₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</td>
+                  <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.hsn || 'N/A') : 'N/A'}</td>
+                  <td className="p-1 border border-black text-right">{typeof item === 'object' ? (item.rate || 0) : 0}%</td>
+                  <td className="p-1 border border-black text-right">₹{typeof item === 'object' ? (item.cgstRate?.toFixed(2) || '0.00') : '0.00'}</td>
+                  <td className="p-1 border border-black text-right">₹{typeof item === 'object' ? (item.sgstRate?.toFixed(2) || '0.00') : '0.00'}</td>
+                  <td className="p-1 border border-black text-right font-bold">₹{typeof item === 'object' ? (item.amount?.toFixed(2) || '0.00') : '0.00'}</td>
                 </tr>
               ))}
               <tr>
@@ -334,8 +337,8 @@ export default function Invoice() {
                   <tbody>
                     {invoiceData.otherCharges?.map((charge, index) => (
                       <tr key={index}>
-                        <td className="p-0.5 border border-black text-xs">{charge.particulars}</td>
-                        <td className="p-0.5 border border-black text-right text-xs">₹{charge.amount?.toFixed(2)}</td>
+                        <td className="p-0.5 border border-black text-xs">{typeof charge === 'object' ? charge.particulars : String(charge)}</td>
+                        <td className="p-0.5 border border-black text-right text-xs">₹{typeof charge === 'object' ? (charge.amount?.toFixed(2) || '0.00') : '0.00'}</td>
                       </tr>
                     ))}
                     <tr className="bg-gray-200">
