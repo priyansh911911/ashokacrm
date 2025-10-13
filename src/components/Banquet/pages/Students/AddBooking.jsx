@@ -1487,7 +1487,8 @@ const AddBooking = () => {
     useCustomPrice: false, // Admin can override calculated price
     customPlatePrice: "", // Custom price per plate
     paymentMethod: "cash", // Payment method
-    transactionId: "" // Transaction ID for online payments
+    transactionId: "", // Transaction ID for online payments
+    mealPlan: "Without Breakfast" // Meal plan option
   });
 
   // Calculate total when pax, ratePlan, foodType, gst, discount, decoration, or music charges change
@@ -2230,6 +2231,30 @@ const AddBooking = () => {
                       {errors.foodType}
                     </p>
                   )}
+                </div>
+
+                {/* Meal Plan */}
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      name="mealPlan"
+                      checked={form.mealPlan === "With Breakfast"}
+                      onChange={(e) => {
+                        setForm(prev => ({
+                          ...prev,
+                          mealPlan: e.target.checked ? "With Breakfast" : "Without Breakfast"
+                        }));
+                      }}
+                      className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
+                    />
+                    <label className="text-sm font-medium text-gray-700">
+                      With Breakfast
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {form.mealPlan === "With Breakfast" ? "Breakfast included" : "Without breakfast"}
+                  </p>
                 </div>
 
                 {/* Custom Plate Price - Admin Only */}
