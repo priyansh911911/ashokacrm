@@ -1233,7 +1233,8 @@ const Order = () => {
                               <label className="block text-xs text-gray-500 mb-1">Quantity</label>
                               <input
                                 type="number"
-                                min="1"
+                                min="0.1"
+                                step="0.1"
                                 value={item.quantity}
                                 onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
