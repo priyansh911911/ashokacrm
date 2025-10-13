@@ -1468,7 +1468,7 @@ const AddBooking = () => {
 
     ratePlan: "",
     roomOption: "complimentary",
-    complimentaryRooms: 2,
+    complimentaryRooms: "",
     advance: [],
     gst: "", // GST input (manual)
     total: "",

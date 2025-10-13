@@ -213,7 +213,7 @@ const Order = () => {
       const newItem = {
         pantryItemId: firstItem._id,
         name: firstItem.name,
-        quantity: 1,
+        quantity: "",
         unit: firstItem.unit || 'pcs',
         unitPrice: firstItem.price || 0,
         notes: ''
@@ -1262,6 +1262,19 @@ const Order = () => {
                           
                           <div className="text-xs text-gray-500">
                             Unit: {item.unit}
+                          </div>
+                          
+                          {/* Add Item button after each item */}
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <button
+                              type="button"
+                              onClick={addItem}
+                              disabled={pantryItems.length === 0}
+                              className="w-full bg-green-50 text-green-700 border border-green-200 px-3 py-2 rounded text-sm hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                            >
+                              <Plus size={14} />
+                              Add Another Item
+                            </button>
                           </div>
                         </div>
                       ))}
