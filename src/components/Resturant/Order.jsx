@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
+import { useSocket } from '../../context/SocketContext';
 
 const Order = () => {
   const { axios } = useAppContext();
+  const { socket } = useSocket();
   const [menuItems, setMenuItems] = useState([]);
   const [staff, setStaff] = useState([]);
   const [tables, setTables] = useState([]);
@@ -242,22 +244,7 @@ const Order = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Store order for KOT notification
-      const newOrder = {
-        orderId: orderResponse.data._id || orderResponse.data.id,
-        tableNo: orderData.tableNo,
-        items: cartItems.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          note: item.note || ''
-        })),
-        timestamp: Date.now()
-      };
-      
-      // Store in localStorage for KOT notification
-      const existingOrders = JSON.parse(localStorage.getItem('newOrders') || '[]');
-      existingOrders.push(newOrder);
-      localStorage.setItem('newOrders', JSON.stringify(existingOrders));
+      // WebSocket notification is handled by backend
       
 
       
@@ -282,21 +269,7 @@ const Order = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
           
-          // Store retry order for KOT notification
-          const retryOrder = {
-            orderId: retryResponse.data._id || retryResponse.data.id,
-            tableNo: orderData.tableNo,
-            items: cartItems.map(item => ({
-              name: item.name,
-              quantity: item.quantity,
-              note: item.note || ''
-            })),
-            timestamp: Date.now()
-          };
-          
-          const existingOrders = JSON.parse(localStorage.getItem('newOrders') || '[]');
-          existingOrders.push(retryOrder);
-          localStorage.setItem('newOrders', JSON.stringify(existingOrders));
+          // WebSocket notification is handled by backend
           
 
           
