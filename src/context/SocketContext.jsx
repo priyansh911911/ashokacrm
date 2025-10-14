@@ -16,13 +16,7 @@ export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Disable WebSocket for production (Vercel doesn't support it)
-    if (import.meta.env.VITE_API_URL?.includes('vercel.app')) {
-      console.log('WebSocket disabled for Vercel deployment');
-      return;
-    }
-
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
       transports: ['polling', 'websocket'],
       autoConnect: true,
       forceNew: true

@@ -74,14 +74,6 @@ const KOT = () => {
       socket.on('order-status-updated', () => {
         fetchOrders();
       });
-    } else {
-      // Fallback: Poll for updates every 5 seconds
-      const interval = setInterval(() => {
-        fetchKOTs();
-        fetchOrders();
-      }, 5000);
-      
-      return () => clearInterval(interval);
     }
 
     return () => {

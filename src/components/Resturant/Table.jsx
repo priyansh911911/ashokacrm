@@ -35,10 +35,6 @@ const App = () => {
             : table
         ));
       });
-    } else {
-      // Fallback: Poll for table updates every 10 seconds
-      const interval = setInterval(fetchTables, 10000);
-      return () => clearInterval(interval);
     }
 
     return () => {
