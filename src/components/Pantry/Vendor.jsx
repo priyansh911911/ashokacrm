@@ -225,13 +225,13 @@ const Vendor = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Vendor Management</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <button
+          {/* <button
             onClick={() => setShowVendorAnalytics(true)}
             className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm sm:text-base flex items-center gap-2"
           >
             <BarChart3 size={16} />
             Vendor Analytics
-          </button>
+          </button> */}
           <button
             onClick={() => setShowVendorForm(true)}
             className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors text-sm sm:text-base flex items-center gap-2"
