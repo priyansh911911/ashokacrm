@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import io from 'socket.io-client';
 
 const SocketContext = createContext();
 
@@ -17,16 +17,24 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-      transports: ['websocket'],
-      autoConnect: true
+      transports: ['polling', 'websocket'],
+      autoConnect: true,
+      forceNew: true
     });
 
     newSocket.on('connect', () => {
+      console.log('Socket connected');
       setIsConnected(true);
       newSocket.emit('join-waiter-dashboard');
     });
 
     newSocket.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setIsConnected(false);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.log('Socket connection error:', error);
       setIsConnected(false);
     });
 

@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
+import io from 'socket.io-client';
 
 const useSocket = () => {
   const socketRef = useRef(null);
 
   useEffect(() => {
     // Initialize socket connection
-    socketRef.current = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+    socketRef.current = io(import.meta.env.VITE_API_URL || 'https://ashoka-backend.vercel.app', {
       transports: ['websocket'],
       autoConnect: true
     });
