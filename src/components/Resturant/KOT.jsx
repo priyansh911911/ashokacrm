@@ -41,7 +41,7 @@ const KOT = () => {
     fetchChefs();
     fetchTables();
     
-    // 🔥 WebSocket listeners
+    // 🔥 WebSocket listeners (fallback to polling if no socket)
     if (socket) {
       socket.on('new-order', (data) => {
         setNewOrderNotification({
@@ -74,6 +74,14 @@ const KOT = () => {
       socket.on('order-status-updated', () => {
         fetchOrders();
       });
+    } else {
+      // Fallback: Poll for updates every 5 seconds
+      const interval = setInterval(() => {
+        fetchKOTs();
+        fetchOrders();
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
 
     return () => {

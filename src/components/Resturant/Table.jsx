@@ -14,7 +14,7 @@ const App = () => {
   useEffect(() => {
     fetchTables();
     
-    // 🔥 WebSocket listeners for table updates
+    // 🔥 WebSocket listeners for table updates (fallback to polling)
     if (socket) {
       socket.on('table-status-updated', (data) => {
         setTables(prev => prev.map(table => 
@@ -35,6 +35,10 @@ const App = () => {
             : table
         ));
       });
+    } else {
+      // Fallback: Poll for table updates every 10 seconds
+      const interval = setInterval(fetchTables, 10000);
+      return () => clearInterval(interval);
     }
 
     return () => {
