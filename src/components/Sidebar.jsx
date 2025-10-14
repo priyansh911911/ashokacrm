@@ -289,7 +289,7 @@ const Sidebar = () => {
       isDropdown: true,
       children: [
         { label: "Item", path: "/pantry/item", icon: ListChecks },
-        { label: "Create Category", path: "/pantry/item?action=create-category", icon: ChartBarStacked },
+        { label: "Create Category", path: "/pantry/category", icon: ChartBarStacked },
         { label: "Orders", path: "/pantry/orders", icon: Package },
         { label: "Vendors", path: "/pantry/vendors", icon: Users },
       ],

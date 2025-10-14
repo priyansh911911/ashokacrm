@@ -4,25 +4,16 @@ import { showToast } from '../../utils/toaster';
 
 const Order = () => {
   const { axios } = useAppContext();
-  
-
   const [menuItems, setMenuItems] = useState([]);
   const [staff, setStaff] = useState([]);
   const [tables, setTables] = useState([]);
   const [bookings, setBookings] = useState([]);
-  
-
   const [cartItems, setCartItems] = useState([]);
- 
   const [isCartOpen, setIsCartOpen] = useState(false);
-
   const [isNoteOpen, setIsNoteOpen] = useState(false);
-
   const [itemToNote, setItemToNote] = useState(null);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [isInHouse, setIsInHouse] = useState(false);
-
   const [orderData, setOrderData] = useState({
     staffName: '',
     staffId: '',
@@ -37,7 +28,7 @@ const Order = () => {
     amount: 0
   });
   
-  const [staffNotification, setStaffNotification] = useState(null);
+
 
   useEffect(() => {
     fetchData();
@@ -268,18 +259,7 @@ const Order = () => {
       existingOrders.push(newOrder);
       localStorage.setItem('newOrders', JSON.stringify(existingOrders));
       
-      // Show staff notification
-      setStaffNotification({
-        staffName: orderData.staffName,
-        orderId: orderResponse.data._id || orderResponse.data.id,
-        tableNo: orderData.tableNo,
-        itemCount: cartItems.length
-      });
-      
-      // Auto-hide notification after 5 seconds
-      setTimeout(() => {
-        setStaffNotification(null);
-      }, 5000);
+
       
       showToast.success('🎉 Order placed successfully!');
       setCartItems([]);
@@ -318,18 +298,7 @@ const Order = () => {
           existingOrders.push(retryOrder);
           localStorage.setItem('newOrders', JSON.stringify(existingOrders));
           
-          // Show staff notification
-          setStaffNotification({
-            staffName: orderData.staffName,
-            orderId: retryResponse.data._id || retryResponse.data.id,
-            tableNo: orderData.tableNo,
-            itemCount: cartItems.length
-          });
-          
-          // Auto-hide notification after 5 seconds
-          setTimeout(() => {
-            setStaffNotification(null);
-          }, 5000);
+
           
           showToast.success('🎉 Order placed successfully!');
           setCartItems([]);
@@ -357,7 +326,7 @@ const Order = () => {
   return (
     <div className="min-h-screen font-sans p-4 sm:p-6 bg-gradient-to-br from-[#f7f5ef] to-[#c3ad6b]/30">
       {/* Staff Notification */}
-      {staffNotification && (
+      {false && (
         <div className="fixed top-4 left-4 z-50 bg-[#c3ad6b] text-white p-4 rounded-lg shadow-lg animate-pulse max-w-sm">
           <div className="flex items-center justify-between">
             <div className="flex-1">
