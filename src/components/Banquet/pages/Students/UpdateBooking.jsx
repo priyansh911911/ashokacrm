@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import useWebSocket from '../../../../hooks/useWebSocket';
 import axios from "axios";
 import {
   FaUser,
@@ -74,6 +75,9 @@ const UpdateBooking = () => {
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [menuLoading, setMenuLoading] = useState(false);
+
+  // WebSocket connection
+  const { sendMessage } = useWebSocket();
 
   // Staff edit limit logic (frontend) - define at component level so it's available in JSX
   const isStaffEditLimitReached =
@@ -614,6 +618,16 @@ const UpdateBooking = () => {
       .put(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/update/${id}`, payload)
       .then((res) => {
         if (res.data) {
+          // Send WebSocket notification for real-time update
+          sendMessage({
+            type: 'BOOKING_UPDATED',
+            data: {
+              id: id,
+              name: payload.name,
+              bookingStatus: payload.bookingStatus
+            }
+          });
+
           toast.success("Booking updated successfully!");
           setLoading(false);
           setTimeout(() => {

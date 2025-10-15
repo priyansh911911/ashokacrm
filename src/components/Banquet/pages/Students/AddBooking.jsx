@@ -1373,6 +1373,7 @@ import axios from "axios";
 import { useAppContext } from "../../../../context/AppContext";
 import MenuSelector from "../Menu/MenuSelector";
 import DashboardLoader from "../../../DashboardLoader";
+import useWebSocket from '../../../../hooks/useWebSocket';
 import {
   FaUser,
   FaArrowLeft,
@@ -1445,6 +1446,9 @@ const AddBooking = () => {
   const [progress, setProgress] = useState(0); // For progress bar
   const [submitSuccess, setSubmitSuccess] = useState(false); // For button animation
   const [submitError, setSubmitError] = useState(false); // For button shake
+
+  // WebSocket connection
+  const { sendMessage } = useWebSocket();
 
   const [form, setForm] = useState({
     name: "",
@@ -1748,6 +1752,16 @@ const AddBooking = () => {
         "https://ashoka-backend.vercel.app/api/banquet-bookings/create",
         payload
       );
+
+      // Send WebSocket notification for real-time update
+      sendMessage({
+        type: 'BOOKING_CREATED',
+        data: {
+          id: response.data._id || response.data.id,
+          name: payload.name,
+          bookingStatus: payload.bookingStatus
+        }
+      });
 
       toast.success("Booking created successfully!");
       const bookingId = response.data._id || response.data.id;
