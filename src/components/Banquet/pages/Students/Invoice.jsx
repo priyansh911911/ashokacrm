@@ -16,7 +16,7 @@ const Invoice = () => {
   const navigate = useNavigate();
 
   const handlePrint = useReactToPrint({
-    contentRef: printRef,
+    content: () => printRef.current,
     documentTitle: `Invoice_${booking?.name}_${booking?.startDate}`,
     pageStyle: `
       @page {

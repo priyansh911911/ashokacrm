@@ -7,6 +7,7 @@ const ChefPDFPreview = ({ booking, className }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [menuData, setMenuData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [contentReady, setContentReady] = useState(false);
   const printRef = useRef();
 
   const fetchMenuData = async () => {
@@ -31,6 +32,7 @@ const ChefPDFPreview = ({ booking, className }) => {
       setMenuData({});
     } finally {
       setLoading(false);
+      setTimeout(() => setContentReady(true), 200);
     }
   };
 
@@ -39,11 +41,38 @@ const ChefPDFPreview = ({ booking, className }) => {
     setShowPreview(true);
   };
 
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: `Chef_Instructions_${booking.customerRef || booking.name}_${new Date().toISOString().split('T')[0]}`,
-    onAfterPrint: () => console.log('Print completed')
-  });
+  const handlePrint = () => {
+    if (printRef.current) {
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Chef Instructions - ${booking.customerRef || booking.name}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              .print-content { max-width: 800px; margin: 0 auto; }
+              h2, h3 { color: #333; }
+              .booking-details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+              .menu-items { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+              .category { border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+              .category h4 { margin: 0 0 10px 0; color: #c3ad6b; }
+              ul { list-style: none; padding: 0; }
+              li { margin: 5px 0; }
+              li:before { content: '• '; color: #c3ad6b; }
+            </style>
+          </head>
+          <body>
+            <div class="print-content">
+              ${printRef.current.innerHTML}
+            </div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
 
   return (
     <>
@@ -67,9 +96,9 @@ const ChefPDFPreview = ({ booking, className }) => {
                 <button
                   onClick={handlePrint}
                   className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm sm:text-base"
-                  disabled={loading}
+                  disabled={loading || !contentReady}
                 >
-                  {loading ? 'Loading...' : 'Download PDF'}
+                  {loading ? 'Loading...' : 'Print PDF'}
                 </button>
                 <button
                   onClick={() => setShowPreview(false)}
