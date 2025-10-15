@@ -40,7 +40,7 @@ const ChefPDFPreview = ({ booking, className }) => {
   };
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `Chef_Instructions_${booking.customerRef || booking.name}_${new Date().toISOString().split('T')[0]}`,
     onAfterPrint: () => console.log('Print completed')
   });
