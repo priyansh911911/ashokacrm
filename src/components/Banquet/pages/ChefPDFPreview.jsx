@@ -65,7 +65,17 @@ const ChefPDFPreview = ({ booking, className }) => {
               <h3 className="text-base sm:text-lg font-semibold">Chef Instructions Preview</h3>
               <div className="flex gap-2 w-full sm:w-auto">
                 <button
-                  onClick={handlePrint}
+                  onClick={() => {
+                    if (!loading) {
+                      setTimeout(() => {
+                        if (printRef.current) {
+                          handlePrint();
+                        } else {
+                          console.error('Print ref is still null after delay');
+                        }
+                      }, 100);
+                    }
+                  }}
                   className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm sm:text-base"
                   disabled={loading}
                 >

@@ -2,21 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import AvailableTable from './Availabletable';
 import Pagination from '../common/Pagination';
+import { useSocket } from '../../context/SocketContext';
 
 // The main application component
 const App = () => {
   const { axios } = useAppContext();
+  const { socket } = useSocket();
   const [tables, setTables] = useState([]);
   const [activeTab, setActiveTab] = useState('manage');
 
   useEffect(() => {
     fetchTables();
-  }, []);
+    
+    // 🔥 WebSocket listeners for table updates (fallback to polling)
+    if (socket) {
+      socket.on('table-status-updated', (data) => {
+        setTables(prev => prev.map(table => 
+          table._id === data.tableId 
+            ? { ...table, status: data.status }
+            : table
+        ));
+      });
+
+      socket.on('table-created', (data) => {
+        setTables(prev => [...prev, data.table]);
+      });
+
+      socket.on('table-updated', (data) => {
+        setTables(prev => prev.map(table => 
+          table._id === data.table._id 
+            ? data.table
+            : table
+        ));
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('table-status-updated');
+        socket.off('table-created');
+        socket.off('table-updated');
+      }
+    };
+  }, [socket]);
 
   const fetchTables = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/restaurant-tables/all', {
+      const response = await axios.get('/api/restaurant/tables', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const tablesData = Array.isArray(response.data) ? response.data : (response.data.tables || []);
@@ -29,7 +62,7 @@ const App = () => {
   const getAllTableNumbers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/restaurant-tables/all', {
+      const response = await axios.get('/api/restaurant/tables', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const tablesData = Array.isArray(response.data) ? response.data : (response.data.tables || []);
@@ -67,7 +100,7 @@ const App = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/restaurant-tables/create', newTable, {
+      await axios.post('/api/restaurant/tables', newTable, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('Table created successfully!');
@@ -78,7 +111,7 @@ const App = () => {
         status: 'available',
         isActive: true,
       });
-      fetchTables();
+      // WebSocket will handle the update
     } catch (error) {
       console.error('Error creating table:', error);
       alert('Failed to create table!');
@@ -89,12 +122,12 @@ const App = () => {
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`/api/restaurant-tables/${id}/status`, {
+      await axios.patch(`/api/restaurant/tables/${id}/status`, {
         status: newStatus
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchTables();
+      // WebSocket will handle the update
     } catch (error) {
       console.error('Error updating table status:', error);
       alert('Failed to update table status!');

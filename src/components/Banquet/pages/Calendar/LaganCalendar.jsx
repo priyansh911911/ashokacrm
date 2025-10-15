@@ -8,6 +8,8 @@ import {
 } from "react-icons/fa";
 import { useAppContext } from '../../../../context/AppContext';
 import DashboardLoader from '../../../DashboardLoader';
+import useWebSocket from '../../../../hooks/useWebSocket';
+import WebSocketStatus from '../../components/WebSocketStatus';
 
 function LaganCalendar() {
   const { axios } = useAppContext();
@@ -63,25 +65,6 @@ function LaganCalendar() {
 
   // Fetch bookings from backend and group by startDate
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const res = await axios.get(
-          "/api/banquet-bookings/"
-        );
-        const grouped = {};
-        res.data.forEach((b) => {
-          // Use only the date part (before 'T') for grouping
-          const dateKey = b.startDate.split("T")[0];
-          if (!grouped[dateKey]) grouped[dateKey] = [];
-          grouped[dateKey].push(b);
-        });
-        setBookings(grouped);
-        console.log("Fetched bookings:", res.data);
-        console.log("Grouped bookings:", grouped);
-      } catch (err) {
-        console.error("Failed to fetch bookings", err);
-      }
-    };
     fetchBookings();
   }, [month, year]);
 
@@ -411,6 +394,46 @@ function LaganCalendar() {
   const [searchResults, setSearchResults] = useState(null); // null = no search, [] = no results
   const [searchLoading, setSearchLoading] = useState(false);
 
+  // WebSocket connection for real-time updates
+  const { lastMessage } = useWebSocket();
+
+  // Handle real-time booking updates
+  useEffect(() => {
+    if (lastMessage) {
+      switch (lastMessage.type) {
+        case 'BOOKING_CREATED':
+        case 'BOOKING_UPDATED':
+        case 'BOOKING_DELETED':
+          // Refresh bookings when any booking changes
+          fetchBookings();
+          break;
+        default:
+          break;
+      }
+    }
+  }, [lastMessage]);
+
+  // Extract fetchBookings function to be reusable
+  const fetchBookings = async () => {
+    try {
+      const res = await axios.get(
+        "/api/banquet-bookings/"
+      );
+      const grouped = {};
+      res.data.forEach((b) => {
+        // Use only the date part (before 'T') for grouping
+        const dateKey = b.startDate.split("T")[0];
+        if (!grouped[dateKey]) grouped[dateKey] = [];
+        grouped[dateKey].push(b);
+      });
+      setBookings(grouped);
+      console.log("Fetched bookings:", res.data);
+      console.log("Grouped bookings:", grouped);
+    } catch (err) {
+      console.error("Failed to fetch bookings", err);
+    }
+  };
+
   // Get bookings for the selected date
   const bookingsForDate = bookings[selectedDate] || [];
   // Filter bookings by status if filter is not 'All'
@@ -439,13 +462,21 @@ function LaganCalendar() {
     >
       {/* Header with Ashoka colors */}
       <div className=" p-1 rounded-xl mb-6 shadow-lg">
-        <div>
+        <div className="flex justify-between items-center">
           {/* Show user role */}
           {isMobile && (
             <div className="w-full flex justify-center items-center">
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-100 to-yellow-100 font-semibold text-sm shadow" style={{ color: '#5D4037' }}>
                 {userRole === "Admin" ? "👑 Admin" : "👤 Staff"}
               </span>
+            </div>
+          )}
+          {!isMobile && (
+            <div className="flex items-center justify-between w-full">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-amber-100 to-yellow-100 font-semibold text-sm shadow" style={{ color: '#5D4037' }}>
+                {userRole === "Admin" ? "👑 Admin" : "👤 Staff"}
+              </span>
+              <WebSocketStatus />
             </div>
           )}
         </div>

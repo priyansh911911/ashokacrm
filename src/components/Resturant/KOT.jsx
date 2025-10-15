@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import Pagination from '../common/Pagination';
+import { useSocket } from '../../context/SocketContext';
 
 const KOT = () => {
   const { axios } = useAppContext();
@@ -30,6 +31,8 @@ const KOT = () => {
   const [userRole, setUserRole] = useState(null);
   const [userRestaurantRole, setUserRestaurantRole] = useState(null);
 
+  const { socket } = useSocket();
+
   useEffect(() => {
     fetchUserRole();
     fetchMenuItems();
@@ -38,33 +41,50 @@ const KOT = () => {
     fetchChefs();
     fetchTables();
     
-    // Show test notification
-    setTimeout(() => {
-      setNewOrderNotification({
-        tableNo: '5',
-        itemCount: 3,
-        orderId: 'TEST123',
-        items: [{name: 'Burger'}, {name: 'Fries'}, {name: 'Coke'}]
+    // 🔥 WebSocket listeners (fallback to polling if no socket)
+    if (socket) {
+      socket.on('new-order', (data) => {
+        setNewOrderNotification({
+          tableNo: data.tableNo,
+          itemCount: data.itemCount,
+          orderId: data.order._id,
+          items: data.kot.items || []
+        });
+        fetchKOTs();
+        fetchOrders();
+        setTimeout(() => setNewOrderNotification(null), 5000);
       });
-    }, 3000);
-    
-    // Show staff notification
-    setTimeout(() => {
-      setStaffNotification({
-        title: 'Staff Alert',
-        message: 'New task assigned to kitchen staff',
-        type: 'info'
+
+      socket.on('new-kot', (data) => {
+        setNewOrderNotification({
+          tableNo: data.tableNo,
+          itemCount: data.itemCount,
+          orderId: data.kot.orderId,
+          items: data.kot.items || []
+        });
+        fetchKOTs();
+        setTimeout(() => setNewOrderNotification(null), 5000);
       });
-    }, 5000);
-    
-    // Check for new orders every 2 seconds
-    const interval = setInterval(() => {
-      checkForNewOrders();
-      checkForNewKOTs();
-    }, 2000);
-    
-    return () => clearInterval(interval);
-  }, []);
+
+      socket.on('kot-status-updated', () => {
+        fetchKOTs();
+        fetchOrders();
+      });
+
+      socket.on('order-status-updated', () => {
+        fetchOrders();
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('new-order');
+        socket.off('new-kot');
+        socket.off('kot-status-updated');
+        socket.off('order-status-updated');
+      }
+    };
+  }, [socket]);
   
   // Re-fetch KOTs when menu items are loaded
   useEffect(() => {
@@ -176,56 +196,7 @@ const KOT = () => {
     }
   };
   
-  const checkForNewOrders = () => {
-    const newOrders = JSON.parse(localStorage.getItem('newOrders') || '[]');
-    if (newOrders.length > 0) {
-      const latestOrder = newOrders[newOrders.length - 1];
-      setNewOrderNotification({
-        tableNo: latestOrder.tableNo,
-        itemCount: latestOrder.items?.length || 0,
-        orderId: latestOrder.orderId,
-        items: latestOrder.items || []
-      });
-      
-      // Clear the notification from localStorage
-      localStorage.removeItem('newOrders');
-      
-      // Auto-hide notification after 5 seconds
-      setTimeout(() => {
-        setNewOrderNotification(null);
-      }, 5000);
-    }
-  };
-  
-  const checkForNewKOTs = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/kot/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const currentKotCount = response.data.length;
-      if (lastKotCount > 0 && currentKotCount > lastKotCount) {
-        const newKots = response.data.slice(lastKotCount);
-        if (newKots.length > 0) {
-          const latestKot = newKots[0];
-          setNewOrderNotification({
-            tableNo: latestKot.tableNo,
-            itemCount: latestKot.items?.length || 0,
-            orderId: latestKot.orderId,
-            items: latestKot.items || []
-          });
-          
-          setTimeout(() => {
-            setNewOrderNotification(null);
-          }, 5000);
-        }
-      }
-      setLastKotCount(currentKotCount);
-    } catch (error) {
-      console.error('Error checking for new KOTs:', error);
-    }
-  };
+
 
   const fetchOrders = async () => {
     try {
@@ -233,23 +204,6 @@ const KOT = () => {
       const response = await axios.get('/api/restaurant-orders/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      // Check for new orders
-      if (orderCount > 0 && response.data.length > orderCount) {
-        const newOrder = response.data[response.data.length - 1];
-        setNewOrderNotification({
-          tableNo: newOrder.tableNo,
-          itemCount: newOrder.items?.length || 0,
-          orderId: newOrder._id,
-          items: newOrder.items || []
-        });
-        
-        setTimeout(() => {
-          setNewOrderNotification(null);
-        }, 8000);
-      }
-      
-      setOrderCount(response.data.length);
       setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);

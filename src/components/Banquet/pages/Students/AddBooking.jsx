@@ -1373,6 +1373,7 @@ import axios from "axios";
 import { useAppContext } from "../../../../context/AppContext";
 import MenuSelector from "../Menu/MenuSelector";
 import DashboardLoader from "../../../DashboardLoader";
+import useWebSocket from '../../../../hooks/useWebSocket';
 import {
   FaUser,
   FaArrowLeft,
@@ -1446,6 +1447,9 @@ const AddBooking = () => {
   const [submitSuccess, setSubmitSuccess] = useState(false); // For button animation
   const [submitError, setSubmitError] = useState(false); // For button shake
 
+  // WebSocket connection
+  const { sendMessage } = useWebSocket();
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -1468,7 +1472,7 @@ const AddBooking = () => {
 
     ratePlan: "",
     roomOption: "complimentary",
-    complimentaryRooms: 2,
+    complimentaryRooms: "",
     advance: [],
     gst: "", // GST input (manual)
     total: "",
@@ -1487,7 +1491,8 @@ const AddBooking = () => {
     useCustomPrice: false, // Admin can override calculated price
     customPlatePrice: "", // Custom price per plate
     paymentMethod: "cash", // Payment method
-    transactionId: "" // Transaction ID for online payments
+    transactionId: "", // Transaction ID for online payments
+    mealPlan: "Without Breakfast" // Meal plan option
   });
 
   // Calculate total when pax, ratePlan, foodType, gst, discount, decoration, or music charges change
@@ -1747,6 +1752,16 @@ const AddBooking = () => {
         "https://ashoka-backend.vercel.app/api/banquet-bookings/create",
         payload
       );
+
+      // Send WebSocket notification for real-time update
+      sendMessage({
+        type: 'BOOKING_CREATED',
+        data: {
+          id: response.data._id || response.data.id,
+          name: payload.name,
+          bookingStatus: payload.bookingStatus
+        }
+      });
 
       toast.success("Booking created successfully!");
       const bookingId = response.data._id || response.data.id;
@@ -2230,6 +2245,30 @@ const AddBooking = () => {
                       {errors.foodType}
                     </p>
                   )}
+                </div>
+
+                {/* Meal Plan */}
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      name="mealPlan"
+                      checked={form.mealPlan === "With Breakfast"}
+                      onChange={(e) => {
+                        setForm(prev => ({
+                          ...prev,
+                          mealPlan: e.target.checked ? "With Breakfast" : "Without Breakfast"
+                        }));
+                      }}
+                      className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
+                    />
+                    <label className="text-sm font-medium text-gray-700">
+                      With Breakfast
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {form.mealPlan === "With Breakfast" ? "Breakfast included" : "Without breakfast"}
+                  </p>
                 </div>
 
                 {/* Custom Plate Price - Admin Only */}

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import useWebSocket from '../../../../hooks/useWebSocket';
 import axios from "axios";
 import {
   FaUser,
@@ -67,12 +68,16 @@ const UpdateBooking = () => {
     statusChangedAt: null, // Track when status changes
     staffEditCount: 0, // Added for staff edit limit logic
     paymentMethod: "cash", // Payment method
-    transactionId: "" // Transaction ID for online payments
+    transactionId: "", // Transaction ID for online payments
+    mealPlan: "Without Breakfast" // Meal plan option
   });
 
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [menuLoading, setMenuLoading] = useState(false);
+
+  // WebSocket connection
+  const { sendMessage } = useWebSocket();
 
   // Staff edit limit logic (frontend) - define at component level so it's available in JSX
   const isStaffEditLimitReached =
@@ -613,6 +618,16 @@ const UpdateBooking = () => {
       .put(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/update/${id}`, payload)
       .then((res) => {
         if (res.data) {
+          // Send WebSocket notification for real-time update
+          sendMessage({
+            type: 'BOOKING_UPDATED',
+            data: {
+              id: id,
+              name: payload.name,
+              bookingStatus: payload.bookingStatus
+            }
+          });
+
           toast.success("Booking updated successfully!");
           setLoading(false);
           setTimeout(() => {
@@ -1031,6 +1046,30 @@ const UpdateBooking = () => {
                   <option value="Gold">Gold</option>
                   <option value="Platinum">Platinum</option>
                 </select>
+              </div>
+
+              {/* Meal Plan */}
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="mealPlan"
+                    checked={booking.mealPlan === "With Breakfast"}
+                    onChange={(e) => {
+                      setBooking(prev => ({
+                        ...prev,
+                        mealPlan: e.target.checked ? "With Breakfast" : "Without Breakfast"
+                      }));
+                    }}
+                    className="rounded border-gray-300 text-[#c3ad6b] focus:ring-[#c3ad6b]"
+                  />
+                  <label className="text-sm font-medium text-gray-700">
+                    With Breakfast
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {booking.mealPlan === "With Breakfast" ? "Breakfast included" : "Without breakfast"}
+                </p>
               </div>
 
               {/* Custom Plate Price - Admin Only */}

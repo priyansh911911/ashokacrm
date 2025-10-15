@@ -30,7 +30,7 @@ const Order = () => {
 
   // Form state
   const [formData, setFormData] = useState({
-    orderType: 'Kitchen to Pantry',
+    orderType: '',
     selectedItems: [],
     priority: 'medium',
     notes: '',
@@ -213,7 +213,7 @@ const Order = () => {
       const newItem = {
         pantryItemId: firstItem._id,
         name: firstItem.name,
-        quantity: 1,
+        quantity: "",
         unit: firstItem.unit || 'pcs',
         unitPrice: firstItem.price || 0,
         notes: ''
@@ -285,7 +285,7 @@ const Order = () => {
 
   const resetForm = () => {
     setFormData({
-      orderType: 'Kitchen to Pantry',
+      orderType: '',
       selectedItems: [],
       priority: 'medium',
       notes: '',
@@ -991,10 +991,10 @@ const Order = () => {
                       onChange={(e) => setFormData(prev => ({ ...prev, orderType: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     >
+                      <option value="">Select Order Type</option>
                       <option value="Kitchen to Pantry">Kitchen to Pantry</option>
                       <option value="Pantry to Reception">Pantry to Reception</option>
                       <option value="Reception to Vendor">Reception to Vendor</option>
-                      {/* <option value="Daily Essentials Distributor">🛒 Daily Essentials Distributor</option> */}
                     </select>
                   </div>
                   
@@ -1181,17 +1181,8 @@ const Order = () => {
                 )}
 
                 <div>
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="mb-3">
                     <label className="block text-sm font-medium text-gray-700">Items</label>
-                    <button
-                      type="button"
-                      onClick={addItem}
-                      disabled={pantryItems.length === 0}
-                      className="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                    >
-                      <Plus size={14} />
-                      Add Item ({pantryItems.length} available)
-                    </button>
                   </div>
                   
                   {pantryItems.length === 0 ? (
@@ -1199,8 +1190,19 @@ const Order = () => {
                       No pantry items available. Please add pantry items first before creating orders.
                     </div>
                   ) : formData.selectedItems.length === 0 ? (
-                    <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
-                      No items added yet. Click "Add Item" to add items to this order.
+                    <div className="space-y-3">
+                      <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+                        No items added yet. Click "Add Item" to add items to this order.
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addItem}
+                        disabled={pantryItems.length === 0}
+                        className="w-full bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-2 rounded text-sm hover:bg-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                      >
+                        <Plus size={14} />
+                        Add Item ({pantryItems.length} available)
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -1233,7 +1235,8 @@ const Order = () => {
                               <label className="block text-xs text-gray-500 mb-1">Quantity</label>
                               <input
                                 type="number"
-                                min="1"
+                                min="0.1"
+                                step="0.1"
                                 value={item.quantity}
                                 onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
@@ -1263,8 +1266,22 @@ const Order = () => {
                           <div className="text-xs text-gray-500">
                             Unit: {item.unit}
                           </div>
+
                         </div>
                       ))}
+                      
+                      {/* Add Item button that appears after all items */}
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={addItem}
+                          disabled={pantryItems.length === 0}
+                          className="w-full bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-2 rounded text-sm hover:bg-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                        >
+                          <Plus size={14} />
+                          Add Item ({pantryItems.length} available)
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

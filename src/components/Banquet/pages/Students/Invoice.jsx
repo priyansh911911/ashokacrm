@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useReactToPrint } from "react-to-print";
 import Logo from "../../../../assets/logo.png";
+import WaterMark from "../../../../assets/WaterMark.png";
 import { useNavigate } from "react-router-dom";
 
 const Invoice = () => {
@@ -15,7 +16,7 @@ const Invoice = () => {
   const navigate = useNavigate();
 
   const handlePrint = useReactToPrint({
-    contentRef: printRef,
+    content: () => printRef.current,
     documentTitle: `Invoice_${booking?.name}_${booking?.startDate}`,
     pageStyle: `
       @page {
@@ -25,6 +26,32 @@ const Invoice = () => {
       @media print {
         body { -webkit-print-color-adjust: exact; }
         .print\\:hidden { display: none !important; }
+        * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
+        .print\\:text-lg { font-size: 1.125rem !important; }
+        .print\\:text-sm { font-size: 0.875rem !important; }
+        .print\\:text-xs { font-size: 0.75rem !important; }
+        .print\\:leading-tight { line-height: 1.25 !important; }
+        .watermark-container::before {
+          content: '' !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          background-image: url('${WaterMark}') !important;
+          background-size: 80% !important;
+          background-position: center !important;
+          background-repeat: no-repeat !important;
+          opacity: 0.3 !important;
+          z-index: 1 !important;
+          pointer-events: none !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .watermark-content {
+          position: relative !important;
+          z-index: 2 !important;
+        }
       }
     `
   });
@@ -145,8 +172,16 @@ const Invoice = () => {
 
         <div
           ref={printRef}
-          className="bg-white shadow-lg rounded-lg overflow-hidden print:shadow-none print:rounded-none print:max-w-none print:m-0 print:p-4 print:text-xs print:leading-tight"
+          className="watermark-container bg-white shadow-lg rounded-lg overflow-hidden print:shadow-none print:rounded-none print:max-w-none print:m-0 print:p-4 print:text-xs print:leading-tight relative"
+          style={{
+            backgroundImage: `url(${WaterMark})`,
+            backgroundSize: '80%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
         >
+          <div className="absolute inset-0 bg-white/60 print:bg-white/60 pointer-events-none"></div>
+          <div className="watermark-content relative z-10">
           {/* Header */}
           <div className="bg-[#f7f5ef] px-8 py-6 print:bg-white print:px-2 print:py-3 print:border-b print:border-gray-300">
             <div className="flex items-center justify-between print:flex-row">
@@ -208,12 +243,30 @@ const Invoice = () => {
               </div>
             </div>
 
+            {/* Terms & Conditions */}
+            <div className="mb-8 print:mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4  pb-2 print:text-xs print:text-black print:mb-1 print:pb-0 print:font-bold">
+                Terms & Conditions
+              </h3>
+              <div className="rounded-lg p-4  print:p-2">
+                <ul className="text-sm text-gray-700 space-y-1 print:text-xs print:text-black print:space-y-0">
+                  <li>• Lunch timing will be from 10 AM - 4PM and Dinner timing will be from 6PM - 11PM.</li>
+                  <li>• Advance is Non-refundable & Non-transferable.</li>
+                  <li>• Booking rate once finalized will not be changed at the time of final payment.</li>
+                  <li>• Loud music will not be allowed after 11PM.</li>
+                  <li>• 50% advance payment required at the time of booking.</li>
+                  <li>• LCD Projector will be charged Rs4000 Only.</li>
+                  <li>• Mike & Sound system will be provided for Rs3000 Only.</li>
+                </ul>
+              </div>
+            </div>
+
             {/* Package Details */}
             <div className="mb-8 print:mb-2">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2 print:text-xs print:text-black print:mb-1 print:pb-0 print:font-bold">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 print:text-xs print:text-black print:mb-1 print:pb-0 print:font-bold">
                 Package Details
               </h3>
-              <div className="bg-gray-50 rounded-lg p-4 print:bg-white print:p-2 print:border print:border-gray-300">
+              <div className=" rounded-lg p-4  print:p-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-4 print:items-start">
                   <div>
                     <p className="font-medium text-gray-600 print:text-xs print:text-black">Rate Plan</p>
@@ -231,7 +284,7 @@ const Invoice = () => {
                       Object.entries(booking.categorizedMenu)
                         .filter(([key, items]) => !['_id', 'bookingRef', 'customerRef', 'createdAt', 'updatedAt', '__v'].includes(key) && Array.isArray(items) && items.length > 0)
                         .map(([category, items]) => (
-                          <div key={category} className="bg-white rounded-lg p-2 border border-gray-200 print:bg-transparent print:p-1 print:border-none">
+                          <div key={category} className="p-2 print:p-1">
                             <h4 className="font-medium text-[#c3ad6b] mb-1 text-xs print:text-xs print:text-black print:mb-0 print:font-bold">
                               {category.replaceAll('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                             </h4>
@@ -341,6 +394,7 @@ const Invoice = () => {
               <p className="mb-2 print:mb-0">Thank you for choosing Ashoka Hotel!</p>
               <p className="print:hidden">For any queries, please contact us at your convenience.</p>
             </div>
+          </div>
           </div>
         </div>
       </div>

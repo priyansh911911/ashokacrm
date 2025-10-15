@@ -4,6 +4,7 @@ import axios from "axios";
 import { useReactToPrint } from "react-to-print";
 import Logo from "/src/assets/logo.png";
 import { useNavigate } from "react-router-dom";
+import WebSocketStatus from '../../components/WebSocketStatus';
 
 const MenuView = () => {
   const { id } = useParams();
@@ -98,12 +99,15 @@ const MenuView = () => {
     );
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-4 px-4 py-2 bg-[#c3ad6b]/20 text-[#c3ad6b] rounded hover:bg-[#c3ad6b]/40 font-semibold shadow print:shadow-none print:bg-gray-200 print:text-black"
-      >
-        ← Back
-      </button>
+      <div className="flex justify-between items-center mb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 bg-[#c3ad6b]/20 text-[#c3ad6b] rounded hover:bg-[#c3ad6b]/40 font-semibold shadow print:shadow-none print:bg-gray-200 print:text-black"
+        >
+          ← Back
+        </button>
+        <WebSocketStatus className="print:hidden" />
+      </div>
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <img

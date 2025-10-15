@@ -3,7 +3,7 @@ import axios from "axios";
 
 // Main axios instance
 const mainAxios = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL,
+  baseURL: import.meta.env.VITE_API_URL || 'https://ashoka-backend.vercel.app',
   withCredentials: true
 });
 

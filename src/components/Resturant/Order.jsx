@@ -1,28 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
+import { useSocket } from '../../context/SocketContext';
 
 const Order = () => {
   const { axios } = useAppContext();
-  
-
+  const { socket } = useSocket();
   const [menuItems, setMenuItems] = useState([]);
   const [staff, setStaff] = useState([]);
   const [tables, setTables] = useState([]);
   const [bookings, setBookings] = useState([]);
-  
-
   const [cartItems, setCartItems] = useState([]);
- 
   const [isCartOpen, setIsCartOpen] = useState(false);
-
   const [isNoteOpen, setIsNoteOpen] = useState(false);
-
   const [itemToNote, setItemToNote] = useState(null);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [isInHouse, setIsInHouse] = useState(false);
-
   const [orderData, setOrderData] = useState({
     staffName: '',
     staffId: '',
@@ -37,7 +30,7 @@ const Order = () => {
     amount: 0
   });
   
-  const [staffNotification, setStaffNotification] = useState(null);
+
 
   useEffect(() => {
     fetchData();
@@ -251,35 +244,9 @@ const Order = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Store order for KOT notification
-      const newOrder = {
-        orderId: orderResponse.data._id || orderResponse.data.id,
-        tableNo: orderData.tableNo,
-        items: cartItems.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          note: item.note || ''
-        })),
-        timestamp: Date.now()
-      };
+      // WebSocket notification is handled by backend
       
-      // Store in localStorage for KOT notification
-      const existingOrders = JSON.parse(localStorage.getItem('newOrders') || '[]');
-      existingOrders.push(newOrder);
-      localStorage.setItem('newOrders', JSON.stringify(existingOrders));
-      
-      // Show staff notification
-      setStaffNotification({
-        staffName: orderData.staffName,
-        orderId: orderResponse.data._id || orderResponse.data.id,
-        tableNo: orderData.tableNo,
-        itemCount: cartItems.length
-      });
-      
-      // Auto-hide notification after 5 seconds
-      setTimeout(() => {
-        setStaffNotification(null);
-      }, 5000);
+
       
       showToast.success('🎉 Order placed successfully!');
       setCartItems([]);
@@ -302,34 +269,9 @@ const Order = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
           
-          // Store retry order for KOT notification
-          const retryOrder = {
-            orderId: retryResponse.data._id || retryResponse.data.id,
-            tableNo: orderData.tableNo,
-            items: cartItems.map(item => ({
-              name: item.name,
-              quantity: item.quantity,
-              note: item.note || ''
-            })),
-            timestamp: Date.now()
-          };
+          // WebSocket notification is handled by backend
           
-          const existingOrders = JSON.parse(localStorage.getItem('newOrders') || '[]');
-          existingOrders.push(retryOrder);
-          localStorage.setItem('newOrders', JSON.stringify(existingOrders));
-          
-          // Show staff notification
-          setStaffNotification({
-            staffName: orderData.staffName,
-            orderId: retryResponse.data._id || retryResponse.data.id,
-            tableNo: orderData.tableNo,
-            itemCount: cartItems.length
-          });
-          
-          // Auto-hide notification after 5 seconds
-          setTimeout(() => {
-            setStaffNotification(null);
-          }, 5000);
+
           
           showToast.success('🎉 Order placed successfully!');
           setCartItems([]);
@@ -357,7 +299,7 @@ const Order = () => {
   return (
     <div className="min-h-screen font-sans p-4 sm:p-6 bg-gradient-to-br from-[#f7f5ef] to-[#c3ad6b]/30">
       {/* Staff Notification */}
-      {staffNotification && (
+      {false && (
         <div className="fixed top-4 left-4 z-50 bg-[#c3ad6b] text-white p-4 rounded-lg shadow-lg animate-pulse max-w-sm">
           <div className="flex items-center justify-between">
             <div className="flex-1">
