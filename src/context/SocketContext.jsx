@@ -16,30 +16,32 @@ export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    // Only try to connect to Socket.io in development mode with localhost
+    const isDevelopment = import.meta.env.DEV;
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const isLocalhost = apiUrl && apiUrl.includes('localhost');
+    
+    if (!isDevelopment || !isLocalhost) {
+      console.log('Socket.io disabled - not in development mode or not using localhost');
+      return;
+    }
+
     let newSocket = null;
-    let connectionAttempts = 0;
-    const maxAttempts = 2;
-
+    
     const connectSocket = () => {
-      if (connectionAttempts >= maxAttempts) {
-        console.log('Socket connection failed after max attempts');
-        return;
-      }
-
-      connectionAttempts++;
-      
-      newSocket = io(import.meta.env.VITE_API_URL || 'https://ashoka-backend.vercel.app', {
+      newSocket = io(apiUrl, {
         transports: ['polling', 'websocket'],
         autoConnect: true,
         forceNew: true,
-        timeout: 3000,
-        reconnection: false // Disable automatic reconnection to prevent spam
+        timeout: 5000,
+        reconnection: true,
+        reconnectionAttempts: 3,
+        reconnectionDelay: 2000
       });
 
       newSocket.on('connect', () => {
-        console.log('Socket connected');
+        console.log('Socket connected to local server');
         setIsConnected(true);
-        connectionAttempts = 0; // Reset on successful connection
         newSocket.emit('join-waiter-dashboard');
       });
 
@@ -49,14 +51,8 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('connect_error', (error) => {
-        console.log('Socket connection failed - server may be offline');
+        console.log('Socket connection failed - local server not running');
         setIsConnected(false);
-        newSocket.close();
-        
-        // Retry after delay if under max attempts
-        if (connectionAttempts < maxAttempts) {
-          setTimeout(connectSocket, 3000);
-        }
       });
 
       setSocket(newSocket);
