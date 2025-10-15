@@ -81,11 +81,14 @@ function Item() {
     setLoading(true);
     try {
       const token = getAuthToken();
+      console.log('Fetching pantry items...');
       const { data } = await axios.get('/api/pantry/items', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Items fetched:', data);
       setItems(data.items || []);
     } catch (err) {
+      console.error('Error fetching items:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -95,9 +98,11 @@ function Item() {
   const fetchCategories = async () => {
     try {
       const token = getAuthToken();
+      console.log('Fetching categories...');
       const { data } = await axios.get('/api/pantry-categories/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Categories fetched:', data);
       setCategories(data || []);
     } catch (err) {
       console.error('Error fetching categories:', err);
@@ -105,19 +110,26 @@ function Item() {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPageLoading(false);
-    }, 2000);
-    fetchItems();
-    fetchCategories();
+    const initializePage = async () => {
+      try {
+        await Promise.all([fetchItems(), fetchCategories()]);
+        
+        // Check if accessed from sidebar for category creation
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'create-category') {
+          setShowCategoryForm(true);
+          // Clear the URL parameter
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } catch (error) {
+        console.error('Error initializing page:', error);
+        setError('Failed to load page data');
+      } finally {
+        setPageLoading(false);
+      }
+    };
     
-    // Check if accessed from sidebar for category creation
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('action') === 'create-category') {
-      setShowCategoryForm(true);
-    }
-    
-    return () => clearTimeout(timer);
+    initializePage();
   }, []);
 
   if (pageLoading) {

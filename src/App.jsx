@@ -27,6 +27,7 @@ import Driver from "./components/cab/Driver.jsx";
 import PantryItems from "./components/Pantry/Item.jsx";
 import PantryOrders from "./components/Pantry/Order.jsx";
 import PantryVendors from "./components/Pantry/Vendor.jsx";
+import CategoryPage from "./components/Pantry/CategoryPage.jsx";
 import Resturant from "./components/Resturant/Resturant.jsx";
 import StaffWorkTask from "./components/StaffWorkTask";
 import Orders from "./components/Resturant/Allorders.jsx";
@@ -151,6 +152,7 @@ const App = () => {
 
                       <Route path="/resturant" element={<Resturant />} />
                       <Route path="/pantry/item" element={<PantryItems />} />
+                      <Route path="/pantry/category" element={<CategoryPage />} />
                       <Route path="/pantry/orders" element={<PantryOrders />} />
                       <Route path="/pantry/vendors" element={<PantryVendors />} />
                       <Route 
