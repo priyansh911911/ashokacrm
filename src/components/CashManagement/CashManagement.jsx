@@ -212,30 +212,30 @@ const CashManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-yellow-50 w-full overflow-x-hidden">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-lg border-b" style={{borderColor: '#c3ad6b'}}>
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6">
-            <div className="w-full lg:w-auto">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4" style={{color: '#5D4037'}}>
-                <div className="p-2 sm:p-3 rounded-xl shadow-lg" style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)'}}>
-                  <IndianRupee className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-white" />
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6 md:py-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+            <div className="w-full md:w-auto">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl xl:text-5xl font-bold flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4" style={{color: '#5D4037'}}>
+                <div className="p-2 sm:p-3 md:p-4 rounded-xl shadow-lg" style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)'}}>
+                  <IndianRupee className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 xl:h-12 xl:w-12 text-white" />
                 </div>
-                <span className="text-xl sm:text-2xl lg:text-4xl" style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                <span className="text-xl sm:text-2xl md:text-4xl xl:text-5xl" style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
                   Cash Management
                 </span>
               </h1>
-              <p className="text-gray-600 mt-2 text-sm sm:text-base lg:text-lg">Monitor and manage your cash flow operations</p>
+              <p className="text-gray-600 mt-2 text-sm sm:text-base md:text-lg xl:text-xl">Monitor and manage your cash flow operations</p>
             </div>
             <button 
               onClick={() => setShowTransactionForm(true)}
-              className="w-full sm:w-auto text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+              className="w-full md:w-auto text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-xl font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base md:text-lg"
               style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)'}}
               onMouseEnter={(e) => e.target.style.background = 'linear-gradient(to right, #b39b5a, #c3ad6b)'}
               onMouseLeave={(e) => e.target.style.background = 'linear-gradient(to right, #c3ad6b, #d4c078)'}
             >
-              <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6" />
+              <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
               <span className="hidden sm:inline">Add Transaction</span>
               <span className="sm:hidden">Add</span>
             </button>
@@ -243,9 +243,9 @@ const CashManagement = () => {
         </div>
       </div>
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6 md:py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
           <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #c3ad6b'}}>
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
@@ -325,7 +325,7 @@ const CashManagement = () => {
         </div>
 
         {/* Source Breakdown Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
           {['RESTAURANT', 'ROOM_BOOKING', 'BANQUET + PARTY', 'OTHER'].map((source, index) => {
             const sourceData = (cashData.sourceBreakdown || []).find(s => s._id === source) || { total: 0 };
             
@@ -353,19 +353,19 @@ const CashManagement = () => {
         </div>
 
         {/* Recent Transactions */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 p-8">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6 md:p-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <div className="flex items-center gap-3">
               <h3 className="text-lg font-bold text-gray-900">Recent Transactions</h3>
               {filterLoading && (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-200 border-t-amber-500"></div>
               )}
             </div>
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
               <select 
                 value={dateFilter} 
                 onChange={(e) => handleDateFilterChange(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm w-full sm:w-auto">
                 <option value="all">All</option>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
@@ -380,19 +380,19 @@ const CashManagement = () => {
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     placeholder="Start Date"
-                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm w-full sm:w-auto"
                   />
                   <input 
                     type="date" 
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     placeholder="End Date"
-                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm w-full sm:w-auto"
                   />
                   <button
                     onClick={handleDateRangeChange}
                     disabled={!startDate || !endDate}
-                    className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                    className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors w-full sm:w-auto"
                     style={{backgroundColor: 'hsl(45, 43%, 58%)', color: 'white'}}
                   >
                     Apply
@@ -402,7 +402,7 @@ const CashManagement = () => {
               <select 
                 value={sourceFilter} 
                 onChange={(e) => handleSourceFilterChange(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm w-full sm:w-auto">
                 <option value="all">All Sources</option>
                 <option value="RESTAURANT">Restaurant</option>
                 <option value="ROOM_BOOKING">Room Booking</option>
@@ -414,14 +414,14 @@ const CashManagement = () => {
           
           <div className="overflow-x-auto">
             {cashData.recentTransactions.length > 0 ? (
-              <table className="w-full text-sm">
+              <table className="min-w-full text-sm">
                 <thead>
                   <tr style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
-                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Amount</th>
-                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Transaction Type</th>
-                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Source</th>
-                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Description</th>
-                    <th className="text-left p-3 font-medium" style={{color: 'hsl(45, 100%, 30%)'}}>Time</th>
+                    <th className="text-left p-2 sm:p-3 font-medium whitespace-nowrap" style={{color: 'hsl(45, 100%, 30%)'}}>Amount</th>
+                    <th className="text-left p-2 sm:p-3 font-medium whitespace-nowrap" style={{color: 'hsl(45, 100%, 30%)'}}>Type</th>
+                    <th className="text-left p-2 sm:p-3 font-medium whitespace-nowrap" style={{color: 'hsl(45, 100%, 30%)'}}>Source</th>
+                    <th className="text-left p-2 sm:p-3 font-medium whitespace-nowrap" style={{color: 'hsl(45, 100%, 30%)'}}>Description</th>
+                    <th className="text-left p-2 sm:p-3 font-medium whitespace-nowrap" style={{color: 'hsl(45, 100%, 30%)'}}>Time</th>
                   </tr>
                 </thead>
                 <tbody>
