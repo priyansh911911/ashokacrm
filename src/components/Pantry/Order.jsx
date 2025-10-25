@@ -27,6 +27,14 @@ const Order = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentVendor, setPaymentVendor] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
+  const [fulfillmentOrder, setFulfillmentOrder] = useState(null);
+  const [fulfillmentData, setFulfillmentData] = useState({
+    previousAmount: 0,
+    newAmount: 0,
+    notes: '',
+    pricingImage: null
+  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -426,6 +434,47 @@ const Order = () => {
     setShowViewModal(true);
   };
 
+  const handleFulfillOrder = (order) => {
+    setFulfillmentOrder(order);
+    setFulfillmentData({
+      previousAmount: order.totalAmount || 0,
+      newAmount: order.totalAmount || 0,
+      notes: '',
+      pricingImage: null
+    });
+    setShowFulfillmentModal(true);
+  };
+
+  const submitFulfillment = async () => {
+    if (!fulfillmentOrder) return;
+    
+    setLoading(true);
+    try {
+      const requestData = {
+        previousAmount: fulfillmentData.previousAmount,
+        newAmount: fulfillmentData.newAmount,
+        difference: fulfillmentData.newAmount - fulfillmentData.previousAmount,
+        notes: fulfillmentData.notes
+      };
+
+      await axios.put(`/api/pantry/fulfill-invoice/${fulfillmentOrder._id}`, requestData, {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      showToast.success('Order fulfilled successfully');
+      setShowFulfillmentModal(false);
+      setFulfillmentOrder(null);
+      fetchOrders();
+    } catch (error) {
+      showToast.error('Failed to fulfill order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (isInitialLoading) {
     return <DashboardLoader pageName="Pantry Orders" />;
   }
@@ -745,7 +794,7 @@ const Order = () => {
                         )}
                         {order.status === 'approved' && (
                           <button
-                            onClick={() => updateOrderStatus(order._id, 'fulfilled')}
+                            onClick={() => handleFulfillOrder(order)}
                             className="text-blue-600 hover:text-blue-900 text-xs"
                           >
                             Fulfill
@@ -843,7 +892,7 @@ const Order = () => {
                 )}
                 {order.status === 'approved' && (
                   <button
-                    onClick={() => updateOrderStatus(order._id, 'fulfilled')}
+                    onClick={() => handleFulfillOrder(order)}
                     className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
                   >
                     Fulfill
@@ -1531,6 +1580,112 @@ const Order = () => {
                   className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fulfillment Modal */}
+      {showFulfillmentModal && fulfillmentOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Fulfill Order</h2>
+                <button
+                  onClick={() => setShowFulfillmentModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-3 rounded">
+                  <h3 className="font-medium text-gray-900 mb-2">Order Details</h3>
+                  <p className="text-sm text-gray-600">Order ID: #{fulfillmentOrder._id?.slice(-8)}</p>
+                  <p className="text-sm text-gray-600">Vendor: {getVendorName(fulfillmentOrder.vendorId)}</p>
+                  <p className="text-sm text-gray-600">Items: {fulfillmentOrder.items?.length || 0}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Previous Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={fulfillmentData.previousAmount}
+                    onChange={(e) => setFulfillmentData(prev => ({ 
+                      ...prev, 
+                      previousAmount: parseFloat(e.target.value) || 0 
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={fulfillmentData.newAmount}
+                    onChange={(e) => setFulfillmentData(prev => ({ 
+                      ...prev, 
+                      newAmount: parseFloat(e.target.value) || 0 
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Difference</label>
+                  <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm font-medium">
+                    ₹{(fulfillmentData.newAmount - fulfillmentData.previousAmount).toFixed(2)}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pricing Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFulfillmentData(prev => ({ 
+                      ...prev, 
+                      pricingImage: e.target.files[0] 
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea
+                    rows={3}
+                    value={fulfillmentData.notes}
+                    onChange={(e) => setFulfillmentData(prev => ({ 
+                      ...prev, 
+                      notes: e.target.value 
+                    }))}
+                    placeholder="Add fulfillment notes..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowFulfillmentModal(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitFulfillment}
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Fulfilling...' : 'Fulfill Order'}
                 </button>
               </div>
             </div>

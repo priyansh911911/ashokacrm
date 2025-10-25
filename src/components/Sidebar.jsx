@@ -288,6 +288,7 @@ const Sidebar = () => {
       path: "/pantry",
       isDropdown: true,
       children: [
+        { label: "Dashboard", path: "/pantry/dashboard", icon: LayoutDashboard },
         { label: "Item", path: "/pantry/item", icon: ListChecks },
         { label: "Create Category", path: "/pantry/category", icon: ChartBarStacked },
         { label: "Orders", path: "/pantry/orders", icon: Package },

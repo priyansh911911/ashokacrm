@@ -132,6 +132,20 @@ function Item() {
     initializePage();
   }, []);
 
+  // Separate effect for handling edit URL parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editItemId = urlParams.get('edit');
+    if (editItemId && items.length > 0) {
+      const itemToEdit = items.find(item => item._id === editItemId);
+      if (itemToEdit) {
+        handleEdit(itemToEdit);
+        // Clear the URL parameter
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [items]);
+
   if (pageLoading) {
     return <DashboardLoader pageName="Pantry Items" />;
   }
