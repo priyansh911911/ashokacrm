@@ -2380,10 +2380,10 @@ const AddBooking = () => {
                   )}
                 </div>
 
-                {/* GST (manual input) */}
+                {/* GST (optional) */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    GST In Percentage (%)
+                    GST In Percentage (%) <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
@@ -2398,7 +2398,7 @@ const AddBooking = () => {
                       max="100"
                     />
                   </div>
-                  {/* <p className="text-xs text-gray-500">Leave empty if no GST applicable</p> */}
+                  <p className="text-xs text-gray-500">Leave empty if no GST applicable</p>
                 </div>
               </div>
 

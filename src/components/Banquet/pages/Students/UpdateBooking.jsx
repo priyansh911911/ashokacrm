@@ -228,12 +228,12 @@ const UpdateBooking = () => {
   const fetchBookingDetail = async () => {
     try {
       // Fetch booking data
-      const bookingResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/get/${id}`);
+      const bookingResponse = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`);
       
       // Fetch associated menu data
       let categorizedMenu = null;
       try {
-        const menuResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-menus/${id}`);
+        const menuResponse = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-menus/${id}`);
         const rawMenuData = menuResponse.data?.data || menuResponse.data || null;
         categorizedMenu = rawMenuData?.categories || rawMenuData || null;
       } catch (menuErr) {
@@ -532,7 +532,7 @@ const UpdateBooking = () => {
     if (role !== "Admin") {
       // Get original menu from server to compare
       axios
-        .get(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/get/${id}`)
+        .get(`https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`)
         .then((res) => {
           const originalMenu = res.data.categorizedMenu;
           const isMenuChanged =
@@ -615,7 +615,7 @@ const UpdateBooking = () => {
 
 
     axios
-      .put(`${import.meta.env.VITE_BACKEND_URL}/api/banquet-bookings/update/${id}`, payload)
+      .put(`https://ashoka-backend.vercel.app/api/banquet-bookings/update/${id}`, payload)
       .then((res) => {
         if (res.data) {
           // Send WebSocket notification for real-time update
@@ -1349,22 +1349,25 @@ const UpdateBooking = () => {
                 )}
               </div>
 
-              {/* GST (manual input) */}
+              {/* GST (optional) */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  GST In Percentage
+                  GST In Percentage (%) <span className="text-gray-400 font-normal">(Optional)</span>
                 </label>
                 <div className="relative">
-                  <FaRupeeSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
                   <input
                     type="number"
                     name="gst"
                     className="pl-10 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
                     onChange={handleInputChange}
                     value={booking.gst || ""}
-                    placeholder="Enter GST manually"
+                    placeholder="Enter GST % if applicable"
+                    min="0"
+                    max="100"
                   />
                 </div>
+                <p className="text-xs text-gray-500">Leave empty if no GST applicable</p>
               </div>
 
               {/* Total */}
