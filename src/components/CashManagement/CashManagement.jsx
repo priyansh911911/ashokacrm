@@ -151,6 +151,53 @@ const CashManagement = () => {
     fetchCashData(dateFilter, newSource, startDate, endDate, false);
   };
 
+  const exportToExcel = async () => {
+    try {
+      let url = `/api/cash-transactions/excel-report?filter=${dateFilter}`;
+      if (dateFilter === 'range' && startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      }
+      if (sourceFilter && sourceFilter !== 'all') {
+        url += `&source=${sourceFilter}`;
+      }
+      
+      const response = await axios.get(url, {
+        responseType: 'blob',
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      });
+      
+      // Check if response is actually Excel or CSV
+      const contentType = response.headers['content-type'] || '';
+      let mimeType, fileExtension;
+      
+      if (contentType.includes('spreadsheet') || contentType.includes('excel')) {
+        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        fileExtension = 'xlsx';
+      } else {
+        mimeType = 'text/csv;charset=utf-8;';
+        fileExtension = 'csv';
+      }
+      
+      const blob = new Blob([response.data], { type: mimeType });
+      const link = document.createElement('a');
+      const downloadUrl = URL.createObjectURL(blob);
+      link.setAttribute('href', downloadUrl);
+      link.setAttribute('download', `cash-transactions-${new Date().toISOString().split('T')[0]}.${fileExtension}`);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+      
+      toast.success(`${fileExtension.toUpperCase()} report downloaded successfully`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export report');
+    }
+  };
+
   const handleTransactionSubmit = async (e) => {
     e.preventDefault();
     if (!formData.amount || formData.amount <= 0) {
@@ -228,17 +275,25 @@ const CashManagement = () => {
               </h1>
               <p className="text-gray-600 mt-2 text-sm sm:text-base md:text-lg xl:text-xl">Monitor and manage your cash flow operations</p>
             </div>
-            <button 
-              onClick={() => setShowTransactionForm(true)}
-              className="w-full md:w-auto text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-xl font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base md:text-lg"
-              style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)'}}
-              onMouseEnter={(e) => e.target.style.background = 'linear-gradient(to right, #b39b5a, #c3ad6b)'}
-              onMouseLeave={(e) => e.target.style.background = 'linear-gradient(to right, #c3ad6b, #d4c078)'}
-            >
-              <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
-              <span className="hidden sm:inline">Add Transaction</span>
-              <span className="sm:hidden">Add</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <button
+                onClick={exportToExcel}
+                className="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              >
+                Export Excel
+              </button>
+              <button 
+                onClick={() => setShowTransactionForm(true)}
+                className="w-full sm:w-auto text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-xl font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base md:text-lg"
+                style={{background: 'linear-gradient(to right, #c3ad6b, #d4c078)'}}
+                onMouseEnter={(e) => e.target.style.background = 'linear-gradient(to right, #b39b5a, #c3ad6b)'}
+                onMouseLeave={(e) => e.target.style.background = 'linear-gradient(to right, #c3ad6b, #d4c078)'}
+              >
+                <IndianRupee className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
+                <span className="hidden sm:inline">Add Transaction</span>
+                <span className="sm:hidden">Add</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

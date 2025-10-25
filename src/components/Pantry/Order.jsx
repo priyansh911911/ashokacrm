@@ -398,6 +398,52 @@ const Order = () => {
     }
   };
 
+  const exportToExcel = async () => {
+    try {
+      let url = `/api/pantry/orders/excel-report?`;
+      const params = new URLSearchParams();
+      
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterType) params.append('orderType', filterType);
+      if (filterVendor) params.append('vendorId', filterVendor);
+      
+      const response = await axios.get(url + params.toString(), {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      });
+      
+      const contentType = response.headers['content-type'] || '';
+      let mimeType, fileExtension;
+      
+      if (contentType.includes('spreadsheet') || contentType.includes('excel')) {
+        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        fileExtension = 'xlsx';
+      } else {
+        mimeType = 'text/csv;charset=utf-8;';
+        fileExtension = 'csv';
+      }
+      
+      const blob = new Blob([response.data], { type: mimeType });
+      const link = document.createElement('a');
+      const downloadUrl = URL.createObjectURL(blob);
+      link.setAttribute('href', downloadUrl);
+      link.setAttribute('download', `pantry-orders-${new Date().toISOString().split('T')[0]}.${fileExtension}`);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+      
+      showToast.success(`${fileExtension.toUpperCase()} report downloaded successfully`);
+    } catch (error) {
+      console.error('Export error:', error);
+      showToast.error('Failed to export report');
+    }
+  };
+
   const filteredOrders = orders.filter(order => {
     if (filterStatus && order.status !== filterStatus) return false;
     if (filterType && order.orderType !== filterType) return false;
@@ -410,8 +456,13 @@ const Order = () => {
   });
 
   const generateInvoice = (order) => {
-    const vendor = vendors.find(v => v._id === (typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId));
-    const subtotal = order.totalAmount;
+    let vendor = null;
+    if (order.vendorId) {
+      const vendorId = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+      vendor = vendors.find(v => v && v._id === vendorId) || null;
+    }
+    
+    const subtotal = order.totalAmount || 0;
     const tax = subtotal * 0.18;
     const total = subtotal + tax;
     
@@ -486,6 +537,12 @@ const Order = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Pantry Orders</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={exportToExcel}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            Export Excel
+          </button>
           <button
             onClick={() => {
               if (filterVendor) {
