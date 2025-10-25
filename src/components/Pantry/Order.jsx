@@ -35,6 +35,9 @@ const Order = () => {
     notes: '',
     pricingImage: null
   });
+  const [showChalanModal, setShowChalanModal] = useState(false);
+  const [chalanOrder, setChalanOrder] = useState(null);
+  const [chalanFile, setChalanFile] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -528,6 +531,65 @@ const Order = () => {
     }
   };
 
+  const handleChalanUpload = (order) => {
+    setChalanOrder(order);
+    setShowChalanModal(true);
+  };
+
+  const submitChalan = async () => {
+    if (!chalanOrder || !chalanFile) {
+      showToast.error('Please select a chalan image');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const requestData = {
+            orderId: chalanOrder._id,
+            image: {
+              base64: reader.result,
+              name: chalanFile.name
+            }
+          };
+
+          const response = await axios.post('/api/pantry/upload-chalan', requestData, {
+            headers: { 
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.data.success) {
+            showToast.success('Chalan uploaded successfully');
+            setShowChalanModal(false);
+            setChalanOrder(null);
+            setChalanFile(null);
+            fetchOrders();
+          }
+        } catch (error) {
+          console.error('Chalan upload error:', error);
+          showToast.error(error.response?.data?.error || 'Failed to upload chalan');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        showToast.error('Failed to read file');
+        setLoading(false);
+      };
+      
+      reader.readAsDataURL(chalanFile);
+    } catch (error) {
+      console.error('File processing error:', error);
+      showToast.error('Failed to process file');
+      setLoading(false);
+    }
+  };
+
   if (isInitialLoading) {
     return <DashboardLoader pageName="Pantry Orders" />;
   }
@@ -875,6 +937,12 @@ const Order = () => {
                         >
                           Invoice
                         </button>
+                        <button
+                          onClick={() => handleChalanUpload(order)}
+                          className="text-purple-600 hover:text-purple-900 text-xs"
+                        >
+                          Chalan
+                        </button>
 
                       </div>
                     </td>
@@ -974,6 +1042,12 @@ const Order = () => {
                   className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
                 >
                   Invoice
+                </button>
+                <button
+                  onClick={() => handleChalanUpload(order)}
+                  className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200"
+                >
+                  Chalan
                 </button>
                 <button
                   onClick={() => {
@@ -1677,6 +1751,28 @@ const Order = () => {
                   <p className="text-sm text-gray-600">Order ID: #{fulfillmentOrder._id?.slice(-8)}</p>
                   <p className="text-sm text-gray-600">Vendor: {getVendorName(fulfillmentOrder.vendorId)}</p>
                   <p className="text-sm text-gray-600">Items: {fulfillmentOrder.items?.length || 0}</p>
+                  {fulfillmentOrder.chalanImage && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600 mb-1">Chalan:</p>
+                      <img 
+                        src={fulfillmentOrder.chalanImage} 
+                        alt="Chalan" 
+                        className="w-20 h-20 object-cover rounded border cursor-pointer"
+                        onClick={() => window.open(fulfillmentOrder.chalanImage, '_blank')}
+                      />
+                    </div>
+                  )}
+                  {fulfillmentOrder.fulfillment?.chalanImage && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600 mb-1">Fulfillment Chalan:</p>
+                      <img 
+                        src={fulfillmentOrder.fulfillment.chalanImage} 
+                        alt="Fulfillment Chalan" 
+                        className="w-20 h-20 object-cover rounded border cursor-pointer"
+                        onClick={() => window.open(fulfillmentOrder.fulfillment.chalanImage, '_blank')}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1755,6 +1851,78 @@ const Order = () => {
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Fulfilling...' : 'Fulfill Order'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chalan Upload Modal */}
+      {showChalanModal && chalanOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Upload Chalan</h2>
+                <button
+                  onClick={() => setShowChalanModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-3 rounded">
+                  <h3 className="font-medium text-gray-900 mb-2">Order Details</h3>
+                  <p className="text-sm text-gray-600">Order ID: #{chalanOrder._id?.slice(-8)}</p>
+                  <p className="text-sm text-gray-600">Vendor: {getVendorName(chalanOrder.vendorId)}</p>
+                  <p className="text-sm text-gray-600">Amount: ₹{chalanOrder.totalAmount || 0}</p>
+                </div>
+
+                {chalanOrder?.chalanImage && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Current Chalan:</p>
+                    <img 
+                      src={chalanOrder.chalanImage} 
+                      alt="Current chalan" 
+                      className="w-full h-32 object-cover rounded border cursor-pointer"
+                      onClick={() => window.open(chalanOrder.chalanImage, '_blank')}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Chalan Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setChalanFile(e.target.files[0])}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {chalanFile && (
+                    <p className="text-sm text-green-600 mt-1">Selected: {chalanFile.name}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowChalanModal(false);
+                    setChalanFile(null);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitChalan}
+                  disabled={loading || !chalanFile}
+                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Uploading...' : 'Upload Chalan'}
                 </button>
               </div>
             </div>
