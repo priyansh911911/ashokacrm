@@ -85,8 +85,10 @@ const Order = () => {
       });
       const ordersData = data.orders || data.data || data || [];
       console.log('Fetched orders:', ordersData);
+      console.log('Sample order structure:', ordersData[0]);
       setOrders(ordersData);
     } catch (error) {
+      console.error('Error fetching orders:', error);
       showToast.error('Failed to fetch orders');
     } finally {
       setLoading(false);
@@ -527,6 +529,8 @@ const Order = () => {
             <option value="Kitchen to Pantry">Kitchen to Pantry</option>
             <option value="Pantry to Reception">Pantry to Reception</option>
             <option value="Reception to Vendor">Reception to Vendor</option>
+            <option value="store to vendor">Store to Vendor</option>
+            <option value="pantry to store">Pantry to Store</option>
           </select>
 
           <select
@@ -756,7 +760,9 @@ const Order = () => {
                        order.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
                        order.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
                        order.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
-                       order.orderType}
+                       order.orderType === 'store to vendor' ? 'Store → Vendor' :
+                       order.orderType === 'pantry to store' ? 'Pantry → Store' :
+                       order.orderType || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getVendorName(order.vendorId)}
@@ -847,7 +853,9 @@ const Order = () => {
                      order.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
                      order.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
                      order.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
-                     order.orderType}
+                     order.orderType === 'store to vendor' ? 'Store → Vendor' :
+                     order.orderType === 'pantry to store' ? 'Pantry → Store' :
+                     order.orderType || 'N/A'}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -1044,6 +1052,8 @@ const Order = () => {
                       <option value="Kitchen to Pantry">Kitchen to Pantry</option>
                       <option value="Pantry to Reception">Pantry to Reception</option>
                       <option value="Reception to Vendor">Reception to Vendor</option>
+                      <option value="store to vendor">Store to Vendor</option>
+                      <option value="pantry to store">Pantry to Store</option>
                     </select>
                   </div>
                   
@@ -1418,7 +1428,9 @@ const Order = () => {
                          viewingOrder.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
                          viewingOrder.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
                          viewingOrder.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
-                         viewingOrder.orderType}
+                         viewingOrder.orderType === 'store to vendor' ? 'Store → Vendor' :
+                         viewingOrder.orderType === 'pantry to store' ? 'Pantry → Store' :
+                         viewingOrder.orderType || 'N/A'}
                       </p>
                     </div>
                     <div>
