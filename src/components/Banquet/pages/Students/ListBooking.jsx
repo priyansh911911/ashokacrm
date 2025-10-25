@@ -629,6 +629,79 @@ const ListBooking = () => {
                         <ChefPDFPreview booking={item} className="w-full" />
                       </div>
                       <button
+                        onClick={() => {
+                          let raw = String(item.whatsapp || item.number || "").replace(
+                            /[^\d]/g,
+                            ""
+                          );
+                          raw = raw.replace(/^0+/, "");
+                          let phoneNumber = "";
+                          if (raw.length === 10) {
+                            phoneNumber = `91${raw}`;
+                          } else if (
+                            raw.length === 12 &&
+                            raw.startsWith("91")
+                          ) {
+                            phoneNumber = raw;
+                          } else {
+                            toast.error(
+                              "Invalid phone number for WhatsApp. Must be 10 digits (India) or 12 digits with country code."
+                            );
+                            return;
+                          }
+                          const decorationCharge = item.decorationCharge && item.decorationCharge > 0 ? item.decorationCharge : 0;
+                          const musicCharge = item.musicCharge && item.musicCharge > 0 ? item.musicCharge : 0;
+                          
+                          // Calculate advance amount from array or use number
+                          const advanceAmount = Array.isArray(item.advance) 
+                            ? item.advance.reduce((sum, payment) => sum + (payment.amount || 0), 0)
+                            : (typeof item.advance === 'number' ? item.advance : 0);
+                          const totalAmount = typeof item.total === 'object' ? (item.total?.amount || 0) : (item.total || 0);
+                          const balanceAmount = typeof item.balance === 'object' ? (item.balance?.amount || 0) : (item.balance || 0);
+                          
+                          const message =
+                            `🌟 *Welcome to Hotel ASHOKA HOTEL!* 🌟\n\n` +
+                            `Here's your booking confirmation:\n\n` +
+                            `📅 *Date:* ${new Date(
+                              item.startDate
+                            ).toLocaleDateString("en-IN", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}\n` +
+                            `⏰ *Time:* ${item.time || "To be confirmed"}\n` +
+                            `👨👩👧👦 *Guest Name:* ${item.name}\n` +
+                            `📞 *Contact:* ${item.number}\n` +
+                            `🍽️ *Plan:* ${item.ratePlan}\n` +
+                            `🥗 *Food Type:* ${item.foodType}\n` +
+                            `🏛️ *Hall/Area:* ${item.hall}\n` +
+                            `👥 *Pax:* ${item.pax || "To be confirmed"}\n` +
+                            (decorationCharge > 0 ? `🎨 *Decoration:* ₹${decorationCharge}\n` : '') +
+                            (musicCharge > 0 ? `🎵 *Music:* ₹${musicCharge}\n` : '') +
+                            `📝 *Special Requests:* ${
+                              item.notes || item.specialRequests || "None"
+                            }\n` +
+                            `🔄 *Status:* ${item.bookingStatus}\n\n` +
+                            `💰 *Payment Details:*\n` +
+                            `💵 *Total Amount:* ₹${totalAmount || "To be confirmed"}\n` +
+                            `💳 *Advance Paid:* ₹${advanceAmount}\n` +
+                            `💸 *Balance Due:* ₹${balanceAmount || (totalAmount - advanceAmount) || "To be confirmed"}\n\n` +
+                            `📍 *Venue Address:* Medical Road, Gorakhpur\n\n` +
+                            `📌 *Important Notes:*\n` +
+                            `- Please arrive 15 minutes before your booking time\n` +
+                            `- Bring your ID proof for verification\n` +
+                            `- Final payment due on event day\n\n` +
+                            `Thank you for choosing us! We look forward to serving you. 🙏\n\n`;
+                          const whatsappUrl = `https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+                          window.open(whatsappUrl, "_blank");
+                        }}
+                        className="flex-1 inline-flex items-center justify-center gap-1 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors font-semibold px-3 py-2 text-xs"
+                        title="Send WhatsApp Message"
+                      >
+                        <FaWhatsapp />
+                      </button>
+                      <button
                         onClick={() => handleDeleteModal(item)}
                         className="flex-1 inline-flex items-center justify-center gap-1 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition-colors font-semibold px-3 py-2 text-xs"
                       >
