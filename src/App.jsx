@@ -78,6 +78,8 @@ import RestaurantDashboard from "./components/restaurant/RestaurantDashboard.jsx
 import EasyDashboard from "./components/easy dashboard/easydashboard.jsx";
 import CashManagement from "./components/CashManagement/CashManagement.jsx";
 import RegisterForm from "./components/auth/RegisterForm.jsx";
+import Kitchen from "./components/Kitchen.jsx";
+import Disbursh from "./components/Disbursh.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -226,6 +228,8 @@ const App = () => {
                           </ProtectedRoute>
                         } 
                       />
+                      <Route path="/kitchen" element={<Kitchen />} />
+                      <Route path="/disbursements" element={<Disbursh />} />
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>
                   </main>

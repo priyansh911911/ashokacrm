@@ -293,6 +293,8 @@ const Sidebar = () => {
         { label: "Create Category", path: "/pantry/category", icon: ChartBarStacked },
         { label: "Orders", path: "/pantry/orders", icon: Package },
         { label: "Vendors", path: "/pantry/vendors", icon: Users },
+        { label: "Kitchen", path: "/kitchen", icon: Settings },
+        { label: "Disbursements", path: "/disbursements", icon: Package },
       ],
     }] : []),
 
