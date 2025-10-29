@@ -26,26 +26,40 @@ const Kitchen = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const requests = [
-        axios.get('/api/kitchen-orders', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => ({ data: [] })),
-        axios.get('/api/pantry/items', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => ({ data: [] })),
-        axios.get('/api/vendor/all', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => ({ data: [] }))
-      ];
-      
-      const [ordersRes, itemsRes, vendorsRes] = await Promise.all(requests);
-      
-      setOrders(ordersRes.data || []);
-      const itemsData = itemsRes.data;
-      setItems(Array.isArray(itemsData) ? itemsData : [
-        { _id: '1', name: 'Rice' },
-        { _id: '2', name: 'Dal' },
-        { _id: '3', name: 'Vegetables' }
-      ]);
-      const vendorsData = vendorsRes.data;
-      setVendors(Array.isArray(vendorsData) ? vendorsData : [
-        { _id: '1', name: 'Local Supplier' },
-        { _id: '2', name: 'Wholesale Market' }
-      ]);
+      // Fetch items
+      try {
+        const itemsRes = await axios.get('/api/pantry/items', { 
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
+        });
+        const itemsData = itemsRes.data;
+        setItems(Array.isArray(itemsData) ? itemsData : (itemsData?.items || itemsData?.data || []));
+      } catch (error) {
+        console.log('Items fetch failed:', error);
+        setItems([]);
+      }
+
+      // Fetch vendors
+      try {
+        const vendorsRes = await axios.get('/api/vendor/all', { 
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
+        });
+        const vendorsData = vendorsRes.data;
+        setVendors(Array.isArray(vendorsData) ? vendorsData : (vendorsData?.vendors || vendorsData?.data || []));
+      } catch (error) {
+        console.log('Vendors fetch failed:', error);
+        setVendors([]);
+      }
+
+      // Fetch orders
+      try {
+        const ordersRes = await axios.get('/api/kitchen-orders', { 
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
+        });
+        setOrders(ordersRes.data || []);
+      } catch (error) {
+        console.log('Kitchen orders not available');
+        setOrders([]);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -55,15 +69,33 @@ const Kitchen = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.vendorId) {
+      showToast.error('Please select a vendor');
+      return;
+    }
+    
+    const validItems = formData.items.filter(item => item.itemId && item.quantity > 0);
+    if (validItems.length === 0) {
+      showToast.error('Please add at least one valid item');
+      return;
+    }
+    
     setLoading(true);
     try {
+      const payload = {
+        ...formData,
+        items: validItems
+      };
+      
       if (editingOrder) {
-        await axios.put(`/api/kitchen-orders/${editingOrder._id}`, formData, {
+        await axios.put(`/api/kitchen-orders/${editingOrder._id}`, payload, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         showToast.success('Order updated successfully');
       } else {
-        await axios.post('/api/kitchen-orders', formData, {
+        await axios.post('/api/kitchen-orders', payload, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         showToast.success('Order created successfully');

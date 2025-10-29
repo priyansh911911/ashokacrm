@@ -35,16 +35,10 @@ const Disbursh = () => {
       
       setDisbursements(disbursementsRes.data || []);
       setKitchenOrders(kitchenOrdersRes.data || []);
-      setPantries(pantriesRes.data || [
-        { _id: '1', name: 'Main Pantry' },
-        { _id: '2', name: 'Secondary Pantry' }
-      ]);
+      const pantriesData = pantriesRes.data;
+      setPantries(Array.isArray(pantriesData) ? pantriesData : (pantriesData?.vendors || pantriesData?.data || []));
       const itemsData = itemsRes.data;
-      setItems(Array.isArray(itemsData) ? itemsData : [
-        { _id: '1', name: 'Rice' },
-        { _id: '2', name: 'Dal' },
-        { _id: '3', name: 'Vegetables' }
-      ]);
+      setItems(Array.isArray(itemsData) ? itemsData : (itemsData?.items || itemsData?.data || []));
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -54,11 +48,18 @@ const Disbursh = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const validItems = formData.items.filter(item => item.itemId && item.quantity > 0);
+    if (validItems.length === 0) {
+      showToast.error('Please add at least one valid item');
+      return;
+    }
+    
     setLoading(true);
     try {
       await axios.post('/api/disbursements', {
         ...formData,
-        disbursedBy: localStorage.getItem('userId')
+        items: validItems
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
@@ -263,3 +264,82 @@ const Disbursh = () => {
 };
 
 export default Disbursh;
+// tton
+//                       type="button"
+//                       onClick={addItem}
+//                       className="text-amber-600 hover:text-amber-800 text-sm"
+//                     >
+//                       + Add Item
+//                     </button>
+//                   </div>
+//                   {formData.items.map((item, index) => (
+//                     <div key={index} className="grid grid-cols-2 gap-2 mb-2">
+//                       <div>
+//                         <label className="block text-xs font-medium text-gray-600 mb-1">Item</label>
+//                         <select
+//                           value={item.itemId}
+//                           onChange={(e) => updateItem(index, 'itemId', e.target.value)}
+//                           className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+//                         >
+//                           <option value="">Select Item</option>
+//                           {items.map(itm => (
+//                             <option key={itm._id} value={itm._id}>
+//                               {itm.name}
+//                             </option>
+//                           ))}
+//                         </select>
+//                       </div>
+//                       <div>
+//                         <label className="block text-xs font-medium text-gray-600 mb-1">Quantity</label>
+//                         <input
+//                           type="number"
+//                           value={item.quantity}
+//                           onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
+//                           className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+//                           min="1"
+//                         />
+//                       </div>
+//                     </div>
+//                   ))}
+//                   {items.length === 0 && (
+//                     <p className="text-sm text-red-600 mt-1">No items available</p>
+//                   )}
+//                 </div>
+
+//                 <div>
+//                   <label className="block text-sm font-medium text-amber-800 mb-1">Notes</label>
+//                   <textarea
+//                     value={formData.notes}
+//                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
+//                     className="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+//                     rows="3"
+//                     placeholder="Additional notes..."
+//                   />
+//                 </div>
+
+//                 <div className="flex justify-end gap-2 pt-4">
+//                   <button
+//                     type="button"
+//                     onClick={resetForm}
+//                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+//                   >
+//                     Cancel
+//                   </button>
+//                   <button
+//                     type="submit"
+//                     disabled={loading}
+//                     className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+//                   >
+//                     {loading ? 'Creating...' : 'Create Disbursement'}
+//                   </button>
+//                 </div>
+//               </form>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default Disbursh;
