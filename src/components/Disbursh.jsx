@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { showToast } from '../utils/toaster';
+import { useSocket } from '../context/SocketContext';
 import { Plus, Package, ArrowRight, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 const Disbursh = () => {
   const { axios } = useAppContext();
+  const { socket } = useSocket();
   const [disbursements, setDisbursements] = useState([]);
   const [kitchenOrders, setKitchenOrders] = useState([]);
   const [pantries, setPantries] = useState([]);
@@ -19,16 +21,45 @@ const Disbursh = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    
+    // WebSocket listeners
+    if (socket) {
+      socket.on('disbursement-created', () => {
+        fetchData();
+      });
+      
+      socket.on('disbursement-status-updated', () => {
+        fetchData();
+      });
+    }
+    
+    return () => {
+      if (socket) {
+        socket.off('disbursement-created');
+        socket.off('disbursement-status-updated');
+      }
+    };
+  }, [socket]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Set empty defaults immediately
+      setDisbursements([]);
+      setKitchenOrders([]);
+      setPantries([]);
+      setItems([]);
+      
+      // Try to fetch data with timeout
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+      
       const requests = [
-        axios.get('/api/disbursements', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => ({ data: [] })),
-        axios.get('/api/kitchen-orders', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => ({ data: [] })),
-        axios.get('/api/vendor/all', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => ({ data: [] })),
-        axios.get('/api/pantry/items', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).catch(() => ({ data: [] }))
+        Promise.race([axios.get('/api/disbursements', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }), timeout]).catch(() => ({ data: [] })),
+        Promise.race([axios.get('/api/kitchen-orders', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }), timeout]).catch(() => ({ data: [] })),
+        Promise.race([axios.get('/api/vendor/all', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }), timeout]).catch(() => ({ data: [] })),
+        Promise.race([axios.get('/api/inventory/items', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }), timeout]).catch(() => ({ data: [] }))
       ];
       
       const [disbursementsRes, kitchenOrdersRes, pantriesRes, itemsRes] = await Promise.all(requests);
@@ -57,17 +88,45 @@ const Disbursh = () => {
     
     setLoading(true);
     try {
-      await axios.post('/api/disbursements', {
-        ...formData,
-        items: validItems
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Disbursement API not deployed to Vercel')), 5000)
+      );
+      
+      // Test server connection first
+      const testResponse = await Promise.race([
+        axios.get('/health', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }),
+        timeout
+      ]);
+      
+      console.log('Server health check:', testResponse.data);
+      
+      // Test disbursement routes
+      const routeTest = await axios.get('/api/disbursements/test');
+      console.log('Disbursement route test:', routeTest.data);
+      
+      // Now try disbursement creation
+      await Promise.race([
+        axios.post('/api/disbursements', {
+          ...formData,
+          items: validItems
+        }, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }),
+        timeout
+      ]);
+      
       showToast.success('Disbursement created successfully');
       resetForm();
       fetchData();
     } catch (error) {
-      showToast.error(error.response?.data?.message || 'Failed to create disbursement');
+      console.error('Disbursement creation error:', error);
+      console.error('Error response:', error.response);
+      const errorMsg = error.message === 'Request timeout - API not available' 
+        ? 'API timeout - disbursement endpoints may not be deployed'
+        : error.response?.data?.message || error.message || 'Failed to create disbursement';
+      showToast.error(errorMsg);
     } finally {
       setLoading(false);
     }

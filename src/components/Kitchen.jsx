@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { showToast } from '../utils/toaster';
-import { Plus, Edit, Trash2, Package, Clock, CheckCircle } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
+import { Plus, Edit, Trash2, Package, Clock, CheckCircle, Store } from 'lucide-react';
 
 const Kitchen = () => {
   const { axios } = useAppContext();
+  const { socket } = useSocket();
   const [orders, setOrders] = useState([]);
   const [items, setItems] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [kitchenStore, setKitchenStore] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showStore, setShowStore] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [formData, setFormData] = useState({
     items: [{ itemId: '', quantity: '1', unitPrice: 0 }],
@@ -21,7 +25,29 @@ const Kitchen = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    fetchKitchenStore();
+    
+    // WebSocket listeners
+    if (socket) {
+      socket.on('kitchen-store-updated', () => {
+        fetchKitchenStore();
+      });
+      
+      socket.on('disbursement-created', (data) => {
+        if (data.type === 'pantry_to_kitchen') {
+          fetchKitchenStore();
+          showToast.success(`${data.itemCount} items received from pantry`);
+        }
+      });
+    }
+    
+    return () => {
+      if (socket) {
+        socket.off('kitchen-store-updated');
+        socket.off('disbursement-created');
+      }
+    };
+  }, [socket]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -64,6 +90,18 @@ const Kitchen = () => {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchKitchenStore = async () => {
+    try {
+      const response = await axios.get('/api/disbursements/kitchen-store', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setKitchenStore(response.data || []);
+    } catch (error) {
+      console.log('Kitchen store fetch failed:', error);
+      setKitchenStore([]);
     }
   };
 
@@ -178,13 +216,22 @@ const Kitchen = () => {
     <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-amber-900">Kitchen Orders</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white px-4 py-2 rounded-lg hover:from-amber-700 hover:to-orange-700 flex items-center gap-2 shadow-lg transition-all duration-200"
-        >
-          <Plus size={20} />
-          New Order
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowStore(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 flex items-center gap-2 shadow-lg transition-all duration-200"
+          >
+            <Store size={20} />
+            Kitchen Store
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-gradient-to-r from-amber-600 to-orange-600 text-white px-4 py-2 rounded-lg hover:from-amber-700 hover:to-orange-700 flex items-center gap-2 shadow-lg transition-all duration-200"
+          >
+            <Plus size={20} />
+            New Order
+          </button>
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -261,6 +308,64 @@ const Kitchen = () => {
           </div>
         )}
       </div>
+
+      {/* Kitchen Store Modal */}
+      {showStore && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl border border-amber-200 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-t-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-green-900">Kitchen Store Inventory</h2>
+                <button
+                  onClick={() => setShowStore(false)}
+                  className="text-green-600 hover:text-green-800"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="bg-white rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-green-100 to-emerald-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-green-800 uppercase">Item</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-green-800 uppercase">Quantity</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-green-800 uppercase">Unit</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-green-800 uppercase">Last Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-green-200">
+                    {kitchenStore.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="px-4 py-8 text-center text-green-600">
+                          No items in kitchen store
+                        </td>
+                      </tr>
+                    ) : (
+                      kitchenStore.map((item) => (
+                        <tr key={item._id} className="hover:bg-green-50">
+                          <td className="px-4 py-3 text-sm text-green-900">
+                            {item.itemId?.name || 'Unknown Item'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-green-900 font-medium">
+                            {item.quantity}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-green-700">
+                            {item.unit}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-green-700">
+                            {new Date(item.lastUpdated).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form Modal */}
       {showForm && (
