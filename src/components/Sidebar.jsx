@@ -158,6 +158,11 @@ const Sidebar = () => {
       return items;
     }
 
+    // If chef role, return empty - only kitchen items will be added separately
+    if (role === "chef") {
+      return items;
+    }
+
     // Dashboard - accessible to all except pantry
     items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
     
@@ -166,8 +171,13 @@ const Sidebar = () => {
       items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
     }
     
-    // If restaurant role (cashier, chef, waiter), return only dashboard items
-    if (role === "restaurant" && (restaurantRole === "cashier" || restaurantRole === "chef" || restaurantRole === "staff")) {
+    // If restaurant role chef, return empty (no dashboard)
+    if (role === "restaurant" && restaurantRole === "chef") {
+      return [];
+    }
+    
+    // If restaurant role (cashier, waiter), return only dashboard items
+    if (role === "restaurant" && (restaurantRole === "cashier" || restaurantRole === "staff")) {
       return items;
     }
     
@@ -292,6 +302,14 @@ const Sidebar = () => {
         ];
       }
       
+      if (role === "chef") {
+        return [
+          { icon: ListChecks, label: "KOT", path: "/kot" },
+          { icon: ListChecks, label: "Kitchen Orders", path: "/kitchen" },
+          { icon: Package, label: "Kitchen Store", path: "/kitchen-store" },
+        ];
+      }
+      
       if (role === "admin" || 
           (() => {
             try {
@@ -318,24 +336,42 @@ const Sidebar = () => {
       
       return [];
     })(),
-    ...((localStorage.getItem("role") === "admin" ||
-         (() => {
-           try {
-             const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
-             return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && (dept.name === "kitchen" || dept.name === "reception")) : false;
-           } catch (e) {
-             return false;
-           }
-         })()) ? [{
-      icon: UserRound,
-      label: "Kitchen",
-      path: "/kitchen",
-      isDropdown: true,
-      children: [
-        { label: "Kitchen Orders", path: "/kitchen", icon: ListChecks },
-        { label: "Kitchen Store", path: "/kitchen-store", icon: Package },
-      ],
-    }] : []),
+    ...(() => {
+      const role = localStorage.getItem("role");
+      const restaurantRole = localStorage.getItem("restaurantRole");
+      
+      // For restaurant chef - show direct kitchen links (no dropdown)
+      if (role === "restaurant" && restaurantRole === "chef") {
+        return [
+          { icon: ListChecks, label: "Kitchen Orders", path: "/kitchen" },
+          { icon: Package, label: "Kitchen Store", path: "/kitchen-store" },
+        ];
+      }
+      
+      // For admin and other authorized users - show kitchen dropdown
+      if (role === "admin" || 
+          (() => {
+            try {
+              const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+              return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && (dept.name === "kitchen" || dept.name === "reception")) : false;
+            } catch (e) {
+              return false;
+            }
+          })()) {
+        return [{
+          icon: UserRound,
+          label: "Kitchen",
+          path: "/kitchen",
+          isDropdown: true,
+          children: [
+            { label: "Kitchen Orders", path: "/kitchen", icon: ListChecks },
+            { label: "Kitchen Store", path: "/kitchen-store", icon: Package },
+          ],
+        }];
+      }
+      
+      return [];
+    })(),
 
     ...(() => {
       const mainRole = localStorage.getItem("role");
@@ -351,7 +387,7 @@ const Sidebar = () => {
       const hasKitchen = userDepartments.some(dept => dept && dept.name === "kitchen");
       const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
       
-      // Hide restaurant for pantry role
+      // Hide restaurant for pantry role only
       if (mainRole === "pantry") {
         return [];
       }

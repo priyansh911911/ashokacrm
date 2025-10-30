@@ -16,8 +16,7 @@ const Kitchen = () => {
   const [formData, setFormData] = useState({
     items: [{ itemId: '', quantity: '1', unitPrice: 0 }],
     totalAmount: 0,
-    vendorId: '',
-    orderType: 'kitchen_preparation',
+    orderType: 'kitchen_to_pantry',
     specialInstructions: ''
   });
 
@@ -75,12 +74,6 @@ const Kitchen = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate required fields
-    if (!formData.vendorId) {
-      showToast.error('Please select a vendor');
-      return;
-    }
     
     const validItems = formData.items.filter(item => item.itemId && item.quantity > 0);
     if (validItems.length === 0) {
@@ -148,7 +141,6 @@ const Kitchen = () => {
     setFormData({
       items: order.items || [{ itemId: '', quantity: '1', unitPrice: 0 }],
       totalAmount: order.totalAmount,
-      vendorId: order.vendorId || '',
       orderType: order.orderType,
       specialInstructions: order.specialInstructions || ''
     });
@@ -159,8 +151,7 @@ const Kitchen = () => {
     setFormData({
       items: [{ itemId: '', quantity: '1', unitPrice: 0 }],
       totalAmount: 0,
-      vendorId: '',
-      orderType: 'kitchen_preparation',
+      orderType: 'kitchen_to_pantry',
       specialInstructions: ''
     });
     setEditingOrder(null);
@@ -188,10 +179,21 @@ const Kitchen = () => {
   };
 
   const updateItem = (index, field, value) => {
-    const updatedItems = formData.items.map((item, i) => 
-      i === index ? { ...item, [field]: value } : item
-    );
-    const total = updatedItems.reduce((sum, item) => sum + (parseFloat(item.quantity) * item.unitPrice), 0);
+    const updatedItems = formData.items.map((item, i) => {
+      if (i === index) {
+        const updatedItem = { ...item, [field]: value };
+        // Auto-set unit price from selected item
+        if (field === 'itemId') {
+          const selectedItem = items.find(itm => itm._id === value);
+          if (selectedItem) {
+            updatedItem.unitPrice = selectedItem.costPerUnit || selectedItem.price || 10;
+          }
+        }
+        return updatedItem;
+      }
+      return item;
+    });
+    const total = updatedItems.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
     setFormData({ ...formData, items: updatedItems, totalAmount: total });
   };
 
@@ -350,29 +352,12 @@ const Kitchen = () => {
               <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-lg">
                 <div>
                   <label className="block text-sm font-medium text-amber-800 mb-1">Order Type</label>
-                  <select
-                    value={formData.orderType}
-                    onChange={(e) => setFormData({...formData, orderType: e.target.value})}
-                    className="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  >
-                    <option value="kitchen_preparation">Kitchen Preparation</option>
-                    <option value="kitchen_to_pantry">Kitchen to Pantry</option>
-                    <option value="kitchen_to_vendor">Kitchen to Vendor</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-amber-800 mb-1">Vendor</label>
-                  <select
-                    value={formData.vendorId}
-                    onChange={(e) => setFormData({...formData, vendorId: e.target.value})}
-                    className="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  >
-                    <option value="">Select Vendor</option>
-                    {Array.isArray(vendors) && vendors.map(vendor => (
-                      <option key={vendor._id} value={vendor._id}>{vendor.name}</option>
-                    ))}
-                  </select>
+                  <input
+                    type="text"
+                    value="Kitchen to Pantry"
+                    readOnly
+                    className="w-full px-3 py-2 border border-amber-300 rounded-md bg-amber-50"
+                  />
                 </div>
 
                 <div>
@@ -387,7 +372,7 @@ const Kitchen = () => {
                     </button>
                   </div>
                   {formData.items.map((item, index) => (
-                    <div key={index} className="grid grid-cols-3 gap-2 mb-2">
+                    <div key={index} className="grid grid-cols-4 gap-2 mb-2">
                       <select
                         value={item.itemId}
                         onChange={(e) => updateItem(index, 'itemId', e.target.value)}
@@ -400,7 +385,8 @@ const Kitchen = () => {
                         ))}
                       </select>
                       <input
-                        type="text"
+                        type="number"
+                        min="1"
                         value={item.quantity}
                         onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                         placeholder="Quantity"
@@ -409,13 +395,17 @@ const Kitchen = () => {
                       />
                       <input
                         type="number"
+                        min="0"
                         value={item.unitPrice}
-                        onChange={(e) => updateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                        onChange={(e) => updateItem(index, 'unitPrice', Number(e.target.value) || 0)}
                         placeholder="Unit Price"
                         className="px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                         step="0.01"
                         required
                       />
+                      <div className="px-3 py-2 bg-amber-50 border border-amber-300 rounded-md text-sm font-medium">
+                        ₹{(Number(item.quantity) * Number(item.unitPrice)).toFixed(2)}
+                      </div>
                     </div>
                   ))}
                 </div>

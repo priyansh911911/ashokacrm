@@ -907,18 +907,20 @@ const Order = () => {
                         >
                           <Edit size={16} />
                         </button>
-                        <button
-                          onClick={() => handleDeleteOrder(order._id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {localStorage.getItem('role') === 'admin' && (
+                          <button
+                            onClick={() => handleDeleteOrder(order._id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                         {order.status === 'pending' && (
                           <button
                             onClick={() => updateOrderStatus(order._id, 'approved')}
                             className="text-green-600 hover:text-green-900 text-xs"
                           >
-                            Approve
+                            {order.orderType === 'Kitchen to Pantry' ? 'Approve & Send to Kitchen' : 'Approve'}
                           </button>
                         )}
                         {order.status === 'delivered' && (
@@ -1013,19 +1015,21 @@ const Order = () => {
                   <Edit size={14} />
                   Edit
                 </button>
-                <button
-                  onClick={() => handleDeleteOrder(order._id)}
-                  className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200"
-                >
-                  <Trash2 size={14} />
-                  Delete
-                </button>
+                {localStorage.getItem('role') === 'admin' && (
+                  <button
+                    onClick={() => handleDeleteOrder(order._id)}
+                    className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                )}
                 {order.status === 'pending' && (
                   <button
                     onClick={() => updateOrderStatus(order._id, 'approved')}
                     className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
                   >
-                    Approve
+                    {order.orderType === 'Kitchen to Pantry' ? 'Approve & Send to Kitchen' : 'Approve'}
                   </button>
                 )}
                 {order.status === 'delivered' && (

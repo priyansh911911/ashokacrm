@@ -65,9 +65,11 @@ const LoginPage = () => {
 
       // Role-based redirect after login
       if (response.data.role === "pantry") {
-        navigate("/pantry/dashboard");
+        navigate("/pantry/dashboard", { replace: true });
+      } else if (response.data.role === "restaurant" && response.data.restaurantRole === "chef") {
+        navigate("/kot", { replace: true });
       } else {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Login failed. Please try again.";
