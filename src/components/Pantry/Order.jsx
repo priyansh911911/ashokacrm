@@ -646,10 +646,8 @@ const Order = () => {
           >
             <option value="">All Types</option>
             <option value="Kitchen to Pantry">Kitchen to Pantry</option>
-            <option value="Pantry to Reception">Pantry to Reception</option>
-            <option value="Reception to Vendor">Reception to Vendor</option>
-            <option value="store to vendor">Store to Vendor</option>
-            <option value="pantry to store">Pantry to Store</option>
+            <option value="Pantry to Kitchen">Pantry to Kitchen</option>
+            <option value="Pantry to vendor">Pantry to Vendor</option>
           </select>
 
           <select
@@ -875,13 +873,19 @@ const Order = () => {
                       {order.orderNumber || order._id?.slice(-8)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
-                       order.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
-                       order.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
-                       order.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
-                       order.orderType === 'store to vendor' ? 'Store → Vendor' :
-                       order.orderType === 'pantry to store' ? 'Pantry → Store' :
-                       order.orderType || 'N/A'}
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
+                           order.orderType === 'Pantry to Kitchen' ? 'Pantry → Kitchen' :
+                           order.orderType === 'Pantry to vendor' ? 'Pantry → Vendor' :
+                           order.orderType || 'N/A'}
+                        </span>
+                        {order.orderType === 'Pantry to Kitchen' && (
+                          <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            Auto-Delivered to Kitchen
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getVendorName(order.vendorId)}
@@ -917,7 +921,7 @@ const Order = () => {
                             Approve
                           </button>
                         )}
-                        {order.status === 'approved' && (
+                        {order.status === 'delivered' && (
                           <button
                             onClick={() => handleFulfillOrder(order)}
                             className="text-blue-600 hover:text-blue-900 text-xs"
@@ -931,18 +935,22 @@ const Order = () => {
                         >
                           View
                         </button>
-                        <button
-                          onClick={() => generateInvoice(order)}
-                          className="text-green-600 hover:text-green-900 text-xs"
-                        >
-                          Invoice
-                        </button>
-                        <button
-                          onClick={() => handleChalanUpload(order)}
-                          className="text-purple-600 hover:text-purple-900 text-xs"
-                        >
-                          Chalan
-                        </button>
+                        {order.orderType !== 'Pantry to Kitchen' && (
+                          <>
+                            <button
+                              onClick={() => generateInvoice(order)}
+                              className="text-green-600 hover:text-green-900 text-xs"
+                            >
+                              Invoice
+                            </button>
+                            <button
+                              onClick={() => handleChalanUpload(order)}
+                              className="text-purple-600 hover:text-purple-900 text-xs"
+                            >
+                              Chalan
+                            </button>
+                          </>
+                        )}
 
                       </div>
                     </td>
@@ -975,11 +983,8 @@ const Order = () => {
                   </h3>
                   <p className="text-sm text-gray-600">
                     {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
-                     order.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
-                     order.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
-                     order.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
-                     order.orderType === 'store to vendor' ? 'Store → Vendor' :
-                     order.orderType === 'pantry to store' ? 'Pantry → Store' :
+                     order.orderType === 'Pantry to Kitchen' ? 'Pantry → Kitchen' :
+                     order.orderType === 'Pantry to vendor' ? 'Pantry → Vendor' :
                      order.orderType || 'N/A'}
                   </p>
                 </div>
@@ -1023,7 +1028,7 @@ const Order = () => {
                     Approve
                   </button>
                 )}
-                {order.status === 'approved' && (
+                {order.status === 'delivered' && (
                   <button
                     onClick={() => handleFulfillOrder(order)}
                     className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
@@ -1037,35 +1042,39 @@ const Order = () => {
                 >
                   View
                 </button>
-                <button
-                  onClick={() => generateInvoice(order)}
-                  className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
-                >
-                  Invoice
-                </button>
-                <button
-                  onClick={() => handleChalanUpload(order)}
-                  className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200"
-                >
-                  Chalan
-                </button>
-                <button
-                  onClick={() => {
-                    const vendor = vendors.find(v => v._id === order.vendorId);
-                    if (vendor && vendor.UpiID) {
-                      setPaymentVendor({
-                        ...vendor,
-                        totalAmount: order.totalAmount || 0
-                      });
-                      setShowPaymentModal(true);
-                    } else {
-                      showToast.error('Vendor UPI details not available');
-                    }
-                  }}
-                  className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200"
-                >
-                  Pay Now
-                </button>
+                {order.orderType !== 'Pantry to Kitchen' && (
+                  <>
+                    <button
+                      onClick={() => generateInvoice(order)}
+                      className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
+                    >
+                      Invoice
+                    </button>
+                    <button
+                      onClick={() => handleChalanUpload(order)}
+                      className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200"
+                    >
+                      Chalan
+                    </button>
+                    <button
+                      onClick={() => {
+                        const vendor = vendors.find(v => v._id === order.vendorId);
+                        if (vendor && vendor.UpiID) {
+                          setPaymentVendor({
+                            ...vendor,
+                            totalAmount: order.totalAmount || 0
+                          });
+                          setShowPaymentModal(true);
+                        } else {
+                          showToast.error('Vendor UPI details not available');
+                        }
+                      }}
+                      className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200"
+                    >
+                      Pay Now
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))
@@ -1181,10 +1190,8 @@ const Order = () => {
                     >
                       <option value="">Select Order Type</option>
                       <option value="Kitchen to Pantry">Kitchen to Pantry</option>
-                      <option value="Pantry to Reception">Pantry to Reception</option>
-                      <option value="Reception to Vendor">Reception to Vendor</option>
-                      <option value="store to vendor">Store to Vendor</option>
-                      <option value="pantry to store">Pantry to Store</option>
+                      <option value="Pantry to Kitchen">Pantry to Kitchen</option>
+                      <option value="Pantry to vendor">Pantry to Vendor</option>
                     </select>
                   </div>
                   

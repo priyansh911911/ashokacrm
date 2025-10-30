@@ -52,14 +52,16 @@ const Kitchen = () => {
         setVendors([]);
       }
 
-      // Fetch orders
+      // Fetch only kitchen orders (pantry orders create linked kitchen orders)
       try {
-        const ordersRes = await axios.get('/api/kitchen-orders', { 
+        const kitchenOrdersRes = await axios.get('/api/kitchen-orders', { 
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
         });
-        setOrders(ordersRes.data || []);
+        
+        const kitchenOrders = kitchenOrdersRes.data || [];
+        setOrders(kitchenOrders);
       } catch (error) {
-        console.log('Kitchen orders not available');
+        console.log('Orders fetch failed:', error);
         setOrders([]);
       }
     } catch (error) {
@@ -123,6 +125,21 @@ const Kitchen = () => {
       fetchData();
     } catch (error) {
       showToast.error('Failed to delete order');
+    }
+  };
+
+  const handleStatusUpdate = async (order, newStatus) => {
+    try {
+      // Update kitchen order status (will sync pantry if linked)
+      await axios.put(`/api/kitchen-orders/${order._id}`, 
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      showToast.success(`Order ${newStatus} successfully`);
+      fetchData();
+    } catch (error) {
+      showToast.error('Failed to update order status');
+      console.error('Status update error:', error);
     }
   };
 
@@ -225,21 +242,74 @@ const Kitchen = () => {
                         {order._id.slice(-6)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-700">
-                        {order.orderType.replace('_', ' ')}
+                        <div className="flex items-center gap-2">
+                          <span>{order.orderType.replace('_', ' ')}</span>
+                          {order.pantryOrderId && (
+                            <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                              From Pantry
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-700">
                         <div className="flex items-center gap-1">
                           <Package size={14} />
-                          {order.items?.length} items
+                          <div className="max-w-xs">
+                            {order.items?.length > 0 ? (
+                              <div className="text-xs">
+                                {order.items.map((item, idx) => (
+                                  <div key={idx} className="truncate">
+                                    {item.itemId?.name || item.name || 'Unknown Item'} ({item.quantity})
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              '0 items'
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-900">
                         ₹{order.totalAmount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </span>
+                          {order.status === 'pending' && (
+                            <button
+                              onClick={() => handleStatusUpdate(order, 'approved')}
+                              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {order.status === 'approved' && (
+                            <button
+                              onClick={() => handleStatusUpdate(order, 'delivered')}
+                              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                            >
+                              Mark Received
+                            </button>
+                          )}
+                          {order.status === 'preparing' && (
+                            <button
+                              onClick={() => handleStatusUpdate(order, 'ready')}
+                              className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                            >
+                              Mark Ready
+                            </button>
+                          )}
+                          {order.status === 'ready' && (
+                            <button
+                              onClick={() => handleStatusUpdate(order, 'delivered')}
+                              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                            >
+                              Mark Received
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">

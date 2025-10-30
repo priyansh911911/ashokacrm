@@ -79,6 +79,7 @@ import EasyDashboard from "./components/easy dashboard/easydashboard.jsx";
 import CashManagement from "./components/CashManagement/CashManagement.jsx";
 import RegisterForm from "./components/auth/RegisterForm.jsx";
 import Kitchen from "./components/Kitchen.jsx";
+import KitchenStore from "./components/KitchenStore.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -120,44 +121,30 @@ const App = () => {
                   <main className="flex-1 overflow-y-auto">
                     <Routes>
                       <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/tasks" element={<TaskAssign />} />
-                      <Route path="/category" element={<CategoryList />} />
-                      <Route path="/room" element={<RoomList />} />
-                      <Route path="/staff" element={<StaffList />} />
-                      <Route
-                        path="/bookingform"
-                        element={<BookingFormPage />}
-                      />
-                      <Route path="/booking" element={<Booking />} />
-                      <Route path="/room-inspection" element={<RoomInspection />} />
-                      <Route path="/checkout" element={<CheckoutPage />} />
-                      <Route path="/reservation" element={<Reservation />} />
-                      <Route
-                        path="/reservationform"
-                        element={<ReservationForm />}
-                      />
-                      <Route
-                        path="/laundry/ordermanagement"
-                        element={<Order />}
-                      />
-                      <Route
-                        path="/laundry/inventorymanagement"
-                        element={<Inventory />}
-                      />
-                      <Route path="/cab" element={<Cab />} />
-                      <Route
-                        path="/cabbookingform"
-                        element={<Cabbookingform />}
-                      />
-                      <Route path="/cab/vehicle" element={<Vehile />} />
-                      <Route path="/cab/driver" element={<Driver />} />
-
-                      <Route path="/resturant" element={<Resturant />} />
                       <Route path="/pantry/dashboard" element={<PantryDashboard />} />
                       <Route path="/pantry/item" element={<PantryItems />} />
                       <Route path="/pantry/category" element={<CategoryPage />} />
                       <Route path="/pantry/orders" element={<PantryOrders />} />
                       <Route path="/pantry/vendors" element={<PantryVendors />} />
+                      <Route path="/kitchen" element={<Kitchen />} />
+                      <Route path="/kitchen-store" element={<KitchenStore />} />
+                      <Route path="/tasks" element={<TaskAssign />} />
+                      <Route path="/category" element={<CategoryList />} />
+                      <Route path="/room" element={<RoomList />} />
+                      <Route path="/staff" element={<StaffList />} />
+                      <Route path="/bookingform" element={<BookingFormPage />} />
+                      <Route path="/booking" element={<Booking />} />
+                      <Route path="/room-inspection" element={<RoomInspection />} />
+                      <Route path="/checkout" element={<CheckoutPage />} />
+                      <Route path="/reservation" element={<Reservation />} />
+                      <Route path="/reservationform" element={<ReservationForm />} />
+                      <Route path="/laundry/ordermanagement" element={<Order />} />
+                      <Route path="/laundry/inventorymanagement" element={<Inventory />} />
+                      <Route path="/cab" element={<Cab />} />
+                      <Route path="/cabbookingform" element={<Cabbookingform />} />
+                      <Route path="/cab/vehicle" element={<Vehile />} />
+                      <Route path="/cab/driver" element={<Driver />} />
+                      <Route path="/resturant" element={<Resturant />} />
                       <Route 
                         path="/staff-work" 
                         element={
@@ -227,7 +214,7 @@ const App = () => {
                           </ProtectedRoute>
                         } 
                       />
-                      <Route path="/kitchen" element={<Kitchen />} />
+
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>
                   </main>
