@@ -294,7 +294,6 @@ const Sidebar = () => {
         { label: "Orders", path: "/pantry/orders", icon: Package },
         { label: "Vendors", path: "/pantry/vendors", icon: Users },
         { label: "Kitchen", path: "/kitchen", icon: Settings },
-        { label: "Disbursements", path: "/disbursements", icon: Package },
       ],
     }] : []),
 
