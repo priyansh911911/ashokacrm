@@ -196,7 +196,12 @@ const Order = () => {
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
-    const confirmMessage = `Are you sure you want to change the order status to "${newStatus.toUpperCase()}"?\n\nThis action cannot be undone.`;
+    const order = orders.find(o => o._id === orderId);
+    let confirmMessage = `Are you sure you want to change the order status to "${newStatus.toUpperCase()}"?\n\nThis action cannot be undone.`;
+    
+    if (newStatus === 'fulfilled' && order?.orderType === 'Pantry to vendor') {
+      confirmMessage += '\n\nThis will also update the pantry inventory by adding the received quantities from the vendor.';
+    }
     
     if (!window.confirm(confirmMessage)) {
       return;
@@ -208,7 +213,9 @@ const Order = () => {
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       showToast.success(`Order status updated to ${newStatus}`);
-      fetchOrders();
+      
+      // Refresh both orders and pantry items to reflect inventory changes
+      await Promise.all([fetchOrders(), fetchPantryItems()]);
     } catch (error) {
       showToast.error('Failed to update order status');
     }
@@ -221,11 +228,17 @@ const Order = () => {
       return;
     }
     
-    // Find first item with stock > 0
-    const availableItem = pantryItems.find(item => (item.stockQuantity || 0) > 0);
-    if (!availableItem) {
-      showToast.error('No items with available stock. Please restock items first.');
-      return;
+    // For Pantry to vendor orders, allow any item (even out of stock)
+    // For other orders, find first item with stock > 0
+    let availableItem;
+    if (formData.orderType === 'Pantry to vendor') {
+      availableItem = pantryItems[0]; // Use first item regardless of stock
+    } else {
+      availableItem = pantryItems.find(item => (item.stockQuantity || 0) > 0);
+      if (!availableItem) {
+        showToast.error('No items with available stock. Please restock items first.');
+        return;
+      }
     }
     
     console.log('Adding item:', availableItem);
@@ -1066,6 +1079,14 @@ const Order = () => {
                             {order.orderType === 'Kitchen to Pantry' ? 'Approve & Send to Kitchen' : 'Approve'}
                           </button>
                         )}
+                        {order.status === 'approved' && order.orderType === 'Pantry to vendor' && (
+                          <button
+                            onClick={() => updateOrderStatus(order._id, 'fulfilled')}
+                            className="text-blue-600 hover:text-blue-900 text-xs"
+                          >
+                            Fulfill
+                          </button>
+                        )}
                         {order.status === 'delivered' && (
                           <button
                             onClick={() => handleFulfillOrder(order)}
@@ -1219,6 +1240,14 @@ const Order = () => {
                     className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
                   >
                     {order.orderType === 'Kitchen to Pantry' ? 'Approve & Send to Kitchen' : 'Approve'}
+                  </button>
+                )}
+                {order.status === 'approved' && order.orderType === 'Pantry to vendor' && (
+                  <button
+                    onClick={() => updateOrderStatus(order._id, 'fulfilled')}
+                    className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
+                  >
+                    Fulfill
                   </button>
                 )}
                 {order.status === 'delivered' && (
@@ -1613,13 +1642,14 @@ const Order = () => {
                               {pantryItems.map(pantryItem => {
                                 const stock = pantryItem.stockQuantity || 0;
                                 const isOutOfStock = stock <= 0;
+                                const isPantryToVendor = formData.orderType === 'Pantry to vendor';
                                 return (
                                   <option 
                                     key={pantryItem._id} 
                                     value={pantryItem._id}
-                                    disabled={isOutOfStock}
+                                    disabled={!isPantryToVendor && isOutOfStock}
                                   >
-                                    {pantryItem.name} {isOutOfStock ? '(Out of Stock)' : `(Stock: ${stock})`}
+                                    {pantryItem.name} {isOutOfStock ? (isPantryToVendor ? '(Out of Stock - Can Order)' : '(Out of Stock)') : `(Stock: ${stock})`}
                                   </option>
                                 );
                               })}
@@ -1643,10 +1673,19 @@ const Order = () => {
                                 step="0.1"
                                 value={item.quantity}
                                 max={(() => {
+                                  if (formData.orderType === 'Pantry to vendor') {
+                                    return undefined; // No max limit for vendor orders
+                                  }
                                   const pantryItem = pantryItems.find(p => p._id === item.pantryItemId);
                                   return pantryItem?.stockQuantity || 0;
                                 })()}
                                 onChange={(e) => {
+                                  if (formData.orderType === 'Pantry to vendor') {
+                                    // No stock validation for vendor orders
+                                    updateItem(index, 'quantity', e.target.value);
+                                    return;
+                                  }
+                                  
                                   const pantryItem = pantryItems.find(p => p._id === item.pantryItemId);
                                   const maxStock = pantryItem?.stockQuantity || 0;
                                   const value = parseFloat(e.target.value);
