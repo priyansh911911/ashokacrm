@@ -220,15 +220,22 @@ const Order = () => {
       showToast.error('No pantry items available. Please add items first.');
       return;
     }
-    const firstItem = pantryItems[0];
-    console.log('Adding item:', firstItem);
+    
+    // Find first item with stock > 0
+    const availableItem = pantryItems.find(item => (item.stockQuantity || 0) > 0);
+    if (!availableItem) {
+      showToast.error('No items with available stock. Please restock items first.');
+      return;
+    }
+    
+    console.log('Adding item:', availableItem);
     setFormData(prev => {
       const newItem = {
-        pantryItemId: firstItem._id,
-        name: firstItem.name,
+        pantryItemId: availableItem._id,
+        name: availableItem.name,
         quantity: "",
-        unit: firstItem.unit || 'pcs',
-        unitPrice: firstItem.price || 0,
+        unit: availableItem.unit || 'pcs',
+        unitPrice: availableItem.price || 0,
         notes: ''
       };
       
@@ -1415,11 +1422,19 @@ const Order = () => {
                               onChange={(e) => updateItem(index, 'pantryItemId', e.target.value)}
                               className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
                             >
-                              {pantryItems.map(pantryItem => (
-                                <option key={pantryItem._id} value={pantryItem._id}>
-                                  {pantryItem.name}
-                                </option>
-                              ))}
+                              {pantryItems.map(pantryItem => {
+                                const stock = pantryItem.stockQuantity || 0;
+                                const isOutOfStock = stock <= 0;
+                                return (
+                                  <option 
+                                    key={pantryItem._id} 
+                                    value={pantryItem._id}
+                                    disabled={isOutOfStock}
+                                  >
+                                    {pantryItem.name} {isOutOfStock ? '(Out of Stock)' : `(Stock: ${stock})`}
+                                  </option>
+                                );
+                              })}
                             </select>
                             
                             <button
@@ -1439,7 +1454,21 @@ const Order = () => {
                                 min="0.1"
                                 step="0.1"
                                 value={item.quantity}
-                                onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                max={(() => {
+                                  const pantryItem = pantryItems.find(p => p._id === item.pantryItemId);
+                                  return pantryItem?.stockQuantity || 0;
+                                })()}
+                                onChange={(e) => {
+                                  const pantryItem = pantryItems.find(p => p._id === item.pantryItemId);
+                                  const maxStock = pantryItem?.stockQuantity || 0;
+                                  const value = parseFloat(e.target.value);
+                                  
+                                  if (value > maxStock) {
+                                    showToast.error(`Cannot order more than available stock (${maxStock})`);
+                                    return;
+                                  }
+                                  updateItem(index, 'quantity', e.target.value);
+                                }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
                               />
                             </div>

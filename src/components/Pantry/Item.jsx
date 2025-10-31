@@ -463,8 +463,11 @@ function Item() {
                         <td className="px-6 py-3 text-sm text-gray-500">{item.category?.name || item.category}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">₹{item.price}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">
-                          <span className={item.stockQuantity <= item.minStockLevel ? 'text-red-600 font-semibold' : ''}>
-                            {item.stockQuantity}
+                          <span className={`${
+                            item.stockQuantity < 0 ? 'text-red-700 font-bold bg-red-100 px-2 py-1 rounded' :
+                            item.stockQuantity <= item.minStockLevel ? 'text-red-600 font-semibold' : ''
+                          }`}>
+                            {item.stockQuantity < 0 ? `${item.stockQuantity} (Negative Stock!)` : item.stockQuantity}
                           </span>
                         </td>
                         <td className="px-6 py-3 text-sm text-gray-500">{item.unit}</td>
