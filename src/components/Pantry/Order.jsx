@@ -359,6 +359,56 @@ const Order = () => {
     );
   };
 
+  const getPaymentStatusBadge = (paymentStatus) => {
+    const colors = {
+      pending: 'bg-red-100 text-red-800',
+      partial: 'bg-orange-100 text-orange-800',
+      paid: 'bg-green-100 text-green-800'
+    };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[paymentStatus] || 'bg-gray-100 text-gray-800'}`}>
+        {paymentStatus?.charAt(0).toUpperCase() + paymentStatus?.slice(1) || 'Pending'}
+      </span>
+    );
+  };
+
+  const updatePaymentStatus = async (orderId, paymentData) => {
+    try {
+      // Get the current order first
+      const orderResponse = await axios.get(`/api/pantry/orders`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const currentOrder = orderResponse.data.orders.find(o => o._id === orderId);
+      
+      if (!currentOrder) {
+        showToast.error('Order not found');
+        return;
+      }
+
+      // Update the order with payment status
+      const updatedOrder = {
+        ...currentOrder,
+        paymentStatus: paymentData.paymentStatus,
+        paymentDetails: {
+          paidAmount: paymentData.paidAmount || 0,
+          paidAt: paymentData.paymentStatus === 'paid' ? new Date() : null,
+          paymentMethod: paymentData.paymentMethod || 'UPI',
+          transactionId: paymentData.transactionId || '',
+          notes: paymentData.notes || ''
+        }
+      };
+
+      await axios.put(`/api/pantry/orders/${orderId}`, updatedOrder, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      showToast.success('Payment status updated successfully');
+      fetchOrders();
+    } catch (error) {
+      console.error('Payment status update error:', error);
+      showToast.error('Failed to update payment status');
+    }
+  };
+
   const getPriorityBadge = (priority) => {
     const colors = {
       low: 'bg-gray-100 text-gray-800',
@@ -374,32 +424,53 @@ const Order = () => {
   };
 
   const getVendorAnalytics = (vendorId) => {
-    const vendorOrders = orders.filter(order => {
+    // Ensure we have all orders loaded
+    const allVendorOrders = orders.filter(order => {
       if (!order.vendorId) return false;
       const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
       return id === vendorId;
     });
     
+    console.log(`Vendor Analytics for ${vendorId}:`, {
+      totalOrdersInSystem: orders.length,
+      vendorOrders: allVendorOrders.length,
+      vendorOrderIds: allVendorOrders.map(o => o._id)
+    });
+    
     return {
       vendor: vendors.find(v => v._id === vendorId),
       total: {
-        orders: vendorOrders.length,
-        amount: vendorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-        items: vendorOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
+        orders: allVendorOrders.length,
+        amount: allVendorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+        items: allVendorOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
       },
       statusBreakdown: {
-        pending: vendorOrders.filter(o => o.status === 'pending').length,
-        approved: vendorOrders.filter(o => o.status === 'approved').length,
-        fulfilled: vendorOrders.filter(o => o.status === 'fulfilled').length,
-        cancelled: vendorOrders.filter(o => o.status === 'cancelled').length
-      }
+        pending: allVendorOrders.filter(o => o.status === 'pending').length,
+        approved: allVendorOrders.filter(o => o.status === 'approved').length,
+        fulfilled: allVendorOrders.filter(o => o.status === 'fulfilled').length,
+        cancelled: allVendorOrders.filter(o => o.status === 'cancelled').length
+      },
+      allOrders: allVendorOrders // Include all orders for debugging
     };
   };
 
-  const handleVendorSelect = (vendorId) => {
+  const fetchVendorAnalyticsFromAPI = async (vendorId) => {
+    try {
+      const { data } = await axios.get(`/api/pantry/vendor-analytics/${vendorId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      return data.analytics;
+    } catch (error) {
+      console.error('Error fetching vendor analytics:', error);
+      // Fallback to local calculation
+      return getVendorAnalytics(vendorId);
+    }
+  };
+
+  const handleVendorSelect = async (vendorId) => {
     setFilterVendor(vendorId);
     if (vendorId) {
-      const analytics = getVendorAnalytics(vendorId);
+      const analytics = await fetchVendorAnalyticsFromAPI(vendorId);
       setVendorAnalytics(analytics);
       setShowAnalytics(true);
     } else {
@@ -745,7 +816,24 @@ const Order = () => {
           <div className="grid grid-cols-1 sm:grid-cols-1 gap-3 sm:gap-4">
             {/* Total Stats */}
             <div className="bg-blue-50 p-4 sm:p-6 rounded-lg">
-              <h3 className="font-semibold text-blue-800 mb-3 sm:mb-4 text-base sm:text-lg">Vendor Analytics</h3>
+              <div className="flex justify-between items-center mb-3 sm:mb-4">
+                <h3 className="font-semibold text-blue-800 text-base sm:text-lg">Vendor Analytics</h3>
+                <button
+                  onClick={() => {
+                    console.log('Current vendor analytics:', vendorAnalytics);
+                    console.log('All orders in system:', orders.length);
+                    console.log('Filtered vendor orders:', orders.filter(o => {
+                      if (!o.vendorId) return false;
+                      const id = typeof o.vendorId === 'object' ? o.vendorId._id : o.vendorId;
+                      return id === filterVendor;
+                    }));
+                    alert(`Debug Info:\nTotal Orders: ${vendorAnalytics.total.orders}\nTotal Amount: ₹${vendorAnalytics.total.amount}\nTotal Items: ${vendorAnalytics.total.items}\nCheck console for detailed logs.`);
+                  }}
+                  className="text-xs px-2 py-1 bg-blue-200 text-blue-800 rounded hover:bg-blue-300"
+                >
+                  Debug
+                </button>
+              </div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-2xl sm:text-3xl font-bold text-blue-600">{vendorAnalytics.total.orders}</div>
@@ -856,13 +944,14 @@ const Order = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center">
+                  <td colSpan="8" className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mr-2"></div>
                       Loading orders...
@@ -871,7 +960,7 @@ const Order = () => {
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500">No orders found</td>
+                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No orders found</td>
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
@@ -905,6 +994,29 @@ const Order = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(order.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {order.orderType === 'Pantry to vendor' ? (
+                        <div className="flex items-center gap-2">
+                          {getPaymentStatusBadge(order.paymentStatus)}
+                          <button
+                            onClick={() => {
+                              const newStatus = order.paymentStatus === 'paid' ? 'pending' : 'paid';
+                              updatePaymentStatus(order._id, {
+                                paymentStatus: newStatus,
+                                paidAmount: newStatus === 'paid' ? order.totalAmount : 0,
+                                paymentMethod: 'UPI',
+                                notes: `Payment ${newStatus} via admin panel`
+                              });
+                            }}
+                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          >
+                            {order.paymentStatus === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">N/A</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
@@ -1012,6 +1124,28 @@ const Order = () => {
                   <span className="text-gray-500">Items:</span>
                   <p className="font-medium">{order.items?.length || 0} items</p>
                 </div>
+                {order.orderType === 'Pantry to vendor' && (
+                  <div className="col-span-2">
+                    <span className="text-gray-500">Payment Status:</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {getPaymentStatusBadge(order.paymentStatus)}
+                      <button
+                        onClick={() => {
+                          const newStatus = order.paymentStatus === 'paid' ? 'pending' : 'paid';
+                          updatePaymentStatus(order._id, {
+                            paymentStatus: newStatus,
+                            paidAmount: newStatus === 'paid' ? order.totalAmount : 0,
+                            paymentMethod: 'UPI',
+                            notes: `Payment ${newStatus} via mobile panel`
+                          });
+                        }}
+                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      >
+                        {order.paymentStatus === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
@@ -1221,7 +1355,7 @@ const Order = () => {
                   </div>
                 </div>
 
-                {(formData.orderType === 'Reception to Vendor' || formData.orderType === 'Daily Essentials Distributor') && (
+                {(formData.orderType === 'Reception to Vendor' || formData.orderType === 'Daily Essentials Distributor' || formData.orderType === 'Pantry to vendor') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
                     <select
@@ -1239,6 +1373,7 @@ const Order = () => {
                     {/* Vendor Analytics in Form */}
                     {formData.vendor && (() => {
                       const analytics = getVendorAnalytics(formData.vendor);
+                      
                       return (
                         <div className="mt-3 bg-blue-50 p-3 rounded-lg border">
                           <div className="flex justify-between items-center mb-2">
@@ -1269,53 +1404,53 @@ const Order = () => {
                               </div>
                               
                               {/* UPI and Scanner Info */}
-                              {analytics.vendor?.UpiID && (
+                              {formAnalytics.vendor?.UpiID && (
                                 <div className="mt-3 p-2 bg-green-50 rounded border">
                                   <div className="text-xs text-gray-600 mb-1">Payment Info:</div>
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const totalAmount = analytics.total?.amount || 0;
+                                      const totalAmount = formAnalytics.total?.amount || 0;
                                       
                                       // Check if mobile device
                                       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                                       
                                       if (isMobile) {
-                                        const upiUrl = `upi://pay?pa=${analytics.vendor.UpiID}&pn=${encodeURIComponent(analytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                                        const upiUrl = `upi://pay?pa=${formAnalytics.vendor.UpiID}&pn=${encodeURIComponent(formAnalytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
                                         window.location.href = upiUrl;
                                       } else {
                                         // Desktop fallback: copy UPI ID to clipboard
-                                        navigator.clipboard.writeText(analytics.vendor.UpiID).then(() => {
-                                          alert(`UPI ID copied to clipboard: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
+                                        navigator.clipboard.writeText(formAnalytics.vendor.UpiID).then(() => {
+                                          alert(`UPI ID copied to clipboard: ${formAnalytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
                                         }).catch(() => {
-                                          alert(`UPI ID: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
+                                          alert(`UPI ID: ${formAnalytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
                                         });
                                       }
                                     }}
                                     className="text-sm font-mono text-green-700 hover:text-green-900 underline cursor-pointer bg-transparent border-none p-0"
                                   >
-                                    {analytics.vendor.UpiID}
+                                    {formAnalytics.vendor.UpiID}
                                   </button>
-                                  {analytics.vendor.scannerImg && (
+                                  {formAnalytics.vendor.scannerImg && (
                                     <img 
-                                      src={analytics.vendor.scannerImg} 
+                                      src={formAnalytics.vendor.scannerImg} 
                                       alt="QR Code" 
                                       className="mt-2 w-20 h-20 border rounded shadow-sm cursor-pointer hover:scale-105 transition-transform"
                                       onClick={() => {
-                                        const totalAmount = analytics.total?.amount || 0;
+                                        const totalAmount = formAnalytics.total?.amount || 0;
                                         
                                         // Check if mobile device
                                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                                         
                                         if (isMobile) {
-                                          const upiUrl = `upi://pay?pa=${analytics.vendor.UpiID}&pn=${encodeURIComponent(analytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                                          const upiUrl = `upi://pay?pa=${formAnalytics.vendor.UpiID}&pn=${encodeURIComponent(formAnalytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
                                           window.location.href = upiUrl;
                                         } else {
                                           // Desktop fallback: copy UPI ID to clipboard
-                                          navigator.clipboard.writeText(analytics.vendor.UpiID).then(() => {
-                                            alert(`UPI ID copied to clipboard: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
+                                          navigator.clipboard.writeText(formAnalytics.vendor.UpiID).then(() => {
+                                            alert(`UPI ID copied to clipboard: ${formAnalytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
                                           }).catch(() => {
-                                            alert(`UPI ID: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
+                                            alert(`UPI ID: ${formAnalytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
                                           });
                                         }
                                       }}
@@ -1325,43 +1460,39 @@ const Order = () => {
                               )}
                               
                               <div className="mt-2 flex justify-between text-xs">
-                                <span className="text-yellow-600">Pending: {analytics.statusBreakdown.pending}</span>
-                                <span className="text-green-600">Fulfilled: {analytics.statusBreakdown.fulfilled}</span>
+                                <span className="text-yellow-600">Pending: {formAnalytics.statusBreakdown.pending}</span>
+                                <span className="text-green-600">Fulfilled: {formAnalytics.statusBreakdown.fulfilled}</span>
                               </div>
                               
                               {/* Vendor Orders List */}
                               <div className="border-t border-blue-200 pt-2 mt-2">
                                 <h5 className="font-medium text-blue-700 mb-2 text-xs">Recent Orders:</h5>
                                 <div className="max-h-24 overflow-y-auto space-y-1">
-                                  {(() => {
-                                    const vendorOrders = orders.filter(order => {
-                                      if (!order.vendorId) return false;
-                                      const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
-                                      return id === formData.vendor;
-                                    });
-                                    
-                                    return vendorOrders.map((order, orderIdx) => (
-                                      <div key={orderIdx} className="bg-white/70 p-2 rounded border">
-                                        <div className="flex justify-between items-center text-xs font-medium text-gray-800 mb-1">
-                                          <span>Order #{order._id?.slice(-6)} - {order.status}</span>
-                                          <span className="text-green-600 font-bold">₹{order.totalAmount?.toFixed(0) || '0'}</span>
-                                        </div>
-                                        {(order.items || []).map((item, itemIdx) => {
-                                          let itemName = item.name || item.itemName;
-                                          if (!itemName && (item.itemId || item.pantryItemId)) {
-                                            const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
-                                            itemName = pantryItem?.name;
-                                          }
-                                          return (
-                                            <div key={itemIdx} className="flex justify-between text-xs text-gray-700 ml-2">
-                                              <span>{itemName || 'Unknown Item'} x{item.quantity || 1}</span>
-                                              <span className="text-green-600 font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(0)}</span>
-                                            </div>
-                                          );
-                                        })}
+                                  {formAnalytics.recentOrders?.map((order, orderIdx) => (
+                                    <div key={orderIdx} className="bg-white/70 p-2 rounded border">
+                                      <div className="flex justify-between items-center text-xs font-medium text-gray-800 mb-1">
+                                        <span>Order #{order._id?.slice(-6)} - {order.status}</span>
+                                        <span className="text-green-600 font-bold">₹{order.totalAmount?.toFixed(0) || '0'}</span>
                                       </div>
-                                    ));
-                                  })()}
+                                      {(order.items || []).map((item, itemIdx) => {
+                                        let itemName = item.name || item.itemName;
+                                        if (!itemName && (item.itemId || item.pantryItemId)) {
+                                          const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                                          itemName = pantryItem?.name;
+                                        }
+                                        return (
+                                          <div key={itemIdx} className="flex justify-between text-xs text-gray-700 ml-2">
+                                            <span>{itemName || 'Unknown Item'} x{item.quantity || 1}</span>
+                                            <span className="text-green-600 font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(0)}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )) || (
+                                    <div className="text-center text-gray-500 py-2 text-xs">
+                                      No recent orders found
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </>
@@ -1628,69 +1759,77 @@ const Order = () => {
                       <span className="text-gray-500">Total Amount:</span>
                       <p className="font-medium text-green-600">₹{viewingOrder.totalAmount?.toFixed(2) || '0.00'}</p>
                     </div>
+                    {viewingOrder.orderType === 'Pantry to vendor' && (
+                      <div>
+                        <span className="text-gray-500">Payment Status:</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          {getPaymentStatusBadge(viewingOrder.paymentStatus)}
+                          <button
+                            onClick={() => {
+                              const newStatus = viewingOrder.paymentStatus === 'paid' ? 'pending' : 'paid';
+                              updatePaymentStatus(viewingOrder._id, {
+                                paymentStatus: newStatus,
+                                paidAmount: newStatus === 'paid' ? viewingOrder.totalAmount : 0,
+                                paymentMethod: 'UPI',
+                                notes: `Payment ${newStatus} via order view modal`
+                              });
+                              setShowViewModal(false);
+                            }}
+                            className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          >
+                            {viewingOrder.paymentStatus === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
+                          </button>
+                        </div>
+                        {viewingOrder.paymentDetails?.paidAt && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Paid on: {new Date(viewingOrder.paymentDetails.paidAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Vendor Analytics (if vendor selected) */}
+                {/* Payment Info (if vendor selected) */}
                 {viewingOrder.vendorId && (() => {
-                  const analytics = getVendorAnalytics(typeof viewingOrder.vendorId === 'object' ? viewingOrder.vendorId._id : viewingOrder.vendorId);
-                  const vendor = vendors.find(v => v._id === (typeof viewingOrder.vendorId === 'object' ? viewingOrder.vendorId._id : viewingOrder.vendorId));
-                  return (
-                    <div className="bg-blue-50 p-4 rounded-lg border">
-                      <h3 className="font-semibold text-blue-800 mb-3">📊 Vendor Analytics: {analytics.vendor?.name}</h3>
-                      <div className="grid grid-cols-3 gap-3 text-center text-sm mb-4">
+                  const vendorId = typeof viewingOrder.vendorId === 'object' ? viewingOrder.vendorId._id : viewingOrder.vendorId;
+                  const vendor = vendors.find(v => v._id === vendorId);
+                  
+                  return vendor?.UpiID ? (
+                    <div className="bg-green-50 p-4 rounded-lg border">
+                      <h3 className="font-semibold text-green-800 mb-3">Payment Info</h3>
+                      <div className="flex items-center justify-between mb-3">
                         <div>
-                          <div className="text-lg font-bold text-blue-600">{analytics.total.orders}</div>
-                          <div className="text-gray-600">Orders</div>
+                          <div className="text-sm text-gray-600 mb-1">UPI ID:</div>
+                          <span className="font-mono text-green-700">{vendor.UpiID}</span>
                         </div>
-                        <div>
-                          <div className="text-lg font-bold text-green-600">₹{analytics.total.amount}</div>
-                          <div className="text-gray-600">Amount</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-purple-600">{analytics.total.items}</div>
-                          <div className="text-gray-600">Items</div>
-                        </div>
+                        {vendor.scannerImg && (
+                          <img 
+                            src={vendor.scannerImg} 
+                            alt="QR Code" 
+                            className="w-16 h-16 border rounded shadow-sm"
+                          />
+                        )}
                       </div>
-                      
-                      {/* Payment Info */}
-                      {vendor?.UpiID && (
-                        <div className="bg-green-50 p-3 rounded border">
-                          <div className="text-sm text-gray-600 mb-1">Payment Info:</div>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-mono text-green-700">{vendor.UpiID}</span>
-                            {vendor.scannerImg && (
-                              <img 
-                                src={vendor.scannerImg} 
-                                alt="QR Code" 
-                                className="w-16 h-16 border rounded shadow-sm"
-                              />
-                            )}
-                          </div>
-                          <button
-                            onClick={() => {
-                              setPaymentVendor({
-                                ...vendor,
-                                totalAmount: viewingOrder.totalAmount || 0
-                              });
-                              setShowViewModal(false);
-                              setShowPaymentModal(true);
-                            }}
-                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
-                          >
-                            Pay Now
-                          </button>
-                        </div>
-                      )}
-                      
-                      <div className="mt-3 flex justify-between text-sm">
-                        <span className="text-yellow-600">Pending: {analytics.statusBreakdown.pending}</span>
-                        <span className="text-blue-600">Approved: {analytics.statusBreakdown.approved}</span>
-                        <span className="text-green-600">Fulfilled: {analytics.statusBreakdown.fulfilled}</span>
-                        <span className="text-red-600">Cancelled: {analytics.statusBreakdown.cancelled}</span>
+                      <div className="mb-3">
+                        <div className="text-sm text-gray-600">Order Amount:</div>
+                        <div className="text-lg font-bold text-green-600">₹{viewingOrder.totalAmount?.toFixed(2) || '0.00'}</div>
                       </div>
+                      <button
+                        onClick={() => {
+                          setPaymentVendor({
+                            ...vendor,
+                            totalAmount: viewingOrder.totalAmount || 0
+                          });
+                          setShowViewModal(false);
+                          setShowPaymentModal(true);
+                        }}
+                        className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
+                      >
+                        Pay Now
+                      </button>
                     </div>
-                  );
+                  ) : null;
                 })()}
 
                 {/* Items */}
