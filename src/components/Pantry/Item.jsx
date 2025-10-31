@@ -109,6 +109,15 @@ function Item() {
     }
   };
 
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setFormData({
+      ...item,
+      category: typeof item.category === 'object' ? item.category._id : item.category
+    });
+    setShowForm(true);
+  };
+
   useEffect(() => {
     const initializePage = async () => {
       try {
@@ -193,12 +202,6 @@ function Item() {
       }
     });
     setShowConfirmModal(true);
-  };
-
-  const handleEdit = (item) => {
-    setEditingItem(item);
-    setFormData(item);
-    setShowForm(true);
   };
 
   const resetForm = () => {

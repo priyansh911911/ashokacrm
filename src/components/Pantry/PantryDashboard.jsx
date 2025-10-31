@@ -43,12 +43,19 @@ const PantryDashboard = () => {
       const orders = ordersRes.data.orders || ordersRes.data.data || ordersRes.data || [];
       const vendors = Array.isArray(vendorsRes.data) ? vendorsRes.data : (vendorsRes.data.vendors || []);
 
-      // Calculate low stock items (items with stock <= 10)
-      const lowStockItems = items.filter(item => (item.stock || 0) <= 10);
+      // Calculate low stock items (items with stockQuantity <= minStockLevel)
+      const lowStockItems = items.filter(item => (item.stockQuantity || 0) <= (item.minStockLevel || 10));
       
       // Calculate total value
-      const totalValue = items.reduce((sum, item) => sum + ((item.stock || 0) * (item.price || 0)), 0);
+      const totalValue = items.reduce((sum, item) => sum + ((item.stockQuantity || 0) * (item.price || 0)), 0);
 
+      console.log('Low Stock Items:', lowStockItems.map(item => ({
+        name: item.name,
+        stockQuantity: item.stockQuantity,
+        unit: item.unit,
+        minStockLevel: item.minStockLevel
+      })));
+      
       setDashboardData({
         totalItems: items.length,
         lowStockItems,
@@ -130,10 +137,10 @@ const PantryDashboard = () => {
       ...dashboardData.lowStockItems.map(item => [
         `"${item.name || 'N/A'}"`,
         `"${typeof item.category === 'object' ? item.category?.name || 'N/A' : item.category || 'N/A'}"`,
-        item.stock || 0,
+        item.stockQuantity ?? 0,
         `"${item.unit || 'pcs'}"`,
         item.price || 0,
-        ((item.stock || 0) * (item.price || 0)).toFixed(2)
+        ((item.stockQuantity || 0) * (item.price || 0)).toFixed(2)
       ].join(','))
     ].join('\n');
 
@@ -299,7 +306,7 @@ const PantryDashboard = () => {
                     <p className="text-sm text-gray-600">Unit: {item.unit}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-red-600">{item.stock || 0}</p>
+                    <p className="text-lg font-bold text-red-600">{item.stockQuantity || 0}</p>
                     <p className="text-xs text-gray-500">in stock</p>
                     <p className="text-xs text-gray-500">₹{item.price || 0}/unit</p>
                   </div>
