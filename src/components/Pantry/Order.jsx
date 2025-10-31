@@ -987,7 +987,31 @@ const Order = () => {
                       {getVendorName(order.vendorId)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {order.items?.length || 0} items
+                      <div className="max-w-xs">
+                        {order.items?.length > 0 ? (
+                          <div className="space-y-1">
+                            {order.items.slice(0, 2).map((item, idx) => {
+                              let itemName = item.name || item.itemName;
+                              if (!itemName && (item.itemId || item.pantryItemId)) {
+                                const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                                itemName = pantryItem?.name;
+                              }
+                              return (
+                                <div key={idx} className="text-xs text-gray-700">
+                                  {itemName || 'Unknown Item'} ({item.quantity || 1})
+                                </div>
+                              );
+                            })}
+                            {order.items.length > 2 && (
+                              <div className="text-xs text-gray-500">
+                                +{order.items.length - 2} more items
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No items</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getPriorityBadge(order.priority)}
@@ -1122,7 +1146,31 @@ const Order = () => {
                 </div>
                 <div>
                   <span className="text-gray-500">Items:</span>
-                  <p className="font-medium">{order.items?.length || 0} items</p>
+                  <div className="font-medium">
+                    {order.items?.length > 0 ? (
+                      <div className="space-y-1">
+                        {order.items.slice(0, 2).map((item, idx) => {
+                          let itemName = item.name || item.itemName;
+                          if (!itemName && (item.itemId || item.pantryItemId)) {
+                            const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                            itemName = pantryItem?.name;
+                          }
+                          return (
+                            <div key={idx} className="text-sm">
+                              {itemName || 'Unknown Item'} ({item.quantity || 1})
+                            </div>
+                          );
+                        })}
+                        {order.items.length > 2 && (
+                          <div className="text-sm text-gray-500">
+                            +{order.items.length - 2} more
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">No items</span>
+                    )}
+                  </div>
                 </div>
                 {order.orderType === 'Pantry to vendor' && (
                   <div className="col-span-2">
