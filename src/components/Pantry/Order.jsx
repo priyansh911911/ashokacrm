@@ -1404,53 +1404,53 @@ const Order = () => {
                               </div>
                               
                               {/* UPI and Scanner Info */}
-                              {formAnalytics.vendor?.UpiID && (
+                              {analytics.vendor?.UpiID && (
                                 <div className="mt-3 p-2 bg-green-50 rounded border">
                                   <div className="text-xs text-gray-600 mb-1">Payment Info:</div>
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const totalAmount = formAnalytics.total?.amount || 0;
+                                      const totalAmount = analytics.total?.amount || 0;
                                       
                                       // Check if mobile device
                                       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                                       
                                       if (isMobile) {
-                                        const upiUrl = `upi://pay?pa=${formAnalytics.vendor.UpiID}&pn=${encodeURIComponent(formAnalytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                                        const upiUrl = `upi://pay?pa=${analytics.vendor.UpiID}&pn=${encodeURIComponent(analytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
                                         window.location.href = upiUrl;
                                       } else {
                                         // Desktop fallback: copy UPI ID to clipboard
-                                        navigator.clipboard.writeText(formAnalytics.vendor.UpiID).then(() => {
-                                          alert(`UPI ID copied to clipboard: ${formAnalytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
+                                        navigator.clipboard.writeText(analytics.vendor.UpiID).then(() => {
+                                          alert(`UPI ID copied to clipboard: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
                                         }).catch(() => {
-                                          alert(`UPI ID: ${formAnalytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
+                                          alert(`UPI ID: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
                                         });
                                       }
                                     }}
                                     className="text-sm font-mono text-green-700 hover:text-green-900 underline cursor-pointer bg-transparent border-none p-0"
                                   >
-                                    {formAnalytics.vendor.UpiID}
+                                    {analytics.vendor.UpiID}
                                   </button>
-                                  {formAnalytics.vendor.scannerImg && (
+                                  {analytics.vendor.scannerImg && (
                                     <img 
-                                      src={formAnalytics.vendor.scannerImg} 
+                                      src={analytics.vendor.scannerImg} 
                                       alt="QR Code" 
                                       className="mt-2 w-20 h-20 border rounded shadow-sm cursor-pointer hover:scale-105 transition-transform"
                                       onClick={() => {
-                                        const totalAmount = formAnalytics.total?.amount || 0;
+                                        const totalAmount = analytics.total?.amount || 0;
                                         
                                         // Check if mobile device
                                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                                         
                                         if (isMobile) {
-                                          const upiUrl = `upi://pay?pa=${formAnalytics.vendor.UpiID}&pn=${encodeURIComponent(formAnalytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
+                                          const upiUrl = `upi://pay?pa=${analytics.vendor.UpiID}&pn=${encodeURIComponent(analytics.vendor.name)}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent('Payment for orders')}`;
                                           window.location.href = upiUrl;
                                         } else {
                                           // Desktop fallback: copy UPI ID to clipboard
-                                          navigator.clipboard.writeText(formAnalytics.vendor.UpiID).then(() => {
-                                            alert(`UPI ID copied to clipboard: ${formAnalytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
+                                          navigator.clipboard.writeText(analytics.vendor.UpiID).then(() => {
+                                            alert(`UPI ID copied to clipboard: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nOpen your UPI app and pay manually.`);
                                           }).catch(() => {
-                                            alert(`UPI ID: ${formAnalytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
+                                            alert(`UPI ID: ${analytics.vendor.UpiID}\nAmount: ₹${totalAmount}\nCopy this UPI ID and pay using your UPI app.`);
                                           });
                                         }
                                       }}
@@ -1460,15 +1460,19 @@ const Order = () => {
                               )}
                               
                               <div className="mt-2 flex justify-between text-xs">
-                                <span className="text-yellow-600">Pending: {formAnalytics.statusBreakdown.pending}</span>
-                                <span className="text-green-600">Fulfilled: {formAnalytics.statusBreakdown.fulfilled}</span>
+                                <span className="text-yellow-600">Pending: {analytics.statusBreakdown.pending}</span>
+                                <span className="text-green-600">Fulfilled: {analytics.statusBreakdown.fulfilled}</span>
                               </div>
                               
                               {/* Vendor Orders List */}
                               <div className="border-t border-blue-200 pt-2 mt-2">
                                 <h5 className="font-medium text-blue-700 mb-2 text-xs">Recent Orders:</h5>
                                 <div className="max-h-24 overflow-y-auto space-y-1">
-                                  {formAnalytics.recentOrders?.map((order, orderIdx) => (
+                                  {orders.filter(order => {
+                                    if (!order.vendorId) return false;
+                                    const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                                    return id === formData.vendor;
+                                  }).slice(0, 5).map((order, orderIdx) => (
                                     <div key={orderIdx} className="bg-white/70 p-2 rounded border">
                                       <div className="flex justify-between items-center text-xs font-medium text-gray-800 mb-1">
                                         <span>Order #{order._id?.slice(-6)} - {order.status}</span>
@@ -1488,7 +1492,12 @@ const Order = () => {
                                         );
                                       })}
                                     </div>
-                                  )) || (
+                                  ))}
+                                  {orders.filter(order => {
+                                    if (!order.vendorId) return false;
+                                    const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                                    return id === formData.vendor;
+                                  }).length === 0 && (
                                     <div className="text-center text-gray-500 py-2 text-xs">
                                       No recent orders found
                                     </div>
