@@ -22,6 +22,9 @@ const AllBookings = ({ setActiveTab }) => {
   const [itemsPerPage] = useState(10);
   const [userRole, setUserRole] = useState(null);
   const [userRestaurantRole, setUserRestaurantRole] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const [loadingInvoice, setLoadingInvoice] = useState(null);
 
   useEffect(() => {
     fetchUserRole();
@@ -39,6 +42,19 @@ const AllBookings = ({ setActiveTab }) => {
       if (interval) clearInterval(interval);
     };
   }, []);
+
+  const fetchUserRole = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/auth/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserRole(response.data.role);
+      setUserRestaurantRole(response.data.restaurantRole);
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+    }
+  };
 
   const fetchBookings = async () => {
     try {
@@ -155,9 +171,11 @@ const AllBookings = ({ setActiveTab }) => {
       const response = await axios.get(`/api/restaurant-orders/details/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      showToast.info('Order details loaded');
+      setSelectedOrderDetails(response.data);
+      setShowDetailsModal(true);
     } catch (error) {
       console.error('Error fetching details:', error);
+      showToast.error('Failed to load order details');
     }
   };
 
@@ -206,84 +224,37 @@ const AllBookings = ({ setActiveTab }) => {
 
   const generateInvoice = async (orderId) => {
     try {
+      setLoadingInvoice(orderId);
       const token = localStorage.getItem('token');
-      
-      // Fetch order details for invoice
-      const response = await axios.get(`/api/restaurant-orders/details/${orderId}`, {
+      const response = await axios.get(`/api/restaurant-orders/invoice/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const orderData = response.data;
+      console.log('Invoice response:', response.data);
       
-      // Transform restaurant order data to match invoice format
-      const invoiceData = {
-        clientDetails: {
-          name: orderData.customerName || 'Guest',
-          address: orderData.address || 'N/A',
-          city: orderData.city || 'N/A',
-          company: orderData.company || 'N/A',
-          mobileNo: orderData.phoneNumber || 'N/A',
-          gstin: orderData.gstin || 'N/A'
-        },
-        invoiceDetails: {
-          billNo: `REST-${orderId.slice(-6)}`,
-          billDate: new Date().toLocaleDateString(),
-          grcNo: `GRC-${orderId.slice(-6)}`,
-          roomNo: `Table ${orderData.tableNo || 'N/A'}`,
-          roomType: 'Restaurant',
-          pax: orderData.pax || 1,
-          adult: orderData.adult || 1,
-          checkInDate: new Date().toLocaleDateString(),
-          checkOutDate: new Date().toLocaleDateString()
-        },
-        items: orderData.items?.map((item, index) => ({
-          date: new Date().toLocaleDateString(),
-          particulars: typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item'),
-          pax: 1,
-          declaredRate: typeof item === 'object' ? (item.price || item.Price || 0) : 0,
-          hsn: '996331',
-          rate: 12,
-          cgstRate: typeof item === 'object' ? ((item.price || item.Price || 0) * 0.06) : 0,
-          sgstRate: typeof item === 'object' ? ((item.price || item.Price || 0) * 0.06) : 0,
-          amount: typeof item === 'object' ? (item.price || item.Price || 0) : 0
-        })) || [],
-        taxes: [{
-          taxableAmount: orderData.amount || orderData.advancePayment || 0,
-          cgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
-          sgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
-          amount: orderData.amount || orderData.advancePayment || 0
-        }],
-        payment: {
-          taxableAmount: orderData.amount || orderData.advancePayment || 0,
-          cgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
-          sgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
-          total: (orderData.amount || orderData.advancePayment || 0) * 1.12
-        },
-        otherCharges: [
-          {
-            particulars: 'Service Charge',
-            amount: 0
+      // Handle different response formats
+      if (response.data.invoiceUrl) {
+        window.open(response.data.invoiceUrl, '_blank');
+      } else if (response.data.url) {
+        window.open(response.data.url, '_blank');
+      } else {
+        // Navigate to invoice page with data
+        navigate('/invoice', {
+          state: {
+            bookingData: response.data,
+            checkoutId: orderId
           }
-        ]
-      };
+        });
+      }
       
-      // Navigate to Invoice component with data
-      navigate('/invoice', {
-        state: {
-          bookingData: orderData,
-          checkoutId: orderId
-        }
-      });
-      
-      showToast.success('Generating invoice...');
-      
+      showToast.success('Invoice generated successfully!');
     } catch (error) {
       console.error('Error generating invoice:', error);
       showToast.error('Failed to generate invoice');
+    } finally {
+      setLoadingInvoice(null);
     }
   };
-
-
 
   const transferTable = async (e) => {
     e.preventDefault();
@@ -426,23 +397,7 @@ const AllBookings = ({ setActiveTab }) => {
     setCurrentPage(page);
   };
 
-  const fetchUserRole = async () => {
-    try {
-      // Get roles directly from localStorage
-      const role = localStorage.getItem('role');
-      const restaurantRole = localStorage.getItem('restaurantRole');
-      
-      console.log('=== ORDER ACCESS DEBUG ===');
-      console.log('Role from localStorage:', role);
-      console.log('Restaurant Role from localStorage:', restaurantRole);
-      console.log('========================');
-      
-      setUserRole(role);
-      setUserRestaurantRole(restaurantRole);
-    } catch (error) {
-      console.error('Error fetching user role:', error);
-    }
-  };
+
 
   const canCompleteOrder = () => {
     return userRole === 'restaurant' && userRestaurantRole === 'cashier';
@@ -591,7 +546,7 @@ const AllBookings = ({ setActiveTab }) => {
             </form>
           </div>
 
-          {/* <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="font-semibold mb-3 text-text text-sm sm:text-base">Apply Coupon</h3>
             <form onSubmit={applyCoupon} className="flex flex-col gap-2">
               <select
@@ -693,7 +648,7 @@ const AllBookings = ({ setActiveTab }) => {
                 Process Payment
               </button>
             </form>
-          </div> */}
+          </div>
         </div>
 
         <form onSubmit={handleSearch} className="mb-4">
@@ -791,6 +746,13 @@ const AllBookings = ({ setActiveTab }) => {
                         >
                           View
                         </button>
+                        <button
+                          onClick={() => generateInvoice(booking._id)}
+                          disabled={loadingInvoice === booking._id}
+                          className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap disabled:opacity-50"
+                        >
+                          {loadingInvoice === booking._id ? 'Loading...' : 'Invoice'}
+                        </button>
                         {booking.status === 'completed' ? (
                           <button
                             onClick={() => setPaymentForm({...paymentForm, orderId: booking._id, amount: (booking.amount || booking.advancePayment || 0).toString()})}
@@ -844,6 +806,86 @@ const AllBookings = ({ setActiveTab }) => {
           totalItems={bookings.length}
         />
       </div>
+
+      {/* Order Details Modal */}
+      {showDetailsModal && selectedOrderDetails && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Order Details</h3>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-semibold">Order ID:</label>
+                  <p>{selectedOrderDetails._id?.slice(-6)}</p>
+                </div>
+                <div>
+                  <label className="font-semibold">Customer Name:</label>
+                  <p>{selectedOrderDetails.customerName || 'Guest'}</p>
+                </div>
+                <div>
+                  <label className="font-semibold">Table Number:</label>
+                  <p>{selectedOrderDetails.tableNo}</p>
+                </div>
+                <div>
+                  <label className="font-semibold">Status:</label>
+                  <p className={`px-2 py-1 rounded text-sm inline-block ${
+                    selectedOrderDetails.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                    selectedOrderDetails.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedOrderDetails.status === 'paid' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedOrderDetails.status}
+                  </p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="font-semibold">Items:</label>
+                <div className="mt-2 space-y-2">
+                  {selectedOrderDetails.items?.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                      <span>{typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item')}</span>
+                      <span>₹{typeof item === 'object' ? (item.price || item.Price || 0) : 0}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center font-bold text-lg">
+                  <span>Total Amount:</span>
+                  <span>₹{selectedOrderDetails.totalAmount || selectedOrderDetails.advancePayment || 0}</span>
+                </div>
+              </div>
+              
+              {selectedOrderDetails.specialRequests && (
+                <div>
+                  <label className="font-semibold">Special Requests:</label>
+                  <p className="mt-1 p-2 bg-gray-50 rounded">{selectedOrderDetails.specialRequests}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

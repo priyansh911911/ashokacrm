@@ -198,12 +198,12 @@ const Kitchen = () => {
   };
 
   return (
-    <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 min-h-screen">
+    <div className="p-6 bg-background min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-amber-900">Kitchen Orders</h1>
+        <h1 className="text-3xl font-bold text-text">Kitchen Orders</h1>
         <button
           onClick={() => setShowForm(true)}
-          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white px-4 py-2 rounded-lg hover:from-amber-700 hover:to-orange-700 flex items-center gap-2 shadow-lg transition-all duration-200"
+          className="bg-primary text-text px-4 py-2 rounded-lg hover:bg-hover flex items-center gap-2 shadow-lg transition-all duration-200"
         >
           <Plus size={20} />
           New Order
@@ -211,39 +211,39 @@ const Kitchen = () => {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-xl border border-amber-200">
+      <div className="bg-white rounded-lg shadow-xl border border-border">
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mx-auto"></div>
-            <p className="mt-2 text-amber-600">Loading orders...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-text">Loading orders...</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gradient-to-r from-amber-100 to-orange-100">
+              <thead className="bg-secondary">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">Order ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">Items</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">Order ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">Items</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">Total</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-amber-200">
+              <tbody className="divide-y divide-border">
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-amber-600">
+                    <td colSpan="6" className="px-6 py-8 text-center text-text">
                       No orders found. Create your first order.
                     </td>
                   </tr>
                 ) : (
                   orders.map((order) => (
-                    <tr key={order._id} className="hover:bg-amber-50 transition-colors duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-900">
+                    <tr key={order._id} className="hover:bg-background transition-colors duration-150">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text">
                         {order._id.slice(-6)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text">
                         <div className="flex items-center gap-2">
                           <span>{order.orderType.replace('_', ' ')}</span>
                           {order.pantryOrderId && (
@@ -253,7 +253,7 @@ const Kitchen = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text">
                         <div className="flex items-center gap-1">
                           <Package size={14} />
                           <div className="max-w-xs">
@@ -271,7 +271,7 @@ const Kitchen = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text">
                         ₹{order.totalAmount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -317,7 +317,7 @@ const Kitchen = () => {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleEdit(order)}
-                            className="text-amber-600 hover:text-amber-800"
+                            className="text-primary hover:text-hover"
                           >
                             <Edit size={16} />
                           </button>
@@ -343,30 +343,30 @@ const Kitchen = () => {
       {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl border border-amber-200 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-t-lg">
-              <h2 className="text-xl font-bold mb-4 text-amber-900">
+          <div className="bg-white rounded-lg shadow-2xl border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 bg-background rounded-t-lg">
+              <h2 className="text-xl font-bold mb-4 text-text">
                 {editingOrder ? 'Edit Order' : 'Create New Order'}
               </h2>
               
               <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-lg">
                 <div>
-                  <label className="block text-sm font-medium text-amber-800 mb-1">Order Type</label>
+                  <label className="block text-sm font-medium text-text mb-1">Order Type</label>
                   <input
                     type="text"
                     value="Kitchen to Pantry"
                     readOnly
-                    className="w-full px-3 py-2 border border-amber-300 rounded-md bg-amber-50"
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background"
                   />
                 </div>
 
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="block text-sm font-medium text-amber-800">Items</label>
+                    <label className="block text-sm font-medium text-text">Items</label>
                     <button
                       type="button"
                       onClick={addItem}
-                      className="text-amber-600 hover:text-amber-800 text-sm font-medium"
+                      className="text-primary hover:text-hover text-sm font-medium"
                     >
                       + Add Item
                     </button>
@@ -376,7 +376,7 @@ const Kitchen = () => {
                       <select
                         value={item.itemId}
                         onChange={(e) => updateItem(index, 'itemId', e.target.value)}
-                        className="px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        className="px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                         required
                       >
                         <option value="">Select Item</option>
@@ -390,7 +390,7 @@ const Kitchen = () => {
                         value={item.quantity}
                         onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                         placeholder="Quantity"
-                        className="px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        className="px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                         required
                       />
                       <input
@@ -399,11 +399,11 @@ const Kitchen = () => {
                         value={item.unitPrice}
                         onChange={(e) => updateItem(index, 'unitPrice', Number(e.target.value) || 0)}
                         placeholder="Unit Price"
-                        className="px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        className="px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                         step="0.01"
                         required
                       />
-                      <div className="px-3 py-2 bg-amber-50 border border-amber-300 rounded-md text-sm font-medium">
+                      <div className="px-3 py-2 bg-background border border-border rounded-md text-sm font-medium">
                         ₹{(Number(item.quantity) * Number(item.unitPrice)).toFixed(2)}
                       </div>
                     </div>
@@ -411,21 +411,21 @@ const Kitchen = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-amber-800 mb-1">Total Amount</label>
+                  <label className="block text-sm font-medium text-text mb-1">Total Amount</label>
                   <input
                     type="number"
                     value={formData.totalAmount}
                     readOnly
-                    className="w-full px-3 py-2 border border-amber-300 rounded-md bg-amber-50"
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-amber-800 mb-1">Special Instructions</label>
+                  <label className="block text-sm font-medium text-text mb-1">Special Instructions</label>
                   <textarea
                     value={formData.specialInstructions}
                     onChange={(e) => setFormData({...formData, specialInstructions: e.target.value})}
-                    className="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                     rows="3"
                   />
                 </div>
@@ -434,14 +434,14 @@ const Kitchen = () => {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 border border-amber-300 rounded-md text-amber-700 hover:bg-amber-50 transition-colors duration-200"
+                    className="px-4 py-2 border border-border rounded-md text-text hover:bg-background transition-colors duration-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-md hover:from-amber-700 hover:to-orange-700 disabled:opacity-50 transition-all duration-200"
+                    className="px-4 py-2 bg-primary text-text rounded-md hover:bg-hover disabled:opacity-50 transition-all duration-200"
                   >
                     {loading ? 'Saving...' : editingOrder ? 'Update' : 'Create'}
                   </button>
