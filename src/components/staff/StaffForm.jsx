@@ -19,6 +19,7 @@ const StaffForm = ({
     { id: 4, name: "maintenance" },
     { id: 5, name: "housekeeping" },
     { id: 6, name: "other" },
+    { id: 7, name: "pantry" },
   ];
 
   const handleDepartmentChange = (e) => {
