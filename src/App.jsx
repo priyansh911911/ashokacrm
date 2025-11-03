@@ -19,6 +19,8 @@ import ReservationForm from "./components/reservation/Reservationform";
 
 import Order from "./components/laundary/Order.jsx";
 import Inventory from "./components/laundary/Inventory.jsx";
+import Loss from "./components/laundary/Loss.jsx";
+import Vendor from "./components/laundary/Vendor.jsx";
 import { useNavigate } from "react-router-dom";
 import Cabbookingform from "./components/cab/cabbookingform.jsx";
 import Cab from "./components/cab/cab.jsx";
@@ -140,6 +142,8 @@ const App = () => {
                       <Route path="/reservationform" element={<ReservationForm />} />
                       <Route path="/laundry/ordermanagement" element={<Order />} />
                       <Route path="/laundry/inventorymanagement" element={<Inventory />} />
+                      <Route path="/laundry/loss" element={<Loss />} />
+                      <Route path="/laundry/vendor" element={<Vendor />} />
                       <Route path="/cab" element={<Cab />} />
                       <Route path="/cabbookingform" element={<Cabbookingform />} />
                       <Route path="/cab/vehicle" element={<Vehile />} />

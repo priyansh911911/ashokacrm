@@ -72,6 +72,12 @@ const App = () => {
   const [itemStatusUpdateAvailable, setItemStatusUpdateAvailable] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showLossModal, setShowLossModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [lossFormData, setLossFormData] = useState({
+    itemId: '',
+    lossNote: ''
+  });
 
   const getAuthToken = () => localStorage.getItem("token");
 
@@ -291,24 +297,39 @@ const App = () => {
     }
   };
 
-  const handleReportLoss = async (id, lossNote) => {
+  const handleReportLoss = async () => {
     const token = getAuthToken();
     if (!token) {
       toast.error('Authentication token not found');
       return;
     }
 
+    if (!lossFormData.itemId || !lossFormData.lossNote) {
+      toast.error('Please select an item and enter loss note');
+      return;
+    }
+
     const loadingToast = toast.loading('Reporting loss...');
     try {
-      await axios.post(`/api/laundry/loss/${id}`, { lossNote }, {
+      await axios.post(`/api/laundry/loss/${selectedOrder._id}/${lossFormData.itemId}`, {
+        isLost: true,
+        lossNote: lossFormData.lossNote
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchOrders();
       toast.success('Loss reported successfully!', { id: loadingToast });
+      setShowLossModal(false);
+      setLossFormData({ itemId: '', lossNote: '' });
     } catch (error) {
       console.error("Error reporting loss:", error);
       toast.error(`Error reporting loss: ${error.response?.data?.message || error.message}`, { id: loadingToast });
     }
+  };
+
+  const openLossModal = (order) => {
+    setSelectedOrder(order);
+    setShowLossModal(true);
   };
 
 
@@ -822,10 +843,7 @@ const App = () => {
                           Cancel
                         </button>
                         <button
-                          onClick={() => {
-                            const lossNote = prompt('Enter loss note:');
-                            if (lossNote) handleReportLoss(order._id, lossNote);
-                          }}
+                          onClick={() => openLossModal(order)}
                           className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors"
                         >
                           Loss
@@ -949,10 +967,7 @@ const App = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      const lossNote = prompt('Enter loss note:');
-                      if (lossNote) handleReportLoss(order._id, lossNote);
-                    }}
+                    onClick={() => openLossModal(order)}
                     className="px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors"
                   >
                     Loss
@@ -1074,6 +1089,75 @@ const App = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Loss Modal */}
+      {showLossModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Report Item Loss</h2>
+              <button
+                onClick={() => {
+                  setShowLossModal(false);
+                  setLossFormData({ itemId: '', lossNote: '' });
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Item</label>
+                <select
+                  value={lossFormData.itemId}
+                  onChange={(e) => setLossFormData({...lossFormData, itemId: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  required
+                >
+                  <option value="">Select an item...</option>
+                  {selectedOrder.items?.map((item) => (
+                    <option key={item._id} value={item._id}>
+                      {item.quantity}x {item.itemName} - ₹{item.calculatedAmount}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Loss Note</label>
+                <textarea
+                  value={lossFormData.lossNote}
+                  onChange={(e) => setLossFormData({...lossFormData, lossNote: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  rows="3"
+                  placeholder="Describe the reason for loss..."
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleReportLoss}
+                  className="flex-1 bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition-colors"
+                >
+                  Report Loss
+                </button>
+                <button
+                  onClick={() => {
+                    setShowLossModal(false);
+                    setLossFormData({ itemId: '', lossNote: '' });
+                  }}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

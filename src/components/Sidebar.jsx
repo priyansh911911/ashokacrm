@@ -284,6 +284,16 @@ const Sidebar = () => {
               path: "/laundry/ordermanagement",
               icon: ListChecks,
             },
+            {
+              label: "Loss Management",
+              path: "/laundry/loss",
+              icon: Package,
+            },
+            {
+              label: "Vendor Management",
+              path: "/laundry/vendor",
+              icon: Users,
+            },
           ],
         }];
       }
