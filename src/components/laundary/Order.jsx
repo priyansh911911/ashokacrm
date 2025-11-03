@@ -77,7 +77,7 @@ const App = () => {
   const [showLossModal, setShowLossModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [lossFormData, setLossFormData] = useState({
-    itemId: '',
+    selectedItems: [],
     lossNote: ''
   });
 
@@ -136,7 +136,9 @@ const App = () => {
       const response = await axios.get("/api/laundry/all", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setOrders(Array.isArray(response.data) ? response.data : response.data?.data || []);
+      const ordersData = Array.isArray(response.data) ? response.data : response.data?.data || [];
+      console.log('Fetched orders with vendor data:', ordersData);
+      setOrders(ordersData);
     } catch (error) {
       console.error("Error fetching orders:", error);
       setOrders([]);
@@ -321,23 +323,26 @@ const App = () => {
       return;
     }
 
-    if (!lossFormData.itemId || !lossFormData.lossNote) {
-      toast.error('Please select an item and enter loss note');
+    if (lossFormData.selectedItems.length === 0 || !lossFormData.lossNote) {
+      toast.error('Please select at least one item and enter loss note');
       return;
     }
 
     const loadingToast = toast.loading('Reporting loss...');
     try {
-      await axios.post(`/api/laundry/loss/${selectedOrder._id}/${lossFormData.itemId}`, {
-        isLost: true,
+      // Create loss report
+      await axios.post('/api/laundry/loss-report', {
+        orderId: selectedOrder._id,
+        selectedItems: lossFormData.selectedItems,
         lossNote: lossFormData.lossNote
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       fetchOrders();
-      toast.success('Loss reported successfully!', { id: loadingToast });
+      toast.success(`Loss reported for ${lossFormData.selectedItems.length} item(s) successfully!`, { id: loadingToast });
       setShowLossModal(false);
-      setLossFormData({ itemId: '', lossNote: '' });
+      setLossFormData({ selectedItems: [], lossNote: '' });
     } catch (error) {
       console.error('Error reporting loss:', error);
       toast.error(`Error reporting loss: ${error.response?.data?.message || error.message}`, { id: loadingToast });
@@ -484,17 +489,17 @@ const App = () => {
         return <span className={`${baseClass} bg-yellow-100 text-yellow-800`}>
           <Clock size={12} className="mr-1" /> Pending
         </span>;
-      case "in_progress":
+      case "picked_up":
         return <span className={`${baseClass} bg-blue-100 text-blue-800`}>
-          <Clock size={12} className="mr-1" /> In Progress
+          <Truck size={12} className="mr-1" /> Picked Up
         </span>;
-      case "completed":
+      case "ready":
+        return <span className={`${baseClass} bg-orange-100 text-orange-800`}>
+          <CheckCircle size={12} className="mr-1" /> Ready
+        </span>;
+      case "delivered":
         return <span className={`${baseClass} bg-green-100 text-green-800`}>
-          <CheckCircle size={12} className="mr-1" /> Completed
-        </span>;
-      case "partially_delivered":
-        return <span className={`${baseClass} bg-purple-100 text-purple-800`}>
-          <Truck size={12} className="mr-1" /> Partial Delivery
+          <CheckCircle size={12} className="mr-1" /> Delivered
         </span>;
       case "cancelled":
         return <span className={`${baseClass} bg-red-100 text-red-800`}>
@@ -688,6 +693,9 @@ const App = () => {
                       Guest / Room
                     </th>
                     <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                      Vendor
+                    </th>
+                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
                       Items
                     </th>
                     <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
@@ -729,6 +737,16 @@ const App = () => {
                           </>
                         );
                       })()}
+                    </td>
+                    <td className="px-3 py-4">
+                      <div className="text-sm text-text">
+                        {order.vendorId?.vendorName || 'No Vendor'}
+                      </div>
+                      {order.vendorId?.phoneNumber && (
+                        <div className="text-xs text-text">
+                          {order.vendorId.phoneNumber}
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-4 text-sm text-text max-w-xs">
                       <div className="space-y-1">
@@ -814,6 +832,17 @@ const App = () => {
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-1">
+                        {order.vendorId?.UpiID && (
+                          <button
+                            onClick={() => {
+                              const upiUrl = `upi://pay?pa=${order.vendorId.UpiID}&pn=${encodeURIComponent(order.vendorId.vendorName)}&am=${order.totalAmount}&cu=INR&tn=${encodeURIComponent(`Laundry Order ${order._id.slice(-6)}`)}`;;
+                              window.open(upiUrl, '_blank');
+                            }}
+                            className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
+                          >
+                            Pay Now
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEditOrder(order)}
                           className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
@@ -862,6 +891,11 @@ const App = () => {
                     <h3 className="font-medium text-text">{order.requestedByName}</h3>
                     <p className="text-sm text-text">Room {order.roomNumber}</p>
                     {order.grcNo && <p className="text-xs text-text">GRC: {order.grcNo}</p>}
+                    {order.vendorId && (
+                      <div className="mt-1">
+                        <p className="text-xs text-text">Vendor: {order.vendorId.vendorName}</p>
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     {getStatusBadge(order.laundryStatus)}
@@ -944,6 +978,17 @@ const App = () => {
                 
                 {/* Actions */}
                 <div className="flex justify-end space-x-2 pt-3 border-t border-border">
+                  {order.vendorId?.UpiID && (
+                    <button
+                      onClick={() => {
+                        const upiUrl = `upi://pay?pa=${order.vendorId.UpiID}&pn=${encodeURIComponent(order.vendorId.vendorName)}&am=${order.totalAmount}&cu=INR&tn=${encodeURIComponent(`Laundry Order ${order._id.slice(-6)}`)}`;;
+                        window.open(upiUrl, '_blank');
+                      }}
+                      className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
+                    >
+                      Pay Now
+                    </button>
+                  )}
                   <button
                     onClick={() => handleEditOrder(order)}
                     className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
@@ -1098,7 +1143,7 @@ const App = () => {
               <button
                 onClick={() => {
                   setShowLossModal(false);
-                  setLossFormData({ itemId: '', lossNote: '' });
+                  setLossFormData({ selectedItems: [], lossNote: '' });
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -1108,20 +1153,33 @@ const App = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Item</label>
-                <select
-                  value={lossFormData.itemId}
-                  onChange={(e) => setLossFormData({...lossFormData, itemId: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                  required
-                >
-                  <option value="">Select an item...</option>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Items</label>
+                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-md p-2">
                   {selectedOrder.items?.map((item) => (
-                    <option key={item._id} value={item._id}>
-                      {item.quantity}x {item.itemName} - ₹{item.calculatedAmount}
-                    </option>
+                    <label key={item._id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={lossFormData.selectedItems.includes(item._id)}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          const newSelectedItems = isChecked
+                            ? [...lossFormData.selectedItems, item._id]
+                            : lossFormData.selectedItems.filter(id => id !== item._id);
+                          setLossFormData({...lossFormData, selectedItems: newSelectedItems});
+                        }}
+                        className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                      />
+                      <span className="text-sm">
+                        {item.quantity}x {item.itemName} - ₹{item.calculatedAmount}
+                      </span>
+                    </label>
                   ))}
-                </select>
+                </div>
+                {lossFormData.selectedItems.length > 0 && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {lossFormData.selectedItems.length} item(s) selected
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1146,7 +1204,7 @@ const App = () => {
                 <button
                   onClick={() => {
                     setShowLossModal(false);
-                    setLossFormData({ itemId: '', lossNote: '' });
+                    setLossFormData({ selectedItems: [], lossNote: '' });
                   }}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >

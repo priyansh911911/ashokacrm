@@ -7,9 +7,8 @@ const AddOrderForm = ({ onSave, onClose }) => {
   const { axios } = useAppContext();
   
   const [formData, setFormData] = useState({
-    bookingId: "",
     roomNumber: "",
-    requestedByName: "",
+    vendorId: "",
     items: [{ rateId: "", quantity: 1, status: "pending" }],
     laundryStatus: "pending",
     isUrgent: false,
@@ -23,25 +22,11 @@ const AddOrderForm = ({ onSave, onClose }) => {
     receivedBy: ""
   });
   
-  const [bookings, setBookings] = useState([]);
   const [laundryRates, setLaundryRates] = useState([]);
+  const [laundryVendors, setLaundryVendors] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('/api/bookings/all', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const bookingsData = Array.isArray(response.data) ? response.data : response.data?.bookings || [];
-        setBookings(bookingsData);
-      } catch (error) {
-        console.error('Error fetching bookings:', error);
-        toast.error('Failed to fetch bookings');
-      }
-    };
-
     const fetchLaundryRates = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -56,34 +41,25 @@ const AddOrderForm = ({ onSave, onClose }) => {
       }
     };
 
-    fetchBookings();
+    const fetchLaundryVendors = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/laundry-vendors', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const vendorsData = Array.isArray(response.data) ? response.data : response.data?.data || [];
+        setLaundryVendors(vendorsData);
+      } catch (error) {
+        console.error('Error fetching laundry vendors:', error);
+        toast.error('Failed to fetch laundry vendors');
+      }
+    };
+
     fetchLaundryRates();
+    fetchLaundryVendors();
   }, [axios]);
 
-  const handleBookingChange = (e) => {
-    const bookingId = e.target.value;
-    
-    if (!bookingId) {
-      setFormData({
-        ...formData,
-        bookingId: "",
-        roomNumber: "",
-        requestedByName: ""
-      });
-      return;
-    }
 
-    // Use local booking data for immediate auto-fill
-    const selectedBooking = bookings.find(b => b._id === bookingId);
-    if (selectedBooking) {
-      setFormData({
-        ...formData,
-        bookingId,
-        roomNumber: selectedBooking.roomNumber || "",
-        requestedByName: selectedBooking.guestName || selectedBooking.name || ""
-      });
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -182,22 +158,36 @@ const AddOrderForm = ({ onSave, onClose }) => {
             </select>
           </div> */}
 
-          {/* Guest Info (Read-only) */}
+          {/* Room Number and Vendor Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              type="text"
-              value={formData.roomNumber}
-              placeholder="Room Number"
-              className="p-2 border rounded bg-gray-100"
-              readOnly
-            />
-            <input
-              type="text"
-              value={formData.requestedByName}
-              placeholder="Guest Name"
-              className="p-2 border rounded bg-gray-100"
-              readOnly
-            />
+            <div>
+              <label className="block text-sm font-medium mb-1">Room Number</label>
+              <input
+                type="text"
+                name="roomNumber"
+                value={formData.roomNumber}
+                onChange={handleChange}
+                placeholder="Enter room number"
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Laundry Vendor</label>
+              <select
+                name="vendorId"
+                value={formData.vendorId}
+                onChange={handleChange}
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select vendor (optional)</option>
+                {laundryVendors.map(vendor => (
+                  <option key={vendor._id} value={vendor._id}>
+                    {vendor.vendorName}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Schedule */}

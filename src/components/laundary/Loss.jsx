@@ -30,19 +30,11 @@ const Loss = () => {
     if (!token) return;
 
     try {
-      const response = await axios.get('/api/laundry/all', {
+      const response = await axios.get('/api/laundry/loss-reports', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const allOrders = Array.isArray(response.data) ? response.data : response.data?.data || [];
-      
-      // Filter orders that have lost items or damaged items
-      const lossReports = allOrders.filter(order => 
-        order.isLost || 
-        (order.items && order.items.some(item => item.damageReported || item.isLost)) ||
-        order.damageReported
-      );
-      
-      setLossReports(lossReports);
+      const reports = Array.isArray(response.data) ? response.data : response.data?.data || [];
+      setLossReports(reports);
     } catch (error) {
       console.error("Error fetching loss reports:", error);
       toast.error('Failed to fetch loss reports');
@@ -93,12 +85,11 @@ const Loss = () => {
   };
 
   const filteredReports = lossReports.filter(report => {
-    const matchesSearch = report.requestedByName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = report.guestName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          report._id?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
                          report.roomNumber?.toString().includes(searchQuery);
     const matchesFilter = filterStatus === "All" || 
-                         (filterStatus === "damaged" && (report.damageReported || (report.items && report.items.some(item => item.damageReported)))) ||
-                         (filterStatus === "lost" && (report.isLost || (report.items && report.items.some(item => item.isLost))));
+                         (filterStatus === "lost" && report.lostItems?.length > 0);
     return matchesSearch && matchesFilter;
   });
 
@@ -184,78 +175,38 @@ const Loss = () => {
                     <tr key={report._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {report._id?.toString().slice(-6) || 'N/A'}
+                          {report.orderId?._id?.toString().slice(-6) || report._id?.toString().slice(-6) || 'N/A'}
                         </div>
-                        <div className="text-sm text-gray-500">{report.requestedByName || 'N/A'}</div>
+                        <div className="text-sm text-gray-500">{report.guestName || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {report.roomNumber || 'N/A'}
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-1">
-                          {/* Damaged Items */}
-                          {(report.items && report.items.filter(item => item.damageReported).length > 0) && (
-                            <div>
-                              <div className="text-xs font-medium text-red-600 mb-1">Damaged:</div>
-                              {report.items.filter(item => item.damageReported).map((item, idx) => (
-                                <div key={idx} className="text-sm">
-                                  <div className="font-medium text-gray-900">{item.itemName}</div>
-                                  <div className="text-xs text-gray-500">Qty: {item.quantity}</div>
-                                  {item.itemNotes && <div className="text-xs text-gray-400">{item.itemNotes}</div>}
-                                </div>
-                              ))}
+                          <div className="text-xs font-medium text-red-600 mb-1">Lost Items:</div>
+                          {report.lostItems?.map((item, idx) => (
+                            <div key={idx} className="text-sm">
+                              <div className="font-medium text-gray-900">{item.itemName}</div>
+                              <div className="text-xs text-gray-500">Qty: {item.quantity}</div>
+                              <div className="text-xs text-green-600">₹{item.calculatedAmount}</div>
                             </div>
-                          )}
-                          
-                          {/* Lost Items - check both order level and item level */}
-                          {((report.isLost && report.items) || (report.items && report.items.filter(item => item.isLost).length > 0)) && (
-                            <div>
-                              <div className="text-xs font-medium text-orange-600 mb-1">Lost Items:</div>
-                              {report.isLost && !report.items.some(item => item.isLost) ? (
-                                // Show all items if order is lost but no specific items marked
-                                report.items.map((item, idx) => (
-                                  <div key={idx} className="text-sm">
-                                    <div className="font-medium text-gray-900">{item.itemName}</div>
-                                    <div className="text-xs text-gray-500">Qty: {item.quantity}</div>
-                                  </div>
-                                ))
-                              ) : (
-                                // Show only specifically lost items
-                                report.items.filter(item => item.isLost).map((item, idx) => (
-                                  <div key={idx} className="text-sm">
-                                    <div className="font-medium text-gray-900">{item.itemName}</div>
-                                    <div className="text-xs text-gray-500">Qty: {item.quantity}</div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* No items */}
-                          {!(report.items && (report.items.filter(item => item.damageReported).length > 0 || report.items.filter(item => item.isLost).length > 0)) && !report.isLost && (
-                            <span className="text-sm text-gray-500">No damaged/lost items</span>
-                          )}
+                          ))}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {report.isLost ? (
-                          <div>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              Lost
-                            </span>
-                            {report.lossNote && (
-                              <div className="text-xs text-gray-500 mt-1">{report.lossNote}</div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-500">Not Lost</span>
-                        )}
+                        <div>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            {report.status || 'Reported'}
+                          </span>
+                          {report.lossNote && (
+                            <div className="text-xs text-gray-500 mt-1">{report.lossNote}</div>
+                          )}
+                          <div className="text-xs text-orange-600 mt-1">Total Loss: ₹{report.totalLossAmount}</div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(report.createdAt).toLocaleDateString()}
-                        {report.lostDate && (
-                          <div className="text-xs">Lost: {new Date(report.lostDate).toLocaleDateString()}</div>
-                        )}
                       </td>
                     </tr>
                   ))}
