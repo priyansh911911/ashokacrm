@@ -166,7 +166,7 @@ const AddOrderForm = ({ onSave, onClose }) => {
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Booking Selection */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium mb-1">Select Booking</label>
             <select
               value={formData.bookingId}
@@ -180,7 +180,7 @@ const AddOrderForm = ({ onSave, onClose }) => {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           {/* Guest Info (Read-only) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

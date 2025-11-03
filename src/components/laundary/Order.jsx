@@ -21,6 +21,8 @@ import {
   RotateCcw,
   Ban,
   AlertTriangle,
+  Wrench,
+  XCircle,
 } from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 import toast, { Toaster } from 'react-hot-toast';
@@ -123,6 +125,21 @@ const App = () => {
     } catch (error) {
       console.error("Error fetching laundry rates:", error);
       setLaundryRates([]);
+    }
+  };
+
+  const fetchOrders = async () => {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    try {
+      const response = await axios.get("/api/laundry/all", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrders(Array.isArray(response.data) ? response.data : response.data?.data || []);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      setOrders([]);
     }
   };
 
@@ -298,6 +315,7 @@ const App = () => {
   };
 
   const handleReportLoss = async () => {
+  const handleReportLoss = async () => {
     const token = getAuthToken();
     if (!token) {
       toast.error('Authentication token not found');
@@ -322,9 +340,22 @@ const App = () => {
       setShowLossModal(false);
       setLossFormData({ itemId: '', lossNote: '' });
     } catch (error) {
-      console.error("Error reporting loss:", error);
-      toast.error(`Error reporting loss: ${error.response?.data?.message || error.message}`, { id: loadingToast });
+      console.error(`Error reporting ${reportType}:`, error);
+      toast.error(`Error reporting ${reportType}: ${error.response?.data?.message || error.message}`, { id: loadingToast });
     }
+  };
+
+  const openLossCard = (orderId, itemId, type = 'loss') => {
+    setSelectedItemForLoss({ orderId, itemId });
+    setReportType(type);
+    setShowLossCard(true);
+  };
+
+
+
+  const openLossModal = (order) => {
+    setSelectedOrder(order);
+    setShowLossModal(true);
   };
 
   const openLossModal = (order) => {
@@ -377,41 +408,7 @@ const App = () => {
     }
   };
 
-  // Fetch orders with better error handling
-  const fetchOrders = async () => {
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Authentication token not found');
-      return;
-    }
 
-    try {
-      const response = await axios.get("/api/laundry/all", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Raw API Response:', response.data);
-      
-      let ordersData = [];
-      if (Array.isArray(response.data)) {
-        ordersData = response.data;
-      } else if (response.data?.data && Array.isArray(response.data.data)) {
-        ordersData = response.data.data;
-      } else if (response.data?.orders && Array.isArray(response.data.orders)) {
-        ordersData = response.data.orders;
-      } else if (response.data?.laundry && Array.isArray(response.data.laundry)) {
-        ordersData = response.data.laundry;
-      }
-      
-      console.log('Processed Orders Data:', ordersData);
-      console.table(ordersData);
-      setOrders(ordersData);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      console.error("Error response:", error.response?.data);
-      setOrders([]);
-      toast.error('Failed to fetch orders');
-    }
-  };
 
   // Function to open the add order form
   const handleAddOrder = () => {
@@ -758,26 +755,52 @@ const App = () => {
                             </div>
                             <div className="flex justify-between items-center mt-1">
                               <span className="text-green-600">₹{item.calculatedAmount}</span>
-                              <select
-                                value={item.status || 'pending'}
-                                onChange={(e) => handleUpdateItemStatus(order._id, item._id, e.target.value)}
-                                disabled={!itemStatusUpdateAvailable}
-                                className={`text-xs border border-gray-300 rounded px-1 py-0.5 ${
-                                  !itemStatusUpdateAvailable ? 'bg-gray-100 cursor-not-allowed' : ''
-                                }`}
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="picked_up">Picked Up</option>
-                                <option value="ready">Ready</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value={item.status || 'pending'}
+                                  onChange={(e) => handleUpdateItemStatus(order._id, item._id, e.target.value)}
+                                  disabled={!itemStatusUpdateAvailable}
+                                  className={`text-xs border border-gray-300 rounded px-1 py-0.5 ${
+                                    !itemStatusUpdateAvailable ? 'bg-gray-100 cursor-not-allowed' : ''
+                                  }`}
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="picked_up">Picked Up</option>
+                                  <option value="ready">Ready</option>
+                                  <option value="delivered">Delivered</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                                {item.damageReported ? (
+                                  <span className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded flex items-center" title="Damage Reported">
+                                    <AlertTriangle size={10} />
+                                  </span>
+                                ) : (
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => openLossCard(order._id, item._id, 'damage')}
+                                      className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5 rounded hover:bg-orange-200 flex items-center"
+                                      title="Report Damage"
+                                    >
+                                      <Wrench size={10} />
+                                    </button>
+                                    <button
+                                      onClick={() => openLossCard(order._id, item._id, 'loss')}
+                                      className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded hover:bg-red-200 flex items-center"
+                                      title="Report Loss"
+                                    >
+                                      <XCircle size={10} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             {item.deliveredQuantity > 0 && (
                               <div className="text-xs text-blue-600">Delivered: {item.deliveredQuantity}</div>
                             )}
                             {item.damageReported && (
-                              <div className="text-xs text-red-600">Damage Reported</div>
+                              <div className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                <AlertTriangle size={10} /> Damage Reported
+                              </div>
                             )}
                           </div>
                         ))}
@@ -889,10 +912,33 @@ const App = () => {
                   <div className="space-y-2">
                     {order.items?.map((item, index) => (
                       <div key={index} className="flex justify-between items-center text-sm">
-                        <span className="text-text">
-                          <span className="font-medium">{item.quantity}x</span> {item.itemName}
-
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-text">
+                            <span className="font-medium">{item.quantity}x</span> {item.itemName}
+                          </span>
+                          {item.damageReported ? (
+                            <span className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded flex items-center" title="Damage Reported">
+                              <AlertTriangle size={10} />
+                            </span>
+                          ) : (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => openLossCard(order._id, item._id, 'damage')}
+                                className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5 rounded hover:bg-orange-200 flex items-center"
+                                title="Report Damage"
+                              >
+                                <Wrench size={10} />
+                              </button>
+                              <button
+                                onClick={() => openLossCard(order._id, item._id, 'loss')}
+                                className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded hover:bg-red-200 flex items-center"
+                                title="Report Loss"
+                              >
+                                <XCircle size={10} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         <select
                           value={item.status || 'pending'}
                           onChange={(e) => handleUpdateItemStatus(order._id, item._id, e.target.value)}

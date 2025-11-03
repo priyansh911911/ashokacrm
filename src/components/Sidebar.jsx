@@ -153,8 +153,12 @@ const Sidebar = () => {
     
     const items = [];
 
-    // If pantry role, return empty - only pantry items will be added separately
-    if (role === "pantry") {
+    // Check if user has pantry access (either pantry role or staff with pantry department)
+    const hasPantryAccess = role === "pantry" || 
+      (role === "staff" && userDepartments.some(dept => dept && dept.name === "pantry"));
+    
+    // If pantry access only, return empty - only pantry items will be added separately
+    if (hasPantryAccess) {
       return items;
     }
 
@@ -163,7 +167,7 @@ const Sidebar = () => {
       return items;
     }
 
-    // Dashboard - accessible to all except pantry
+    // Dashboard - accessible to all except pantry users
     items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
     
     // Easy Dashboard - admin only
@@ -186,8 +190,8 @@ const Sidebar = () => {
       return items;
     }
     
-    // Cash Management - accessible to both admin and staff
-    if (role === "admin" || role === "staff") {
+    // Cash Management - accessible to admin and staff (but not pantry users)
+    if (role === "admin" || (role === "staff" && !userDepartments.some(dept => dept && dept.name === "pantry"))) {
       items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
     }
 
@@ -302,7 +306,19 @@ const Sidebar = () => {
     ...(() => {
       const role = localStorage.getItem("role");
       
-      if (role === "pantry") {
+      // Check if user has pantry access (either pantry role or staff with pantry department)
+      const hasPantryAccess = role === "pantry" || 
+        (role === "staff" && (() => {
+          try {
+            const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+            const departments = deptData && deptData !== 'undefined' ? JSON.parse(deptData) : [];
+            return departments.some(dept => dept && dept.name === "pantry");
+          } catch (e) {
+            return false;
+          }
+        })());
+      
+      if (hasPantryAccess) {
         return [
           { icon: LayoutDashboard, label: "Dashboard", path: "/pantry/dashboard" },
           { icon: ListChecks, label: "Items", path: "/pantry/item" },
@@ -320,29 +336,7 @@ const Sidebar = () => {
         ];
       }
       
-      if (role === "admin" || 
-          (() => {
-            try {
-              const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
-              return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && (dept.name === "kitchen" || dept.name === "reception")) : false;
-            } catch (e) {
-              return false;
-            }
-          })()) {
-        return [{
-          icon: UserRound,
-          label: "Pantry",
-          path: "/pantry",
-          isDropdown: true,
-          children: [
-            { label: "Dashboard", path: "/pantry/dashboard", icon: LayoutDashboard },
-            { label: "Item", path: "/pantry/item", icon: ListChecks },
-            { label: "Create Category", path: "/pantry/category", icon: ChartBarStacked },
-            { label: "Orders", path: "/pantry/orders", icon: Package },
-            { label: "Vendors", path: "/pantry/vendors", icon: Users },
-          ],
-        }];
-      }
+      // Pantry dropdown removed - only direct pantry role users have access
       
       return [];
     })(),

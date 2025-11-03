@@ -64,7 +64,9 @@ const LoginPage = () => {
       }
 
       // Role-based redirect after login
-      if (response.data.role === "pantry") {
+      if (response.data.role === "staff" && response.data.department && 
+          Array.isArray(response.data.department) && 
+          response.data.department.some(dept => dept.name === "pantry")) {
         navigate("/pantry/dashboard", { replace: true });
       } else if (response.data.role === "restaurant" && response.data.restaurantRole === "chef") {
         navigate("/kot", { replace: true });
