@@ -26,7 +26,6 @@ import RatingCard from "./cards/RatingCard.jsx";
 import QuickActions from "./cards/QuickActions.jsx";
 import DashboardLoader from "./DashboardLoader";
 import {
-  dashboardCards,
   revenueData,
   occupancyData,
   bookingSourceData,
@@ -43,6 +42,16 @@ const Dashboard = () => {
   const [timeFrame, setTimeFrame] = useState("weekly");
   const [showCalendar, setShowCalendar] = useState(false);
   const [rooms, setRooms] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [dashboardCards, setDashboardCards] = useState([]);
+  const [allServiceData, setAllServiceData] = useState({
+    laundry: [],
+    restaurant: [],
+    pantry: [],
+
+    banquet: [],
+    reservations: []
+  });
   const [loading, setLoading] = useState(true);
   const handleCalendarClick = () => {
     setShowCalendar(true);
@@ -50,25 +59,137 @@ const Dashboard = () => {
   const [selectedYear, setSelectedYear] = useState(2025);
 
   const fetchRooms = async () => {
-    setLoading(true);
     try {
       const { data } = await axios.get("/api/rooms/all", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       const roomsData = Array.isArray(data) ? data : (data.rooms || data.data || []);
-      console.log('Rooms API Response:', roomsData);
       setRooms(roomsData);
     } catch (error) {
       console.log('Rooms API Error:', error);
       setRooms([]);
-    } finally {
-      setLoading(false);
     }
   };
 
+  const fetchBookings = async () => {
+    try {
+      const { data } = await axios.get("/api/bookings/all", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const bookingsData = Array.isArray(data) ? data : data.bookings || [];
+      setBookings(bookingsData);
+    } catch (error) {
+      console.log('Bookings API Error:', error);
+      setBookings([]);
+    }
+  };
+
+  const fetchAllServiceData = async () => {
+    const token = localStorage.getItem("token");
+    const headers = { Authorization: `Bearer ${token}` };
+    
+    try {
+      const [laundryRes, restaurantRes, pantryRes, banquetRes, reservationRes] = await Promise.allSettled([
+        axios.get("/api/laundry/all", { headers }),
+        axios.get("/api/restaurant/all", { headers }),
+        axios.get("/api/pantry/all", { headers }),
+        axios.get("/api/banquet-bookings", { headers }),
+        axios.get("/api/restaurant-reservations/all", { headers })
+      ]);
+
+      const banquetData = banquetRes.status === 'fulfilled' ? (Array.isArray(banquetRes.value.data) ? banquetRes.value.data : banquetRes.value.data.banquet || banquetRes.value.data.bookings || []) : [];
+      
+      const reservationData = reservationRes.status === 'fulfilled' ? (Array.isArray(reservationRes.value.data) ? reservationRes.value.data : reservationRes.value.data.orders || reservationRes.value.data.reservations || []) : [];
+      
+
+      
+      setAllServiceData({
+        laundry: laundryRes.status === 'fulfilled' ? (Array.isArray(laundryRes.value.data) ? laundryRes.value.data : laundryRes.value.data.laundry || []) : [],
+        restaurant: restaurantRes.status === 'fulfilled' ? (Array.isArray(restaurantRes.value.data) ? restaurantRes.value.data : restaurantRes.value.data.restaurant || []) : [],
+        pantry: pantryRes.status === 'fulfilled' ? (Array.isArray(pantryRes.value.data) ? pantryRes.value.data : pantryRes.value.data.pantry || []) : [],
+        banquet: banquetData,
+        reservations: reservationData
+      });
+    } catch (error) {
+      console.error('Service APIs Error:', error);
+    }
+  };
+
+  const updateDashboardCards = () => {
+    const availableRooms = rooms.filter(room => room.status === 'available').length;
+    const roomRevenue = bookings.reduce((total, booking) => total + (booking.rate || 0), 0);
+    
+    const cards = [
+      {
+        id: "bookings",
+        title: "Bookings",
+        value: bookings.length.toString(),
+        icon: "Calendar",
+        color: "bg-primary",
+        trend: "+0%",
+        trendUp: true,
+      },
+      {
+        id: "rooms",
+        title: "Rooms Available",
+        value: availableRooms.toString(),
+        icon: "Home",
+        color: "bg-primary",
+        trend: "+0%",
+        trendUp: true,
+      },
+      {
+        id: "revenue",
+        title: "Room Revenue",
+        value: `₹${roomRevenue.toLocaleString()}`,
+        icon: "FaIndianRupeeSign",
+        color: "bg-primary",
+        trend: "+0%",
+        trendUp: true,
+      },
+      {
+        id: "occupancy",
+        title: "Occupancy Rate",
+        value: `${rooms.length > 0 ? Math.round((rooms.filter(room => room.status !== 'available').length / rooms.length) * 100) : 0}%`,
+        icon: "Percent",
+        color: "bg-primary",
+        trend: "+0%",
+        trendUp: true,
+      },
+      {
+        id: "guests",
+        title: "Active Guests",
+        value: bookings.filter(booking => booking.status === 'Checked In').reduce((total, booking) => total + (booking.noOfAdults || 0) + (booking.noOfChildren || 0), 0).toString(),
+        icon: "Users",
+        color: "bg-primary",
+        trend: "+0%",
+        trendUp: true,
+      },
+      {
+        id: "rating",
+        title: "Avg. Rating",
+        value: "0.0",
+        icon: "Star",
+        color: "bg-primary",
+        trend: "+0.0",
+        trendUp: true,
+      },
+    ];
+    setDashboardCards(cards);
+  };
+
   useEffect(() => {
-    fetchRooms();
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([fetchRooms(), fetchBookings(), fetchAllServiceData()]);
+      setLoading(false);
+    };
+    fetchData();
   }, []);
+
+  useEffect(() => {
+    updateDashboardCards();
+  }, [rooms, bookings]);
 
   const getRoomCategories = () => {
     const categories = {};
@@ -169,6 +290,8 @@ const Dashboard = () => {
             selectedYear={selectedYear}
             setSelectedYear={setSelectedYear}
             revenueData={revenueData}
+            bookings={bookings}
+            allServiceData={allServiceData}
           />
         );
       case "occupancy":

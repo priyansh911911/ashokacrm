@@ -74,10 +74,12 @@ const App = () => {
   const [itemStatusUpdateAvailable, setItemStatusUpdateAvailable] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showLossCard, setShowLossCard] = useState(false);
-  const [selectedItemForLoss, setSelectedItemForLoss] = useState(null);
-  const [lossNote, setLossNote] = useState('');
-  const [reportType, setReportType] = useState('loss'); // 'loss' or 'damage'
+  const [showLossModal, setShowLossModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [lossFormData, setLossFormData] = useState({
+    itemId: '',
+    lossNote: ''
+  });
 
   const getAuthToken = () => localStorage.getItem("token");
 
@@ -319,40 +321,33 @@ const App = () => {
       return;
     }
 
-    if (!lossNote.trim()) {
-      toast.error('Please enter notes');
+    if (!lossFormData.itemId || !lossFormData.lossNote) {
+      toast.error('Please select an item and enter loss note');
       return;
     }
 
-    const loadingToast = toast.loading(`Reporting ${reportType}...`);
+    const loadingToast = toast.loading('Reporting loss...');
     try {
-      const payload = reportType === 'loss' 
-        ? { isLost: true, lossNote }
-        : { damageReported: true, damageNotes: lossNote };
-        
-      await axios.post(`/api/laundry/loss/${selectedItemForLoss.orderId}/${selectedItemForLoss.itemId}`, payload, {
+      await axios.post(`/api/laundry/loss/${selectedOrder._id}/${lossFormData.itemId}`, {
+        isLost: true,
+        lossNote: lossFormData.lossNote
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchOrders();
-      toast.success(`${reportType === 'loss' ? 'Loss' : 'Damage'} reported successfully!`, { id: loadingToast });
-      setShowLossCard(false);
-      setSelectedItemForLoss(null);
-      setLossNote('');
+      toast.success('Loss reported successfully!', { id: loadingToast });
+      setShowLossModal(false);
+      setLossFormData({ itemId: '', lossNote: '' });
     } catch (error) {
-      console.error(`Error reporting ${reportType}:`, error);
-      toast.error(`Error reporting ${reportType}: ${error.response?.data?.message || error.message}`, { id: loadingToast });
+      console.error('Error reporting loss:', error);
+      toast.error(`Error reporting loss: ${error.response?.data?.message || error.message}`, { id: loadingToast });
     }
   };
 
-  const openLossCard = (orderId, itemId, type = 'loss') => {
-    setSelectedItemForLoss({ orderId, itemId });
-    setReportType(type);
-    setShowLossCard(true);
+  const openLossModal = (order) => {
+    setSelectedOrder(order);
+    setShowLossModal(true);
   };
-
-
-
-
 
   // Add items to existing order
   const handleAddItems = async (orderId, items) => {
@@ -759,27 +754,10 @@ const App = () => {
                                   <option value="delivered">Delivered</option>
                                   <option value="cancelled">Cancelled</option>
                                 </select>
-                                {item.damageReported ? (
+                                {item.damageReported && (
                                   <span className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded flex items-center" title="Damage Reported">
                                     <AlertTriangle size={10} />
                                   </span>
-                                ) : (
-                                  <div className="flex gap-1">
-                                    <button
-                                      onClick={() => openLossCard(order._id, item._id, 'damage')}
-                                      className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5 rounded hover:bg-orange-200 flex items-center"
-                                      title="Report Damage"
-                                    >
-                                      <Wrench size={10} />
-                                    </button>
-                                    <button
-                                      onClick={() => openLossCard(order._id, item._id, 'loss')}
-                                      className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded hover:bg-red-200 flex items-center"
-                                      title="Report Loss"
-                                    >
-                                      <XCircle size={10} />
-                                    </button>
-                                  </div>
                                 )}
                               </div>
                             </div>
@@ -855,7 +833,7 @@ const App = () => {
                           Cancel
                         </button>
                         <button
-                          onClick={() => openLossCard(order._id, null, 'loss')}
+                          onClick={() => openLossModal(order)}
                           className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors"
                         >
                           Loss
@@ -905,27 +883,10 @@ const App = () => {
                           <span className="text-text">
                             <span className="font-medium">{item.quantity}x</span> {item.itemName}
                           </span>
-                          {item.damageReported ? (
+                          {item.damageReported && (
                             <span className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded flex items-center" title="Damage Reported">
                               <AlertTriangle size={10} />
                             </span>
-                          ) : (
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => openLossCard(order._id, item._id, 'damage')}
-                                className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5 rounded hover:bg-orange-200 flex items-center"
-                                title="Report Damage"
-                              >
-                                <Wrench size={10} />
-                              </button>
-                              <button
-                                onClick={() => openLossCard(order._id, item._id, 'loss')}
-                                className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded hover:bg-red-200 flex items-center"
-                                title="Report Loss"
-                              >
-                                <XCircle size={10} />
-                              </button>
-                            </div>
                           )}
                         </div>
                         <select
@@ -1002,7 +963,7 @@ const App = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={() => openLossCard(order._id, null, 'loss')}
+                    onClick={() => openLossModal(order)}
                     className="px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors"
                   >
                     Loss
@@ -1128,57 +1089,64 @@ const App = () => {
         </div>
       )}
 
-      {/* Loss/Damage Report Card */}
-      {showLossCard && (
+      {/* Loss Modal */}
+      {showLossModal && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md border border-border">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-text">
-                Report {reportType === 'loss' ? 'Loss' : 'Damage'}
-              </h3>
+              <h2 className="text-xl font-bold">Report Item Loss</h2>
               <button
                 onClick={() => {
-                  setShowLossCard(false);
-                  setSelectedItemForLoss(null);
-                  setLossNote('');
+                  setShowLossModal(false);
+                  setLossFormData({ itemId: '', lossNote: '' });
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text mb-2">
-                  {reportType === 'loss' ? 'Loss' : 'Damage'} Notes *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Item</label>
+                <select
+                  value={lossFormData.itemId}
+                  onChange={(e) => setLossFormData({...lossFormData, itemId: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  required
+                >
+                  <option value="">Select an item...</option>
+                  {selectedOrder.items?.map((item) => (
+                    <option key={item._id} value={item._id}>
+                      {item.quantity}x {item.itemName} - ₹{item.calculatedAmount}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Loss Note</label>
                 <textarea
-                  value={lossNote}
-                  onChange={(e) => setLossNote(e.target.value)}
-                  placeholder={`Describe the ${reportType === 'loss' ? 'lost item(s) and circumstances' : 'damage to the item'}...`}
-                  className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-text"
-                  rows={4}
+                  value={lossFormData.lossNote}
+                  onChange={(e) => setLossFormData({...lossFormData, lossNote: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  rows="3"
+                  placeholder="Describe the reason for loss..."
                   required
                 />
               </div>
-              
+
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleReportLoss}
-                  className={`flex-1 text-white py-2 px-4 rounded-md transition-colors ${
-                    reportType === 'loss' 
-                      ? 'bg-red-600 hover:bg-red-700' 
-                      : 'bg-orange-600 hover:bg-orange-700'
-                  }`}
+                  className="flex-1 bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 transition-colors"
                 >
-                  Report {reportType === 'loss' ? 'Loss' : 'Damage'}
+                  Report Loss
                 </button>
                 <button
                   onClick={() => {
-                    setShowLossCard(false);
-                    setSelectedItemForLoss(null);
-                    setLossNote('');
+                    setShowLossModal(false);
+                    setLossFormData({ itemId: '', lossNote: '' });
                   }}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
@@ -1189,8 +1157,6 @@ const App = () => {
           </div>
         </div>
       )}
-
-
       
       <Toaster
         position="top-right"
