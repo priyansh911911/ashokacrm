@@ -315,7 +315,6 @@ const App = () => {
   };
 
   const handleReportLoss = async () => {
-  const handleReportLoss = async () => {
     const token = getAuthToken();
     if (!token) {
       toast.error('Authentication token not found');
@@ -340,30 +339,15 @@ const App = () => {
       setShowLossModal(false);
       setLossFormData({ itemId: '', lossNote: '' });
     } catch (error) {
-      console.error(`Error reporting ${reportType}:`, error);
-      toast.error(`Error reporting ${reportType}: ${error.response?.data?.message || error.message}`, { id: loadingToast });
+      console.error('Error reporting loss:', error);
+      toast.error(`Error reporting loss: ${error.response?.data?.message || error.message}`, { id: loadingToast });
     }
   };
 
-  const openLossCard = (orderId, itemId, type = 'loss') => {
-    setSelectedItemForLoss({ orderId, itemId });
-    setReportType(type);
-    setShowLossCard(true);
-  };
-
-
-
   const openLossModal = (order) => {
     setSelectedOrder(order);
     setShowLossModal(true);
   };
-
-  const openLossModal = (order) => {
-    setSelectedOrder(order);
-    setShowLossModal(true);
-  };
-
-
 
   // Add items to existing order
   const handleAddItems = async (orderId, items) => {
@@ -770,27 +754,10 @@ const App = () => {
                                   <option value="delivered">Delivered</option>
                                   <option value="cancelled">Cancelled</option>
                                 </select>
-                                {item.damageReported ? (
+                                {item.damageReported && (
                                   <span className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded flex items-center" title="Damage Reported">
                                     <AlertTriangle size={10} />
                                   </span>
-                                ) : (
-                                  <div className="flex gap-1">
-                                    <button
-                                      onClick={() => openLossCard(order._id, item._id, 'damage')}
-                                      className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5 rounded hover:bg-orange-200 flex items-center"
-                                      title="Report Damage"
-                                    >
-                                      <Wrench size={10} />
-                                    </button>
-                                    <button
-                                      onClick={() => openLossCard(order._id, item._id, 'loss')}
-                                      className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded hover:bg-red-200 flex items-center"
-                                      title="Report Loss"
-                                    >
-                                      <XCircle size={10} />
-                                    </button>
-                                  </div>
                                 )}
                               </div>
                             </div>
@@ -916,27 +883,10 @@ const App = () => {
                           <span className="text-text">
                             <span className="font-medium">{item.quantity}x</span> {item.itemName}
                           </span>
-                          {item.damageReported ? (
+                          {item.damageReported && (
                             <span className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded flex items-center" title="Damage Reported">
                               <AlertTriangle size={10} />
                             </span>
-                          ) : (
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => openLossCard(order._id, item._id, 'damage')}
-                                className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5 rounded hover:bg-orange-200 flex items-center"
-                                title="Report Damage"
-                              >
-                                <Wrench size={10} />
-                              </button>
-                              <button
-                                onClick={() => openLossCard(order._id, item._id, 'loss')}
-                                className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded hover:bg-red-200 flex items-center"
-                                title="Report Loss"
-                              >
-                                <XCircle size={10} />
-                              </button>
-                            </div>
                           )}
                         </div>
                         <select
