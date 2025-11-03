@@ -63,8 +63,14 @@ const LoginPage = () => {
         localStorage.setItem("restaurantRole", response.data.restaurantRole);
       }
 
-      // Always redirect to dashboard after login
-      navigate("/dashboard");
+      // Role-based redirect after login
+      if (response.data.role === "pantry") {
+        navigate("/pantry/dashboard", { replace: true });
+      } else if (response.data.role === "restaurant" && response.data.restaurantRole === "chef") {
+        navigate("/kot", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Login failed. Please try again.";
       setError(errorMessage);

@@ -16,7 +16,7 @@ const Invoice = () => {
   const navigate = useNavigate();
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `Invoice_${booking?.name}_${booking?.startDate}`,
     pageStyle: `
       @page {
@@ -214,6 +214,7 @@ const Invoice = () => {
                   <p><span className="font-medium">Mobile:</span> {booking.number}</p>
                   {booking.email && <p><span className="font-medium">Email:</span> {booking.email}</p>}
                   {booking.whatsapp && <p><span className="font-medium">WhatsApp:</span> {booking.whatsapp}</p>}
+                  {(booking.gst && booking.gst !== '' && booking.gst !== 0 && Number(booking.gst) > 0) ? <p><span className="font-medium">GST:</span> {booking.gst}%</p> : null}
                 </div>
               </div>
 

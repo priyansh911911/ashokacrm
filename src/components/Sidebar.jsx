@@ -153,7 +153,17 @@ const Sidebar = () => {
     
     const items = [];
 
-    // Dashboard - accessible to all
+    // If pantry role, return empty - only pantry items will be added separately
+    if (role === "pantry") {
+      return items;
+    }
+
+    // If chef role, return empty - only kitchen items will be added separately
+    if (role === "chef") {
+      return items;
+    }
+
+    // Dashboard - accessible to all except pantry
     items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
     
     // Easy Dashboard - admin only
@@ -161,8 +171,13 @@ const Sidebar = () => {
       items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
     }
     
-    // If restaurant role (cashier, chef, waiter), return only dashboard items
-    if (role === "restaurant" && (restaurantRole === "cashier" || restaurantRole === "chef" || restaurantRole === "staff")) {
+    // If restaurant role chef, return empty (no dashboard)
+    if (role === "restaurant" && restaurantRole === "chef") {
+      return [];
+    }
+    
+    // If restaurant role (cashier, waiter), return only dashboard items
+    if (role === "restaurant" && (restaurantRole === "cashier" || restaurantRole === "staff")) {
       return items;
     }
     
@@ -274,26 +289,89 @@ const Sidebar = () => {
       }
       return [];
     })(),
-    ...((localStorage.getItem("role") === "admin" || 
-         (() => {
-           try {
-             const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
-             return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && (dept.name === "kitchen" || dept.name === "reception")) : false;
-           } catch (e) {
-             return false;
-           }
-         })()) ? [{
-      icon: UserRound,
-      label: "Pantry",
-      path: "/pantry",
-      isDropdown: true,
-      children: [
-        { label: "Item", path: "/pantry/item", icon: ListChecks },
-        { label: "Create Category", path: "/pantry/category", icon: ChartBarStacked },
-        { label: "Orders", path: "/pantry/orders", icon: Package },
-        { label: "Vendors", path: "/pantry/vendors", icon: Users },
-      ],
-    }] : []),
+    ...(() => {
+      const role = localStorage.getItem("role");
+      
+      if (role === "pantry") {
+        return [
+          { icon: LayoutDashboard, label: "Dashboard", path: "/pantry/dashboard" },
+          { icon: ListChecks, label: "Items", path: "/pantry/item" },
+          { icon: ChartBarStacked, label: "Categories", path: "/pantry/category" },
+          { icon: Package, label: "Orders", path: "/pantry/orders" },
+          { icon: Users, label: "Vendors", path: "/pantry/vendors" },
+        ];
+      }
+      
+      if (role === "chef") {
+        return [
+          { icon: ListChecks, label: "KOT", path: "/kot" },
+          { icon: ListChecks, label: "Kitchen Orders", path: "/kitchen" },
+          { icon: Package, label: "Kitchen Store", path: "/kitchen-store" },
+        ];
+      }
+      
+      if (role === "admin" || 
+          (() => {
+            try {
+              const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+              return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && (dept.name === "kitchen" || dept.name === "reception")) : false;
+            } catch (e) {
+              return false;
+            }
+          })()) {
+        return [{
+          icon: UserRound,
+          label: "Pantry",
+          path: "/pantry",
+          isDropdown: true,
+          children: [
+            { label: "Dashboard", path: "/pantry/dashboard", icon: LayoutDashboard },
+            { label: "Item", path: "/pantry/item", icon: ListChecks },
+            { label: "Create Category", path: "/pantry/category", icon: ChartBarStacked },
+            { label: "Orders", path: "/pantry/orders", icon: Package },
+            { label: "Vendors", path: "/pantry/vendors", icon: Users },
+          ],
+        }];
+      }
+      
+      return [];
+    })(),
+    ...(() => {
+      const role = localStorage.getItem("role");
+      const restaurantRole = localStorage.getItem("restaurantRole");
+      
+      // For restaurant chef - show direct kitchen links (no dropdown)
+      if (role === "restaurant" && restaurantRole === "chef") {
+        return [
+          { icon: ListChecks, label: "Kitchen Orders", path: "/kitchen" },
+          { icon: Package, label: "Kitchen Store", path: "/kitchen-store" },
+        ];
+      }
+      
+      // For admin and other authorized users - show kitchen dropdown
+      if (role === "admin" || 
+          (() => {
+            try {
+              const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+              return deptData && deptData !== 'undefined' ? JSON.parse(deptData).some(dept => dept && (dept.name === "kitchen" || dept.name === "reception")) : false;
+            } catch (e) {
+              return false;
+            }
+          })()) {
+        return [{
+          icon: UserRound,
+          label: "Kitchen",
+          path: "/kitchen",
+          isDropdown: true,
+          children: [
+            { label: "Kitchen Orders", path: "/kitchen", icon: ListChecks },
+            { label: "Kitchen Store", path: "/kitchen-store", icon: Package },
+          ],
+        }];
+      }
+      
+      return [];
+    })(),
 
     ...(() => {
       const mainRole = localStorage.getItem("role");
@@ -308,6 +386,11 @@ const Sidebar = () => {
       }
       const hasKitchen = userDepartments.some(dept => dept && dept.name === "kitchen");
       const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
+      
+      // Hide restaurant for pantry role only
+      if (mainRole === "pantry") {
+        return [];
+      }
       
       // Show restaurant for admin, restaurant roles, or staff with kitchen/reception
       if (mainRole === "admin" || mainRole === "restaurant" || 
@@ -387,7 +470,7 @@ const Sidebar = () => {
       }
       return [];
     })(),
-    ...((localStorage.getItem("role") === "admin" || 
+    ...((localStorage.getItem("role") === "admin" && 
          (() => {
            try {
              const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
@@ -406,7 +489,7 @@ const Sidebar = () => {
         { label: "Menu & Plans", path: "/banquet/menu-plan-manager", icon: Settings },
       ],
     }] : []),
-    ...((localStorage.getItem("role") === "admin" || 
+    ...((localStorage.getItem("role") === "admin" && 
          (() => {
            try {
              const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
@@ -437,8 +520,10 @@ const Sidebar = () => {
   ];
 
   const bottomNavItems = [
-    { icon: HelpCircle, label: "Help & Support", path: "/help" },
-    { icon: Settings, label: "Settings", isSlider: true },
+    ...(localStorage.getItem("role") !== "pantry" ? [
+      { icon: HelpCircle, label: "Help & Support", path: "/help" },
+      { icon: Settings, label: "Settings", isSlider: true },
+    ] : []),
   ];
 
   return (

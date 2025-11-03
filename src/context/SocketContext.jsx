@@ -16,32 +16,54 @@ export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-      transports: ['polling', 'websocket'],
-      autoConnect: true,
-      forceNew: true
-    });
+    // Only try to connect to Socket.io in development mode with localhost
+    const isDevelopment = import.meta.env.DEV;
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const isLocalhost = apiUrl && apiUrl.includes('localhost');
+    
+    if (!isDevelopment || !isLocalhost) {
+      console.log('Socket.io disabled - not in development mode or not using localhost');
+      return;
+    }
 
-    newSocket.on('connect', () => {
-      console.log('Socket connected');
-      setIsConnected(true);
-      newSocket.emit('join-waiter-dashboard');
-    });
+    let newSocket = null;
+    
+    const connectSocket = () => {
+      newSocket = io(apiUrl, {
+        transports: ['polling', 'websocket'],
+        autoConnect: true,
+        forceNew: true,
+        timeout: 5000,
+        reconnection: true,
+        reconnectionAttempts: 3,
+        reconnectionDelay: 2000
+      });
 
-    newSocket.on('disconnect', () => {
-      console.log('Socket disconnected');
-      setIsConnected(false);
-    });
+      newSocket.on('connect', () => {
+        console.log('Socket connected to local server');
+        setIsConnected(true);
+        newSocket.emit('join-waiter-dashboard');
+      });
 
-    newSocket.on('connect_error', (error) => {
-      console.log('Socket connection error:', error);
-      setIsConnected(false);
-    });
+      newSocket.on('disconnect', () => {
+        console.log('Socket disconnected');
+        setIsConnected(false);
+      });
 
-    setSocket(newSocket);
+      newSocket.on('connect_error', (error) => {
+        console.log('Socket connection failed - local server not running');
+        setIsConnected(false);
+      });
+
+      setSocket(newSocket);
+    };
+
+    connectSocket();
 
     return () => {
-      newSocket.close();
+      if (newSocket) {
+        newSocket.close();
+      }
     };
   }, []);
 

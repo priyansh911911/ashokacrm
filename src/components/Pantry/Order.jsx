@@ -27,6 +27,17 @@ const Order = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentVendor, setPaymentVendor] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
+  const [fulfillmentOrder, setFulfillmentOrder] = useState(null);
+  const [fulfillmentData, setFulfillmentData] = useState({
+    previousAmount: 0,
+    newAmount: 0,
+    notes: '',
+    pricingImage: null
+  });
+  const [showChalanModal, setShowChalanModal] = useState(false);
+  const [chalanOrder, setChalanOrder] = useState(null);
+  const [chalanFile, setChalanFile] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -77,8 +88,10 @@ const Order = () => {
       });
       const ordersData = data.orders || data.data || data || [];
       console.log('Fetched orders:', ordersData);
+      console.log('Sample order structure:', ordersData[0]);
       setOrders(ordersData);
     } catch (error) {
+      console.error('Error fetching orders:', error);
       showToast.error('Failed to fetch orders');
     } finally {
       setLoading(false);
@@ -183,7 +196,12 @@ const Order = () => {
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
-    const confirmMessage = `Are you sure you want to change the order status to "${newStatus.toUpperCase()}"?\n\nThis action cannot be undone.`;
+    const order = orders.find(o => o._id === orderId);
+    let confirmMessage = `Are you sure you want to change the order status to "${newStatus.toUpperCase()}"?\n\nThis action cannot be undone.`;
+    
+    if (newStatus === 'fulfilled' && order?.orderType === 'Pantry to vendor') {
+      confirmMessage += '\n\nThis will also update the pantry inventory by adding the received quantities from the vendor.';
+    }
     
     if (!window.confirm(confirmMessage)) {
       return;
@@ -195,7 +213,9 @@ const Order = () => {
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       showToast.success(`Order status updated to ${newStatus}`);
-      fetchOrders();
+      
+      // Refresh both orders and pantry items to reflect inventory changes
+      await Promise.all([fetchOrders(), fetchPantryItems()]);
     } catch (error) {
       showToast.error('Failed to update order status');
     }
@@ -207,15 +227,28 @@ const Order = () => {
       showToast.error('No pantry items available. Please add items first.');
       return;
     }
-    const firstItem = pantryItems[0];
-    console.log('Adding item:', firstItem);
+    
+    // For Pantry to vendor orders, allow any item (even out of stock)
+    // For other orders, find first item with stock > 0
+    let availableItem;
+    if (formData.orderType === 'Pantry to vendor') {
+      availableItem = pantryItems[0]; // Use first item regardless of stock
+    } else {
+      availableItem = pantryItems.find(item => (item.stockQuantity || 0) > 0);
+      if (!availableItem) {
+        showToast.error('No items with available stock. Please restock items first.');
+        return;
+      }
+    }
+    
+    console.log('Adding item:', availableItem);
     setFormData(prev => {
       const newItem = {
-        pantryItemId: firstItem._id,
-        name: firstItem.name,
+        pantryItemId: availableItem._id,
+        name: availableItem.name,
         quantity: "",
-        unit: firstItem.unit || 'pcs',
-        unitPrice: firstItem.price || 0,
+        unit: availableItem.unit || 'pcs',
+        unitPrice: availableItem.price || 0,
         notes: ''
       };
       
@@ -339,6 +372,56 @@ const Order = () => {
     );
   };
 
+  const getPaymentStatusBadge = (paymentStatus) => {
+    const colors = {
+      pending: 'bg-red-100 text-red-800',
+      partial: 'bg-orange-100 text-orange-800',
+      paid: 'bg-green-100 text-green-800'
+    };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[paymentStatus] || 'bg-gray-100 text-gray-800'}`}>
+        {paymentStatus?.charAt(0).toUpperCase() + paymentStatus?.slice(1) || 'Pending'}
+      </span>
+    );
+  };
+
+  const updatePaymentStatus = async (orderId, paymentData) => {
+    try {
+      // Get the current order first
+      const orderResponse = await axios.get(`/api/pantry/orders`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const currentOrder = orderResponse.data.orders.find(o => o._id === orderId);
+      
+      if (!currentOrder) {
+        showToast.error('Order not found');
+        return;
+      }
+
+      // Update the order with payment status
+      const updatedOrder = {
+        ...currentOrder,
+        paymentStatus: paymentData.paymentStatus,
+        paymentDetails: {
+          paidAmount: paymentData.paidAmount || 0,
+          paidAt: paymentData.paymentStatus === 'paid' ? new Date() : null,
+          paymentMethod: paymentData.paymentMethod || 'UPI',
+          transactionId: paymentData.transactionId || '',
+          notes: paymentData.notes || ''
+        }
+      };
+
+      await axios.put(`/api/pantry/orders/${orderId}`, updatedOrder, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      showToast.success('Payment status updated successfully');
+      fetchOrders();
+    } catch (error) {
+      console.error('Payment status update error:', error);
+      showToast.error('Failed to update payment status');
+    }
+  };
+
   const getPriorityBadge = (priority) => {
     const colors = {
       low: 'bg-gray-100 text-gray-800',
@@ -354,37 +437,104 @@ const Order = () => {
   };
 
   const getVendorAnalytics = (vendorId) => {
-    const vendorOrders = orders.filter(order => {
+    // Ensure we have all orders loaded
+    const allVendorOrders = orders.filter(order => {
       if (!order.vendorId) return false;
       const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
       return id === vendorId;
     });
     
+    console.log(`Vendor Analytics for ${vendorId}:`, {
+      totalOrdersInSystem: orders.length,
+      vendorOrders: allVendorOrders.length,
+      vendorOrderIds: allVendorOrders.map(o => o._id)
+    });
+    
     return {
       vendor: vendors.find(v => v._id === vendorId),
       total: {
-        orders: vendorOrders.length,
-        amount: vendorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-        items: vendorOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
+        orders: allVendorOrders.length,
+        amount: allVendorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+        items: allVendorOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0)
       },
       statusBreakdown: {
-        pending: vendorOrders.filter(o => o.status === 'pending').length,
-        approved: vendorOrders.filter(o => o.status === 'approved').length,
-        fulfilled: vendorOrders.filter(o => o.status === 'fulfilled').length,
-        cancelled: vendorOrders.filter(o => o.status === 'cancelled').length
-      }
+        pending: allVendorOrders.filter(o => o.status === 'pending').length,
+        approved: allVendorOrders.filter(o => o.status === 'approved').length,
+        fulfilled: allVendorOrders.filter(o => o.status === 'fulfilled').length,
+        cancelled: allVendorOrders.filter(o => o.status === 'cancelled').length
+      },
+      allOrders: allVendorOrders // Include all orders for debugging
     };
   };
 
-  const handleVendorSelect = (vendorId) => {
+  const fetchVendorAnalyticsFromAPI = async (vendorId) => {
+    try {
+      const { data } = await axios.get(`/api/pantry/vendor-analytics/${vendorId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      return data.analytics;
+    } catch (error) {
+      console.error('Error fetching vendor analytics:', error);
+      // Fallback to local calculation
+      return getVendorAnalytics(vendorId);
+    }
+  };
+
+  const handleVendorSelect = async (vendorId) => {
     setFilterVendor(vendorId);
     if (vendorId) {
-      const analytics = getVendorAnalytics(vendorId);
+      const analytics = await fetchVendorAnalyticsFromAPI(vendorId);
       setVendorAnalytics(analytics);
       setShowAnalytics(true);
     } else {
       setVendorAnalytics(null);
       setShowAnalytics(false);
+    }
+  };
+
+  const exportToExcel = async () => {
+    try {
+      let url = `/api/pantry/orders/excel-report?`;
+      const params = new URLSearchParams();
+      
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterType) params.append('orderType', filterType);
+      if (filterVendor) params.append('vendorId', filterVendor);
+      
+      const response = await axios.get(url + params.toString(), {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      });
+      
+      const contentType = response.headers['content-type'] || '';
+      let mimeType, fileExtension;
+      
+      if (contentType.includes('spreadsheet') || contentType.includes('excel')) {
+        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        fileExtension = 'xlsx';
+      } else {
+        mimeType = 'text/csv;charset=utf-8;';
+        fileExtension = 'csv';
+      }
+      
+      const blob = new Blob([response.data], { type: mimeType });
+      const link = document.createElement('a');
+      const downloadUrl = URL.createObjectURL(blob);
+      link.setAttribute('href', downloadUrl);
+      link.setAttribute('download', `pantry-orders-${new Date().toISOString().split('T')[0]}.${fileExtension}`);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+      
+      showToast.success(`${fileExtension.toUpperCase()} report downloaded successfully`);
+    } catch (error) {
+      console.error('Export error:', error);
+      showToast.error('Failed to export report');
     }
   };
 
@@ -400,8 +550,13 @@ const Order = () => {
   });
 
   const generateInvoice = (order) => {
-    const vendor = vendors.find(v => v._id === (typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId));
-    const subtotal = order.totalAmount;
+    let vendor = null;
+    if (order.vendorId) {
+      const vendorId = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+      vendor = vendors.find(v => v && v._id === vendorId) || null;
+    }
+    
+    const subtotal = order.totalAmount || 0;
     const tax = subtotal * 0.18;
     const total = subtotal + tax;
     
@@ -426,6 +581,106 @@ const Order = () => {
     setShowViewModal(true);
   };
 
+  const handleFulfillOrder = (order) => {
+    setFulfillmentOrder(order);
+    setFulfillmentData({
+      previousAmount: order.totalAmount || 0,
+      newAmount: order.totalAmount || 0,
+      notes: '',
+      pricingImage: null
+    });
+    setShowFulfillmentModal(true);
+  };
+
+  const submitFulfillment = async () => {
+    if (!fulfillmentOrder) return;
+    
+    setLoading(true);
+    try {
+      const requestData = {
+        previousAmount: fulfillmentData.previousAmount,
+        newAmount: fulfillmentData.newAmount,
+        difference: fulfillmentData.newAmount - fulfillmentData.previousAmount,
+        notes: fulfillmentData.notes
+      };
+
+      await axios.put(`/api/pantry/fulfill-invoice/${fulfillmentOrder._id}`, requestData, {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      showToast.success('Order fulfilled successfully');
+      setShowFulfillmentModal(false);
+      setFulfillmentOrder(null);
+      fetchOrders();
+    } catch (error) {
+      showToast.error('Failed to fulfill order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChalanUpload = (order) => {
+    setChalanOrder(order);
+    setShowChalanModal(true);
+  };
+
+  const submitChalan = async () => {
+    if (!chalanOrder || !chalanFile) {
+      showToast.error('Please select a chalan image');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const requestData = {
+            orderId: chalanOrder._id,
+            image: {
+              base64: reader.result,
+              name: chalanFile.name
+            }
+          };
+
+          const response = await axios.post('/api/pantry/upload-chalan', requestData, {
+            headers: { 
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.data.success) {
+            showToast.success('Chalan uploaded successfully');
+            setShowChalanModal(false);
+            setChalanOrder(null);
+            setChalanFile(null);
+            fetchOrders();
+          }
+        } catch (error) {
+          console.error('Chalan upload error:', error);
+          showToast.error(error.response?.data?.error || 'Failed to upload chalan');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        showToast.error('Failed to read file');
+        setLoading(false);
+      };
+      
+      reader.readAsDataURL(chalanFile);
+    } catch (error) {
+      console.error('File processing error:', error);
+      showToast.error('Failed to process file');
+      setLoading(false);
+    }
+  };
+
   if (isInitialLoading) {
     return <DashboardLoader pageName="Pantry Orders" />;
   }
@@ -435,6 +690,12 @@ const Order = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Pantry Orders</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={exportToExcel}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            Export Excel
+          </button>
           <button
             onClick={() => {
               if (filterVendor) {
@@ -476,8 +737,8 @@ const Order = () => {
           >
             <option value="">All Types</option>
             <option value="Kitchen to Pantry">Kitchen to Pantry</option>
-            <option value="Pantry to Reception">Pantry to Reception</option>
-            <option value="Reception to Vendor">Reception to Vendor</option>
+            <option value="Pantry to Kitchen">Pantry to Kitchen</option>
+            <option value="Pantry to vendor">Pantry to Vendor</option>
           </select>
 
           <select
@@ -568,7 +829,24 @@ const Order = () => {
           <div className="grid grid-cols-1 sm:grid-cols-1 gap-3 sm:gap-4">
             {/* Total Stats */}
             <div className="bg-blue-50 p-4 sm:p-6 rounded-lg">
-              <h3 className="font-semibold text-blue-800 mb-3 sm:mb-4 text-base sm:text-lg">Vendor Analytics</h3>
+              <div className="flex justify-between items-center mb-3 sm:mb-4">
+                <h3 className="font-semibold text-blue-800 text-base sm:text-lg">Vendor Analytics</h3>
+                <button
+                  onClick={() => {
+                    console.log('Current vendor analytics:', vendorAnalytics);
+                    console.log('All orders in system:', orders.length);
+                    console.log('Filtered vendor orders:', orders.filter(o => {
+                      if (!o.vendorId) return false;
+                      const id = typeof o.vendorId === 'object' ? o.vendorId._id : o.vendorId;
+                      return id === filterVendor;
+                    }));
+                    alert(`Debug Info:\nTotal Orders: ${vendorAnalytics.total.orders}\nTotal Amount: ₹${vendorAnalytics.total.amount}\nTotal Items: ${vendorAnalytics.total.items}\nCheck console for detailed logs.`);
+                  }}
+                  className="text-xs px-2 py-1 bg-blue-200 text-blue-800 rounded hover:bg-blue-300"
+                >
+                  Debug
+                </button>
+              </div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-2xl sm:text-3xl font-bold text-blue-600">{vendorAnalytics.total.orders}</div>
@@ -679,13 +957,14 @@ const Order = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center">
+                  <td colSpan="8" className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mr-2"></div>
                       Loading orders...
@@ -694,7 +973,7 @@ const Order = () => {
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500">No orders found</td>
+                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No orders found</td>
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
@@ -703,23 +982,78 @@ const Order = () => {
                       {order.orderNumber || order._id?.slice(-8)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
-                       order.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
-                       order.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
-                       order.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
-                       order.orderType}
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
+                           order.orderType === 'Pantry to Kitchen' ? 'Pantry → Kitchen' :
+                           order.orderType === 'Pantry to vendor' ? 'Pantry → Vendor' :
+                           order.orderType || 'N/A'}
+                        </span>
+                        {order.orderType === 'Pantry to Kitchen' && (
+                          <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            Auto-Delivered to Kitchen
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getVendorName(order.vendorId)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {order.items?.length || 0} items
+                      <div className="max-w-xs">
+                        {order.items?.length > 0 ? (
+                          <div className="space-y-1">
+                            {order.items.slice(0, 2).map((item, idx) => {
+                              let itemName = item.name || item.itemName;
+                              if (!itemName && (item.itemId || item.pantryItemId)) {
+                                const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                                itemName = pantryItem?.name;
+                              }
+                              return (
+                                <div key={idx} className="text-xs text-gray-700">
+                                  {itemName || 'Unknown Item'} ({item.quantity || 1})
+                                </div>
+                              );
+                            })}
+                            {order.items.length > 2 && (
+                              <div className="text-xs text-gray-500">
+                                +{order.items.length - 2} more items
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No items</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getPriorityBadge(order.priority)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(order.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {order.orderType === 'Pantry to vendor' ? (
+                        <div className="flex items-center gap-2">
+                          {getPaymentStatusBadge(order.paymentStatus)}
+                          <button
+                            onClick={() => {
+                              const newStatus = order.paymentStatus === 'paid' ? 'pending' : 'paid';
+                              updatePaymentStatus(order._id, {
+                                paymentStatus: newStatus,
+                                paidAmount: newStatus === 'paid' ? order.totalAmount : 0,
+                                paymentMethod: 'UPI',
+                                notes: `Payment ${newStatus} via admin panel`
+                              });
+                            }}
+                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          >
+                            {order.paymentStatus === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">N/A</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
@@ -729,23 +1063,33 @@ const Order = () => {
                         >
                           <Edit size={16} />
                         </button>
-                        <button
-                          onClick={() => handleDeleteOrder(order._id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {localStorage.getItem('role') === 'admin' && (
+                          <button
+                            onClick={() => handleDeleteOrder(order._id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                         {order.status === 'pending' && (
                           <button
                             onClick={() => updateOrderStatus(order._id, 'approved')}
                             className="text-green-600 hover:text-green-900 text-xs"
                           >
-                            Approve
+                            {order.orderType === 'Kitchen to Pantry' ? 'Approve & Send to Kitchen' : 'Approve'}
                           </button>
                         )}
-                        {order.status === 'approved' && (
+                        {order.status === 'approved' && order.orderType === 'Pantry to vendor' && (
                           <button
                             onClick={() => updateOrderStatus(order._id, 'fulfilled')}
+                            className="text-blue-600 hover:text-blue-900 text-xs"
+                          >
+                            Fulfill
+                          </button>
+                        )}
+                        {order.status === 'delivered' && (
+                          <button
+                            onClick={() => handleFulfillOrder(order)}
                             className="text-blue-600 hover:text-blue-900 text-xs"
                           >
                             Fulfill
@@ -757,12 +1101,39 @@ const Order = () => {
                         >
                           View
                         </button>
-                        <button
-                          onClick={() => generateInvoice(order)}
-                          className="text-green-600 hover:text-green-900 text-xs"
-                        >
-                          Invoice
-                        </button>
+                        {order.orderType !== 'Pantry to Kitchen' && (
+                          <>
+                            <button
+                              onClick={() => generateInvoice(order)}
+                              className="text-green-600 hover:text-green-900 text-xs"
+                            >
+                              Invoice
+                            </button>
+                            <button
+                              onClick={() => handleChalanUpload(order)}
+                              className="text-purple-600 hover:text-purple-900 text-xs"
+                            >
+                              Chalan
+                            </button>
+                            {order.orderType === 'Pantry to vendor' && (() => {
+                              const vendor = vendors.find(v => v._id === (typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId));
+                              return vendor?.UpiID ? (
+                                <button
+                                  onClick={() => {
+                                    setPaymentVendor({
+                                      ...vendor,
+                                      totalAmount: order.totalAmount || 0
+                                    });
+                                    setShowPaymentModal(true);
+                                  }}
+                                  className="text-orange-600 hover:text-orange-900 text-xs"
+                                >
+                                  Pay Now
+                                </button>
+                              ) : null;
+                            })()}
+                          </>
+                        )}
 
                       </div>
                     </td>
@@ -795,10 +1166,9 @@ const Order = () => {
                   </h3>
                   <p className="text-sm text-gray-600">
                     {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
-                     order.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
-                     order.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
-                     order.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
-                     order.orderType}
+                     order.orderType === 'Pantry to Kitchen' ? 'Pantry → Kitchen' :
+                     order.orderType === 'Pantry to vendor' ? 'Pantry → Vendor' :
+                     order.orderType || 'N/A'}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -814,8 +1184,54 @@ const Order = () => {
                 </div>
                 <div>
                   <span className="text-gray-500">Items:</span>
-                  <p className="font-medium">{order.items?.length || 0} items</p>
+                  <div className="font-medium">
+                    {order.items?.length > 0 ? (
+                      <div className="space-y-1">
+                        {order.items.slice(0, 2).map((item, idx) => {
+                          let itemName = item.name || item.itemName;
+                          if (!itemName && (item.itemId || item.pantryItemId)) {
+                            const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                            itemName = pantryItem?.name;
+                          }
+                          return (
+                            <div key={idx} className="text-sm">
+                              {itemName || 'Unknown Item'} ({item.quantity || 1})
+                            </div>
+                          );
+                        })}
+                        {order.items.length > 2 && (
+                          <div className="text-sm text-gray-500">
+                            +{order.items.length - 2} more
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">No items</span>
+                    )}
+                  </div>
                 </div>
+                {order.orderType === 'Pantry to vendor' && (
+                  <div className="col-span-2">
+                    <span className="text-gray-500">Payment Status:</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {getPaymentStatusBadge(order.paymentStatus)}
+                      <button
+                        onClick={() => {
+                          const newStatus = order.paymentStatus === 'paid' ? 'pending' : 'paid';
+                          updatePaymentStatus(order._id, {
+                            paymentStatus: newStatus,
+                            paidAmount: newStatus === 'paid' ? order.totalAmount : 0,
+                            paymentMethod: 'UPI',
+                            notes: `Payment ${newStatus} via mobile panel`
+                          });
+                        }}
+                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      >
+                        {order.paymentStatus === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
@@ -826,24 +1242,34 @@ const Order = () => {
                   <Edit size={14} />
                   Edit
                 </button>
-                <button
-                  onClick={() => handleDeleteOrder(order._id)}
-                  className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200"
-                >
-                  <Trash2 size={14} />
-                  Delete
-                </button>
+                {localStorage.getItem('role') === 'admin' && (
+                  <button
+                    onClick={() => handleDeleteOrder(order._id)}
+                    className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                )}
                 {order.status === 'pending' && (
                   <button
                     onClick={() => updateOrderStatus(order._id, 'approved')}
                     className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
                   >
-                    Approve
+                    {order.orderType === 'Kitchen to Pantry' ? 'Approve & Send to Kitchen' : 'Approve'}
                   </button>
                 )}
-                {order.status === 'approved' && (
+                {order.status === 'approved' && order.orderType === 'Pantry to vendor' && (
                   <button
                     onClick={() => updateOrderStatus(order._id, 'fulfilled')}
+                    className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
+                  >
+                    Fulfill
+                  </button>
+                )}
+                {order.status === 'delivered' && (
+                  <button
+                    onClick={() => handleFulfillOrder(order)}
                     className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
                   >
                     Fulfill
@@ -855,29 +1281,40 @@ const Order = () => {
                 >
                   View
                 </button>
-                <button
-                  onClick={() => generateInvoice(order)}
-                  className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
-                >
-                  Invoice
-                </button>
-                <button
-                  onClick={() => {
-                    const vendor = vendors.find(v => v._id === order.vendorId);
-                    if (vendor && vendor.UpiID) {
-                      setPaymentVendor({
-                        ...vendor,
-                        totalAmount: order.totalAmount || 0
-                      });
-                      setShowPaymentModal(true);
-                    } else {
-                      showToast.error('Vendor UPI details not available');
-                    }
-                  }}
-                  className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200"
-                >
-                  Pay Now
-                </button>
+                {order.orderType !== 'Pantry to Kitchen' && (
+                  <>
+                    <button
+                      onClick={() => generateInvoice(order)}
+                      className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
+                    >
+                      Invoice
+                    </button>
+                    <button
+                      onClick={() => handleChalanUpload(order)}
+                      className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200"
+                    >
+                      Chalan
+                    </button>
+                    {order.orderType === 'Pantry to vendor' && (() => {
+                      const vendorId = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                      const vendor = vendors.find(v => v._id === vendorId);
+                      return vendor?.UpiID ? (
+                        <button
+                          onClick={() => {
+                            setPaymentVendor({
+                              ...vendor,
+                              totalAmount: order.totalAmount || 0
+                            });
+                            setShowPaymentModal(true);
+                          }}
+                          className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200"
+                        >
+                          Pay Now
+                        </button>
+                      ) : null;
+                    })()}
+                  </>
+                )}
               </div>
             </div>
           ))
@@ -993,8 +1430,8 @@ const Order = () => {
                     >
                       <option value="">Select Order Type</option>
                       <option value="Kitchen to Pantry">Kitchen to Pantry</option>
-                      <option value="Pantry to Reception">Pantry to Reception</option>
-                      <option value="Reception to Vendor">Reception to Vendor</option>
+                      <option value="Pantry to Kitchen">Pantry to Kitchen</option>
+                      <option value="Pantry to vendor">Pantry to Vendor</option>
                     </select>
                   </div>
                   
@@ -1013,7 +1450,7 @@ const Order = () => {
                   </div>
                 </div>
 
-                {(formData.orderType === 'Reception to Vendor' || formData.orderType === 'Daily Essentials Distributor') && (
+                {(formData.orderType === 'Reception to Vendor' || formData.orderType === 'Daily Essentials Distributor' || formData.orderType === 'Pantry to vendor') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
                     <select
@@ -1031,6 +1468,7 @@ const Order = () => {
                     {/* Vendor Analytics in Form */}
                     {formData.vendor && (() => {
                       const analytics = getVendorAnalytics(formData.vendor);
+                      
                       return (
                         <div className="mt-3 bg-blue-50 p-3 rounded-lg border">
                           <div className="flex justify-between items-center mb-2">
@@ -1125,35 +1563,40 @@ const Order = () => {
                               <div className="border-t border-blue-200 pt-2 mt-2">
                                 <h5 className="font-medium text-blue-700 mb-2 text-xs">Recent Orders:</h5>
                                 <div className="max-h-24 overflow-y-auto space-y-1">
-                                  {(() => {
-                                    const vendorOrders = orders.filter(order => {
-                                      if (!order.vendorId) return false;
-                                      const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
-                                      return id === formData.vendor;
-                                    });
-                                    
-                                    return vendorOrders.map((order, orderIdx) => (
-                                      <div key={orderIdx} className="bg-white/70 p-2 rounded border">
-                                        <div className="flex justify-between items-center text-xs font-medium text-gray-800 mb-1">
-                                          <span>Order #{order._id?.slice(-6)} - {order.status}</span>
-                                          <span className="text-green-600 font-bold">₹{order.totalAmount?.toFixed(0) || '0'}</span>
-                                        </div>
-                                        {(order.items || []).map((item, itemIdx) => {
-                                          let itemName = item.name || item.itemName;
-                                          if (!itemName && (item.itemId || item.pantryItemId)) {
-                                            const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
-                                            itemName = pantryItem?.name;
-                                          }
-                                          return (
-                                            <div key={itemIdx} className="flex justify-between text-xs text-gray-700 ml-2">
-                                              <span>{itemName || 'Unknown Item'} x{item.quantity || 1}</span>
-                                              <span className="text-green-600 font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(0)}</span>
-                                            </div>
-                                          );
-                                        })}
+                                  {orders.filter(order => {
+                                    if (!order.vendorId) return false;
+                                    const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                                    return id === formData.vendor;
+                                  }).slice(0, 5).map((order, orderIdx) => (
+                                    <div key={orderIdx} className="bg-white/70 p-2 rounded border">
+                                      <div className="flex justify-between items-center text-xs font-medium text-gray-800 mb-1">
+                                        <span>Order #{order._id?.slice(-6)} - {order.status}</span>
+                                        <span className="text-green-600 font-bold">₹{order.totalAmount?.toFixed(0) || '0'}</span>
                                       </div>
-                                    ));
-                                  })()}
+                                      {(order.items || []).map((item, itemIdx) => {
+                                        let itemName = item.name || item.itemName;
+                                        if (!itemName && (item.itemId || item.pantryItemId)) {
+                                          const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                                          itemName = pantryItem?.name;
+                                        }
+                                        return (
+                                          <div key={itemIdx} className="flex justify-between text-xs text-gray-700 ml-2">
+                                            <span>{itemName || 'Unknown Item'} x{item.quantity || 1}</span>
+                                            <span className="text-green-600 font-medium">₹{((item.quantity || 1) * (item.unitPrice || 0)).toFixed(0)}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ))}
+                                  {orders.filter(order => {
+                                    if (!order.vendorId) return false;
+                                    const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                                    return id === formData.vendor;
+                                  }).length === 0 && (
+                                    <div className="text-center text-gray-500 py-2 text-xs">
+                                      No recent orders found
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </>
@@ -1214,11 +1657,20 @@ const Order = () => {
                               onChange={(e) => updateItem(index, 'pantryItemId', e.target.value)}
                               className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
                             >
-                              {pantryItems.map(pantryItem => (
-                                <option key={pantryItem._id} value={pantryItem._id}>
-                                  {pantryItem.name}
-                                </option>
-                              ))}
+                              {pantryItems.map(pantryItem => {
+                                const stock = pantryItem.stockQuantity || 0;
+                                const isOutOfStock = stock <= 0;
+                                const isPantryToVendor = formData.orderType === 'Pantry to vendor';
+                                return (
+                                  <option 
+                                    key={pantryItem._id} 
+                                    value={pantryItem._id}
+                                    disabled={!isPantryToVendor && isOutOfStock}
+                                  >
+                                    {pantryItem.name} {isOutOfStock ? (isPantryToVendor ? '(Out of Stock - Can Order)' : '(Out of Stock)') : `(Stock: ${stock})`}
+                                  </option>
+                                );
+                              })}
                             </select>
                             
                             <button
@@ -1238,7 +1690,30 @@ const Order = () => {
                                 min="0.1"
                                 step="0.1"
                                 value={item.quantity}
-                                onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                max={(() => {
+                                  if (formData.orderType === 'Pantry to vendor') {
+                                    return undefined; // No max limit for vendor orders
+                                  }
+                                  const pantryItem = pantryItems.find(p => p._id === item.pantryItemId);
+                                  return pantryItem?.stockQuantity || 0;
+                                })()}
+                                onChange={(e) => {
+                                  if (formData.orderType === 'Pantry to vendor') {
+                                    // No stock validation for vendor orders
+                                    updateItem(index, 'quantity', e.target.value);
+                                    return;
+                                  }
+                                  
+                                  const pantryItem = pantryItems.find(p => p._id === item.pantryItemId);
+                                  const maxStock = pantryItem?.stockQuantity || 0;
+                                  const value = parseFloat(e.target.value);
+                                  
+                                  if (value > maxStock) {
+                                    showToast.error(`Cannot order more than available stock (${maxStock})`);
+                                    return;
+                                  }
+                                  updateItem(index, 'quantity', e.target.value);
+                                }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
                               />
                             </div>
@@ -1369,7 +1844,9 @@ const Order = () => {
                          viewingOrder.orderType === 'Pantry to Reception' ? 'Pantry → Reception' :
                          viewingOrder.orderType === 'Reception to Pantry' ? 'Reception → Pantry' :
                          viewingOrder.orderType === 'Reception to Vendor' ? 'Reception → Vendor' :
-                         viewingOrder.orderType}
+                         viewingOrder.orderType === 'store to vendor' ? 'Store → Vendor' :
+                         viewingOrder.orderType === 'pantry to store' ? 'Pantry → Store' :
+                         viewingOrder.orderType || 'N/A'}
                       </p>
                     </div>
                     <div>
@@ -1396,69 +1873,77 @@ const Order = () => {
                       <span className="text-gray-500">Total Amount:</span>
                       <p className="font-medium text-green-600">₹{viewingOrder.totalAmount?.toFixed(2) || '0.00'}</p>
                     </div>
+                    {viewingOrder.orderType === 'Pantry to vendor' && (
+                      <div>
+                        <span className="text-gray-500">Payment Status:</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          {getPaymentStatusBadge(viewingOrder.paymentStatus)}
+                          <button
+                            onClick={() => {
+                              const newStatus = viewingOrder.paymentStatus === 'paid' ? 'pending' : 'paid';
+                              updatePaymentStatus(viewingOrder._id, {
+                                paymentStatus: newStatus,
+                                paidAmount: newStatus === 'paid' ? viewingOrder.totalAmount : 0,
+                                paymentMethod: 'UPI',
+                                notes: `Payment ${newStatus} via order view modal`
+                              });
+                              setShowViewModal(false);
+                            }}
+                            className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          >
+                            {viewingOrder.paymentStatus === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
+                          </button>
+                        </div>
+                        {viewingOrder.paymentDetails?.paidAt && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Paid on: {new Date(viewingOrder.paymentDetails.paidAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Vendor Analytics (if vendor selected) */}
+                {/* Payment Info (if vendor selected) */}
                 {viewingOrder.vendorId && (() => {
-                  const analytics = getVendorAnalytics(typeof viewingOrder.vendorId === 'object' ? viewingOrder.vendorId._id : viewingOrder.vendorId);
-                  const vendor = vendors.find(v => v._id === (typeof viewingOrder.vendorId === 'object' ? viewingOrder.vendorId._id : viewingOrder.vendorId));
-                  return (
-                    <div className="bg-blue-50 p-4 rounded-lg border">
-                      <h3 className="font-semibold text-blue-800 mb-3">📊 Vendor Analytics: {analytics.vendor?.name}</h3>
-                      <div className="grid grid-cols-3 gap-3 text-center text-sm mb-4">
+                  const vendorId = typeof viewingOrder.vendorId === 'object' ? viewingOrder.vendorId._id : viewingOrder.vendorId;
+                  const vendor = vendors.find(v => v._id === vendorId);
+                  
+                  return vendor?.UpiID ? (
+                    <div className="bg-green-50 p-4 rounded-lg border">
+                      <h3 className="font-semibold text-green-800 mb-3">Payment Info</h3>
+                      <div className="flex items-center justify-between mb-3">
                         <div>
-                          <div className="text-lg font-bold text-blue-600">{analytics.total.orders}</div>
-                          <div className="text-gray-600">Orders</div>
+                          <div className="text-sm text-gray-600 mb-1">UPI ID:</div>
+                          <span className="font-mono text-green-700">{vendor.UpiID}</span>
                         </div>
-                        <div>
-                          <div className="text-lg font-bold text-green-600">₹{analytics.total.amount}</div>
-                          <div className="text-gray-600">Amount</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-purple-600">{analytics.total.items}</div>
-                          <div className="text-gray-600">Items</div>
-                        </div>
+                        {vendor.scannerImg && (
+                          <img 
+                            src={vendor.scannerImg} 
+                            alt="QR Code" 
+                            className="w-16 h-16 border rounded shadow-sm"
+                          />
+                        )}
                       </div>
-                      
-                      {/* Payment Info */}
-                      {vendor?.UpiID && (
-                        <div className="bg-green-50 p-3 rounded border">
-                          <div className="text-sm text-gray-600 mb-1">Payment Info:</div>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-mono text-green-700">{vendor.UpiID}</span>
-                            {vendor.scannerImg && (
-                              <img 
-                                src={vendor.scannerImg} 
-                                alt="QR Code" 
-                                className="w-16 h-16 border rounded shadow-sm"
-                              />
-                            )}
-                          </div>
-                          <button
-                            onClick={() => {
-                              setPaymentVendor({
-                                ...vendor,
-                                totalAmount: viewingOrder.totalAmount || 0
-                              });
-                              setShowViewModal(false);
-                              setShowPaymentModal(true);
-                            }}
-                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
-                          >
-                            Pay Now
-                          </button>
-                        </div>
-                      )}
-                      
-                      <div className="mt-3 flex justify-between text-sm">
-                        <span className="text-yellow-600">Pending: {analytics.statusBreakdown.pending}</span>
-                        <span className="text-blue-600">Approved: {analytics.statusBreakdown.approved}</span>
-                        <span className="text-green-600">Fulfilled: {analytics.statusBreakdown.fulfilled}</span>
-                        <span className="text-red-600">Cancelled: {analytics.statusBreakdown.cancelled}</span>
+                      <div className="mb-3">
+                        <div className="text-sm text-gray-600">Order Amount:</div>
+                        <div className="text-lg font-bold text-green-600">₹{viewingOrder.totalAmount?.toFixed(2) || '0.00'}</div>
                       </div>
+                      <button
+                        onClick={() => {
+                          setPaymentVendor({
+                            ...vendor,
+                            totalAmount: viewingOrder.totalAmount || 0
+                          });
+                          setShowViewModal(false);
+                          setShowPaymentModal(true);
+                        }}
+                        className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
+                      >
+                        Pay Now
+                      </button>
                     </div>
-                  );
+                  ) : null;
                 })()}
 
                 {/* Items */}
@@ -1531,6 +2016,206 @@ const Order = () => {
                   className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fulfillment Modal */}
+      {showFulfillmentModal && fulfillmentOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Fulfill Order</h2>
+                <button
+                  onClick={() => setShowFulfillmentModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-3 rounded">
+                  <h3 className="font-medium text-gray-900 mb-2">Order Details</h3>
+                  <p className="text-sm text-gray-600">Order ID: #{fulfillmentOrder._id?.slice(-8)}</p>
+                  <p className="text-sm text-gray-600">Vendor: {getVendorName(fulfillmentOrder.vendorId)}</p>
+                  <p className="text-sm text-gray-600">Items: {fulfillmentOrder.items?.length || 0}</p>
+                  {fulfillmentOrder.chalanImage && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600 mb-1">Chalan:</p>
+                      <img 
+                        src={fulfillmentOrder.chalanImage} 
+                        alt="Chalan" 
+                        className="w-20 h-20 object-cover rounded border cursor-pointer"
+                        onClick={() => window.open(fulfillmentOrder.chalanImage, '_blank')}
+                      />
+                    </div>
+                  )}
+                  {fulfillmentOrder.fulfillment?.chalanImage && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600 mb-1">Fulfillment Chalan:</p>
+                      <img 
+                        src={fulfillmentOrder.fulfillment.chalanImage} 
+                        alt="Fulfillment Chalan" 
+                        className="w-20 h-20 object-cover rounded border cursor-pointer"
+                        onClick={() => window.open(fulfillmentOrder.fulfillment.chalanImage, '_blank')}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Previous Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={fulfillmentData.previousAmount}
+                    onChange={(e) => setFulfillmentData(prev => ({ 
+                      ...prev, 
+                      previousAmount: parseFloat(e.target.value) || 0 
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={fulfillmentData.newAmount}
+                    onChange={(e) => setFulfillmentData(prev => ({ 
+                      ...prev, 
+                      newAmount: parseFloat(e.target.value) || 0 
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Difference</label>
+                  <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm font-medium">
+                    ₹{(fulfillmentData.newAmount - fulfillmentData.previousAmount).toFixed(2)}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pricing Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFulfillmentData(prev => ({ 
+                      ...prev, 
+                      pricingImage: e.target.files[0] 
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea
+                    rows={3}
+                    value={fulfillmentData.notes}
+                    onChange={(e) => setFulfillmentData(prev => ({ 
+                      ...prev, 
+                      notes: e.target.value 
+                    }))}
+                    placeholder="Add fulfillment notes..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowFulfillmentModal(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitFulfillment}
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Fulfilling...' : 'Fulfill Order'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chalan Upload Modal */}
+      {showChalanModal && chalanOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Upload Chalan</h2>
+                <button
+                  onClick={() => setShowChalanModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-3 rounded">
+                  <h3 className="font-medium text-gray-900 mb-2">Order Details</h3>
+                  <p className="text-sm text-gray-600">Order ID: #{chalanOrder._id?.slice(-8)}</p>
+                  <p className="text-sm text-gray-600">Vendor: {getVendorName(chalanOrder.vendorId)}</p>
+                  <p className="text-sm text-gray-600">Amount: ₹{chalanOrder.totalAmount || 0}</p>
+                </div>
+
+                {chalanOrder?.chalanImage && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Current Chalan:</p>
+                    <img 
+                      src={chalanOrder.chalanImage} 
+                      alt="Current chalan" 
+                      className="w-full h-32 object-cover rounded border cursor-pointer"
+                      onClick={() => window.open(chalanOrder.chalanImage, '_blank')}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Chalan Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setChalanFile(e.target.files[0])}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {chalanFile && (
+                    <p className="text-sm text-green-600 mt-1">Selected: {chalanFile.name}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowChalanModal(false);
+                    setChalanFile(null);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitChalan}
+                  disabled={loading || !chalanFile}
+                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Uploading...' : 'Upload Chalan'}
                 </button>
               </div>
             </div>

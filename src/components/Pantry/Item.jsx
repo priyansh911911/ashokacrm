@@ -81,11 +81,14 @@ function Item() {
     setLoading(true);
     try {
       const token = getAuthToken();
+      console.log('Fetching pantry items...');
       const { data } = await axios.get('/api/pantry/items', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Items fetched:', data);
       setItems(data.items || []);
     } catch (err) {
+      console.error('Error fetching items:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -95,30 +98,62 @@ function Item() {
   const fetchCategories = async () => {
     try {
       const token = getAuthToken();
+      console.log('Fetching categories...');
       const { data } = await axios.get('/api/pantry-categories/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Categories fetched:', data);
       setCategories(data || []);
     } catch (err) {
       console.error('Error fetching categories:', err);
     }
   };
 
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setFormData({
+      ...item,
+      category: typeof item.category === 'object' ? item.category._id : item.category
+    });
+    setShowForm(true);
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPageLoading(false);
-    }, 2000);
-    fetchItems();
-    fetchCategories();
+    const initializePage = async () => {
+      try {
+        await Promise.all([fetchItems(), fetchCategories()]);
+        
+        // Check if accessed from sidebar for category creation
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('action') === 'create-category') {
+          setShowCategoryForm(true);
+          // Clear the URL parameter
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } catch (error) {
+        console.error('Error initializing page:', error);
+        setError('Failed to load page data');
+      } finally {
+        setPageLoading(false);
+      }
+    };
     
-    // Check if accessed from sidebar for category creation
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('action') === 'create-category') {
-      setShowCategoryForm(true);
-    }
-    
-    return () => clearTimeout(timer);
+    initializePage();
   }, []);
+
+  // Separate effect for handling edit URL parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editItemId = urlParams.get('edit');
+    if (editItemId && items.length > 0) {
+      const itemToEdit = items.find(item => item._id === editItemId);
+      if (itemToEdit) {
+        handleEdit(itemToEdit);
+        // Clear the URL parameter
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [items]);
 
   if (pageLoading) {
     return <DashboardLoader pageName="Pantry Items" />;
@@ -169,12 +204,6 @@ function Item() {
     setShowConfirmModal(true);
   };
 
-  const handleEdit = (item) => {
-    setEditingItem(item);
-    setFormData(item);
-    setShowForm(true);
-  };
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -198,6 +227,47 @@ function Item() {
     }));
   };
 
+  const exportToExcel = async () => {
+    try {
+      const token = getAuthToken();
+      const response = await axios.get('/api/pantry/items/excel-report', {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      });
+      
+      const contentType = response.headers['content-type'] || '';
+      let mimeType, fileExtension;
+      
+      if (contentType.includes('spreadsheet') || contentType.includes('excel')) {
+        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        fileExtension = 'xlsx';
+      } else {
+        mimeType = 'text/csv;charset=utf-8;';
+        fileExtension = 'csv';
+      }
+      
+      const blob = new Blob([response.data], { type: mimeType });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `pantry-items-${new Date().toISOString().split('T')[0]}.${fileExtension}`);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setSuccessMessage(`${fileExtension.toUpperCase()} report downloaded successfully`);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Export error:', error);
+      setError('Failed to export report');
+    }
+  };
+
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 font-sans" style={{ backgroundColor: 'hsl(45, 100%, 95%)' }}>
       <div className="w-full bg-white rounded-xl shadow-lg p-6">
@@ -209,7 +279,15 @@ function Item() {
           </div>
         )}
         
-        <div className="flex justify-end mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={exportToExcel}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              Export Excel ({items.length} items)
+            </button>
+          </div>
           <button 
             onClick={() => setShowForm(true)}
             className="font-bold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
@@ -385,8 +463,11 @@ function Item() {
                         <td className="px-6 py-3 text-sm text-gray-500">{item.category?.name || item.category}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">₹{item.price}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">
-                          <span className={item.stockQuantity <= item.minStockLevel ? 'text-red-600 font-semibold' : ''}>
-                            {item.stockQuantity}
+                          <span className={`${
+                            item.stockQuantity < 0 ? 'text-red-700 font-bold bg-red-100 px-2 py-1 rounded' :
+                            item.stockQuantity <= item.minStockLevel ? 'text-red-600 font-semibold' : ''
+                          }`}>
+                            {item.stockQuantity < 0 ? `${item.stockQuantity} (Negative Stock!)` : item.stockQuantity}
                           </span>
                         </td>
                         <td className="px-6 py-3 text-sm text-gray-500">{item.unit}</td>

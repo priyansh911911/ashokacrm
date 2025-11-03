@@ -26,16 +26,23 @@ const CategoryForm = ({ showModal, setShowModal, onCategoryAdded }) => {
     
     try {
       const token = localStorage.getItem('token');
+      console.log('Adding category:', formData);
+      
       const response = await axios.post('/api/pantry-categories/add', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      console.log('Category added successfully:', response.data);
       showToast.success('Category added successfully!');
       setFormData({ name: '', description: '', isActive: true });
       setShowModal(false);
-      onCategoryAdded(); // Refresh categories list
+      if (onCategoryAdded) {
+        onCategoryAdded(); // Refresh categories list
+      }
     } catch (err) {
-      showToast.error(err.response?.data?.message || 'Failed to add category');
+      console.error('Error adding category:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to add category';
+      showToast.error(errorMessage);
     } finally {
       setLoading(false);
     }

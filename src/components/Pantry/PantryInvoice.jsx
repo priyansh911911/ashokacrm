@@ -123,11 +123,11 @@ const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
       
       doc.text((index + 1).toString(), colPositions[0] + colWidths[0]/2, yPos + 4, { align: 'center' });
       doc.text(itemName, colPositions[1] + 2, yPos + 4);
-      doc.text((item.quantity || 0).toFixed(1), colPositions[2] + colWidths[2]/2, yPos + 4, { align: 'center' });
+      doc.text((Number(item.quantity) || 0).toFixed(1), colPositions[2] + colWidths[2]/2, yPos + 4, { align: 'center' });
       doc.text(item.unit || 'UNIT', colPositions[3] + colWidths[3]/2, yPos + 4, { align: 'center' });
       doc.text((item.unitPrice || 0).toFixed(0), colPositions[4] + colWidths[4]/2, yPos + 4, { align: 'center' });
       doc.text('0.00', colPositions[5] + colWidths[5]/2, yPos + 4, { align: 'center' });
-      doc.text(((item.quantity || 0) * (item.unitPrice || 0)).toFixed(0), colPositions[6] + colWidths[6]/2, yPos + 4, { align: 'center' });
+      doc.text(((Number(item.quantity) || 0) * (item.unitPrice || 0)).toFixed(0), colPositions[6] + colWidths[6]/2, yPos + 4, { align: 'center' });
       yPos += 6;
     });
     
@@ -135,7 +135,7 @@ const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
     doc.rect(15, yPos - 5, 180, 60);
     
     doc.text(`Items: ${(order.items?.length || 0).toFixed(2)}`, 20, yPos);
-    doc.text(`Qty: ${(order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0).toFixed(2)}`, 105, yPos);
+    doc.text(`Qty: ${(order.items?.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) || 0).toFixed(2)}`, 105, yPos);
     
     const summaryX = 150;
     doc.setFontSize(10);
@@ -258,11 +258,11 @@ const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
                     <td className="border border-black p-2 text-center">{index + 1}</td>
                     <td className="border border-black p-2 text-center">{item.itemId || (194 + index)}</td>
                     <td className="border border-black p-2 pl-3">{item.name || 'Item'}</td>
-                    <td className="border border-black p-2 text-center">{(item.quantity || 0).toFixed(2)}</td>
+                    <td className="border border-black p-2 text-center">{(Number(item.quantity) || 0).toFixed(2)}</td>
                     <td className="border border-black p-2 text-center">{item.unit || 'UNIT'}</td>
                     <td className="border border-black p-2 text-center">{(item.unitPrice || 0).toFixed(2)}</td>
                     <td className="border border-black p-2 text-center">0.00</td>
-                    <td className="border border-black p-2 text-center">{((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}</td>
+                    <td className="border border-black p-2 text-center">{((Number(item.quantity) || 0) * (item.unitPrice || 0)).toFixed(2)}</td>
                   </tr>
                 )) : (
                   <tr>
@@ -290,7 +290,7 @@ const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
                 <div><strong>Label</strong></div>
               </div>
               <div className="flex-1 text-center">
-                <div><strong>Qty :</strong> {(invoiceData.order?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0).toFixed(2)}</div>
+                <div><strong>Qty :</strong> {(invoiceData.order?.items?.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) || 0).toFixed(2)}</div>
               </div>
               <div className="flex-1 text-right">
                 <div className="mb-1"><strong>Sub Total :</strong> {(invoiceData.order?.totalAmount || 0).toFixed(2)}</div>
