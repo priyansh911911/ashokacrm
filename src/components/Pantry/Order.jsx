@@ -1115,6 +1115,23 @@ const Order = () => {
                             >
                               Chalan
                             </button>
+                            {order.orderType === 'Pantry to vendor' && (() => {
+                              const vendor = vendors.find(v => v._id === (typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId));
+                              return vendor?.UpiID ? (
+                                <button
+                                  onClick={() => {
+                                    setPaymentVendor({
+                                      ...vendor,
+                                      totalAmount: order.totalAmount || 0
+                                    });
+                                    setShowPaymentModal(true);
+                                  }}
+                                  className="text-orange-600 hover:text-orange-900 text-xs"
+                                >
+                                  Pay Now
+                                </button>
+                              ) : null;
+                            })()}
                           </>
                         )}
 
@@ -1278,23 +1295,24 @@ const Order = () => {
                     >
                       Chalan
                     </button>
-                    <button
-                      onClick={() => {
-                        const vendor = vendors.find(v => v._id === order.vendorId);
-                        if (vendor && vendor.UpiID) {
-                          setPaymentVendor({
-                            ...vendor,
-                            totalAmount: order.totalAmount || 0
-                          });
-                          setShowPaymentModal(true);
-                        } else {
-                          showToast.error('Vendor UPI details not available');
-                        }
-                      }}
-                      className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200"
-                    >
-                      Pay Now
-                    </button>
+                    {order.orderType === 'Pantry to vendor' && (() => {
+                      const vendorId = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                      const vendor = vendors.find(v => v._id === vendorId);
+                      return vendor?.UpiID ? (
+                        <button
+                          onClick={() => {
+                            setPaymentVendor({
+                              ...vendor,
+                              totalAmount: order.totalAmount || 0
+                            });
+                            setShowPaymentModal(true);
+                          }}
+                          className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200"
+                        >
+                          Pay Now
+                        </button>
+                      ) : null;
+                    })()}
                   </>
                 )}
               </div>
