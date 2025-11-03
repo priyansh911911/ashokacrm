@@ -79,8 +79,9 @@ const Users = () => {
       } else if (response.data.data && Array.isArray(response.data.data)) {
         usersData = response.data.data;
       }
+
       
-      setUsers(usersData);
+      setUsers(usersData);``
       setFilteredUsers(usersData);
       setTotalPages(response.data.totalPages || Math.ceil(usersData.length / itemsPerPage));
       setTotalUsers(response.data.totalUsers || usersData.length);
@@ -118,6 +119,7 @@ const Users = () => {
       case 'manager': return 'bg-blue-100 text-blue-800';
       case 'staff': return 'bg-green-100 text-green-800';
       case 'restaurant': return 'bg-yellow-100 text-yellow-800';
+      case 'pantry': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

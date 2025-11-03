@@ -36,51 +36,51 @@ const StaffList = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       
-      console.log('=== ALL API CALLS ===');
-      console.log('1. GET /api/auth/all-users (filtering by role)');
-      console.log('2. POST /api/auth/register (for adding staff)');
-      console.log('3. PUT /api/auth/update/:id (for updating staff)');
-      console.log('4. DELETE /api/auth/delete/:id (for deleting staff)');
-      console.log('Base URL:', import.meta.env.VITE_BACKEND_URL);
-      console.log('Token present:', !!token);
-      console.log('==================');
+      // Use same endpoint as Users.jsx with fallback handling
+      let endpoint = `/api/auth/all-users`;
       
-      const { data } = await axios.get(
-        "/api/auth/all-users",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const fallbackEndpoints = [
+        `/api/users`,
+        `/api/auth/users`,
+        `/api/search/universal?query=&type=users`,
+        `/api/search/field?model=users&field=role&value=staff`
+      ];
+      
+      let response;
+      try {
+        response = await axios.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (error) {
+        if (error.response?.status === 403) {
+          // Try fallback endpoints
+          for (const fallback of fallbackEndpoints) {
+            try {
+              response = await axios.get(fallback, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              break;
+            } catch (fallbackError) {
+              console.log(`Fallback ${fallback} failed:`, fallbackError.response?.status);
+            }
+          }
         }
-      );
-
-      console.log('=== STAFF API RESPONSE ===');
-      console.log('Raw API Response:', data);
-      console.log('Response Type:', typeof data);
-      console.log('Is Array:', Array.isArray(data));
-      
-      let allUsers = [];
-      if (Array.isArray(data)) {
-        allUsers = data;
-      } else if (data && data.users && Array.isArray(data.users)) {
-        allUsers = data.users;
-      } else if (data && data.data && Array.isArray(data.data)) {
-        allUsers = data.data;
+        if (!response) throw error;
       }
       
-      // Filter users to show only staff role
-      const staffUsers = allUsers.filter(user => 
-        user.role === 'staff'
-      );
+      // Handle different response structures (same as Users.jsx)
+      let allUsers = [];
+      if (Array.isArray(response.data)) {
+        allUsers = response.data;
+      } else if (response.data.users && Array.isArray(response.data.users)) {
+        allUsers = response.data.users;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        allUsers = response.data.data;
+      }
       
-      console.log('All users count:', allUsers.length);
-      console.log('Filtered staff count:', staffUsers.length);
-      console.log('Staff users:', staffUsers);
-      
-      setStaff(staffUsers);
-      setFilteredStaff(staffUsers);
-      console.log('========================');
-
+      // Show all users instead of filtering by staff role
+      setStaff(allUsers);
+      setFilteredStaff(allUsers);
       setError(null);
     } catch (err) {
       console.error("Error fetching staff:", err);
@@ -310,9 +310,7 @@ const StaffList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedStaff.map((staffMember) => {
-                  console.log('Rendering staff member:', staffMember);
-                  return (
+                {paginatedStaff.map((staffMember) => (
                   <tr key={staffMember._id} className="hover:bg-gray-50">
                     <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -378,8 +376,7 @@ const StaffList = () => {
                       </div>
                     </td>
                   </tr>
-                  );
-                })}
+                ))}
                 {paginatedStaff.length === 0 && (
                   <tr>
                     <td
