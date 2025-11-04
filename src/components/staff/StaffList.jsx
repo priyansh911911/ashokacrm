@@ -21,6 +21,7 @@ const StaffList = () => {
     password: "",
     role: "staff",
     department: [],
+    restaurantRole: "",
     validId: "",
     idNumber: "",
     phoneNumber: "",
@@ -127,6 +128,7 @@ const StaffList = () => {
       password: "",
       role: "",
       department: [],
+      restaurantRole: "",
       validId: "",
       idNumber: "",
       phoneNumber: "",
@@ -147,6 +149,7 @@ const StaffList = () => {
       password: "",
       role: staffMember.role || "",
       department: staffMember.department || [],
+      restaurantRole: staffMember.restaurantRole || "",
       validId: staffMember.validId || "",
       idNumber: staffMember.idNumber || "",
       phoneNumber: staffMember.phoneNumber || "",
@@ -202,6 +205,11 @@ const StaffList = () => {
         role: currentStaff.role,
         department: currentStaff.department || []
       };
+      
+      // Add restaurantRole if role is restaurant
+      if (currentStaff.role === 'restaurant' && currentStaff.restaurantRole) {
+        staffData.restaurantRole = currentStaff.restaurantRole;
+      }
       
       // Add optional fields only if they have values
       if (currentStaff.validId) {

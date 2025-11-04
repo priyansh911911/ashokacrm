@@ -154,8 +154,6 @@ const StaffForm = ({
                   <option value="staff">Staff</option>
                   <option value="admin">Admin</option>
                   <option value="restaurant">Restaurant</option>
-                  <option value="pantry">Pantry</option>
-                  <option value="chef">Chef</option>
                 </select>
               </div>
               
@@ -199,6 +197,27 @@ const StaffForm = ({
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+              
+              {currentStaff.role === "restaurant" && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Restaurant Role *</label>
+                  <select
+                    value={currentStaff.restaurantRole || ''}
+                    onChange={(e) =>
+                      setCurrentStaff({ ...currentStaff, restaurantRole: e.target.value })
+                    }
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      !currentStaff.restaurantRole ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                    }`}
+                    required
+                  >
+                    <option value="">Select Restaurant Role</option>
+                    <option value="staff">Staff</option>
+                    <option value="cashier">Cashier</option>
+                    <option value="chef">Chef</option>
+                  </select>
                 </div>
               )}
             </div>
