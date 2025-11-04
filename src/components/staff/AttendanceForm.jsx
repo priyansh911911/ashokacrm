@@ -99,7 +99,7 @@ const AttendanceForm = () => {
 
   const markAttendance = async (staffId, day, status, leaveType = null) => {
     setLoading(true);
-    const date = new Date(selectedYear, selectedMonth - 1, day);
+    const date = new Date(Date.UTC(selectedYear, selectedMonth - 1, day));
     
     try {
       const token = localStorage.getItem('token');
@@ -126,7 +126,7 @@ const AttendanceForm = () => {
           date: date.toISOString(),
           status,
           leaveType,
-          time_in: status === 'Present' ? new Date() : null
+          time_in: status === 'Present' ? new Date().toISOString() : null
         }, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
