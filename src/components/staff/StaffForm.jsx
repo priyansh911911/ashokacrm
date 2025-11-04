@@ -89,7 +89,10 @@ const StaffForm = ({
                     onChange={(e) =>
                       setCurrentStaff({ ...currentStaff, username: e.target.value })
                     }
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      !currentStaff.username ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Enter username"
                     required
                   />
                 </div>
@@ -101,7 +104,10 @@ const StaffForm = ({
                     onChange={(e) =>
                       setCurrentStaff({ ...currentStaff, email: e.target.value })
                     }
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      !currentStaff.email ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Enter email address"
                     required
                   />
                 </div>
@@ -115,7 +121,10 @@ const StaffForm = ({
                   onChange={(e) =>
                     setCurrentStaff({ ...currentStaff, password: e.target.value })
                   }
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className={`w-full px-3 py-2 border rounded-md text-sm ${
+                    !editMode && !currentStaff.password ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder={editMode ? 'Leave blank to keep current password' : 'Enter password'}
                   required={!editMode}
                 />
                 {editMode && (
@@ -136,7 +145,9 @@ const StaffForm = ({
                       department: e.target.value === "admin" ? [] : currentStaff.department,
                     })
                   }
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className={`w-full px-3 py-2 border rounded-md text-sm ${
+                    !currentStaff.role ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   required
                 >
                   <option value="">Select Role</option>
@@ -198,7 +209,7 @@ const StaffForm = ({
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Valid ID Type</label>
+                  <label className="block text-sm font-medium mb-1">Valid ID Type (Optional)</label>
                   <select
                     value={currentStaff.validId || ''}
                     onChange={(e) =>
@@ -206,7 +217,7 @@ const StaffForm = ({
                     }
                     className="w-full px-3 py-2 border rounded-md text-sm"
                   >
-                    <option value="">Select ID Type</option>
+                    <option value="">Select ID Type (Optional)</option>
                     <option value="aadhar">Aadhar Card</option>
                     <option value="pan">PAN Card</option>
                     <option value="passport">Passport</option>
@@ -215,15 +226,17 @@ const StaffForm = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Phone Number</label>
+                  <label className="block text-sm font-medium mb-1">Phone Number (Optional)</label>
                   <input
                     type="tel"
                     value={currentStaff.phoneNumber || ''}
-                    onChange={(e) =>
-                      setCurrentStaff({ ...currentStaff, phoneNumber: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9+\-\s]/g, '');
+                      setCurrentStaff({ ...currentStaff, phoneNumber: value });
+                    }}
                     className="w-full px-3 py-2 border rounded-md text-sm"
-                    placeholder="Enter phone number"
+                    placeholder="Enter phone number (optional)"
+                    maxLength="15"
                   />
                 </div>
               </div>
@@ -240,17 +253,31 @@ const StaffForm = ({
                   <input
                     type="text"
                     value={currentStaff.idNumber || ''}
-                    onChange={(e) =>
-                      setCurrentStaff({ ...currentStaff, idNumber: e.target.value })
-                    }
+                    onChange={(e) => {
+                      let value = e.target.value.toUpperCase();
+                      // Basic validation based on ID type
+                      if (currentStaff.validId === 'aadhar') {
+                        value = value.replace(/[^0-9]/g, '').slice(0, 12);
+                      } else if (currentStaff.validId === 'pan') {
+                        value = value.replace(/[^A-Z0-9]/g, '').slice(0, 10);
+                      }
+                      setCurrentStaff({ ...currentStaff, idNumber: value });
+                    }}
                     className="w-full px-3 py-2 border rounded-md text-sm"
                     placeholder={`Enter ${currentStaff.validId.replace('_', ' ')} number`}
+                    maxLength={currentStaff.validId === 'aadhar' ? '12' : currentStaff.validId === 'pan' ? '10' : '20'}
                   />
+                  {currentStaff.validId === 'aadhar' && currentStaff.idNumber && currentStaff.idNumber.length !== 12 && (
+                    <p className="text-xs text-red-500 mt-1">Aadhar number should be 12 digits</p>
+                  )}
+                  {currentStaff.validId === 'pan' && currentStaff.idNumber && currentStaff.idNumber.length !== 10 && (
+                    <p className="text-xs text-red-500 mt-1">PAN number should be 10 characters (e.g., ABCDE1234F)</p>
+                  )}
                 </div>
               )}
               
               <div>
-                <label className="block text-sm font-medium mb-1">Photo URL</label>
+                <label className="block text-sm font-medium mb-1">Photo URL (Optional)</label>
                 <input
                   type="url"
                   value={currentStaff.photo || ''}
@@ -258,7 +285,7 @@ const StaffForm = ({
                     setCurrentStaff({ ...currentStaff, photo: e.target.value })
                   }
                   className="w-full px-3 py-2 border rounded-md text-sm"
-                  placeholder="Enter photo URL (optional)"
+                  placeholder="https://example.com/photo.jpg (optional)"
                 />
               </div>
             </div>
@@ -278,7 +305,7 @@ const StaffForm = ({
                       setCurrentStaff({
                         ...currentStaff,
                         bankDetails: {
-                          ...currentStaff.bankDetails,
+                          ...(currentStaff.bankDetails || {}),
                           accountNumber: e.target.value
                         }
                       })
@@ -296,7 +323,7 @@ const StaffForm = ({
                       setCurrentStaff({
                         ...currentStaff,
                         bankDetails: {
-                          ...currentStaff.bankDetails,
+                          ...(currentStaff.bankDetails || {}),
                           ifscCode: e.target.value
                         }
                       })
@@ -317,7 +344,7 @@ const StaffForm = ({
                       setCurrentStaff({
                         ...currentStaff,
                         bankDetails: {
-                          ...currentStaff.bankDetails,
+                          ...(currentStaff.bankDetails || {}),
                           bankName: e.target.value
                         }
                       })
@@ -335,7 +362,7 @@ const StaffForm = ({
                       setCurrentStaff({
                         ...currentStaff,
                         bankDetails: {
-                          ...currentStaff.bankDetails,
+                          ...(currentStaff.bankDetails || {}),
                           accountHolderName: e.target.value
                         }
                       })
@@ -352,12 +379,12 @@ const StaffForm = ({
                   <label className="block text-sm font-medium mb-1">Basic Salary</label>
                   <input
                     type="number"
-                    value={currentStaff.salaryDetails?.basicSalary || ''}
+                    value={currentStaff.salaryDetails?.basicSalary ?? ''}
                     onChange={(e) =>
                       setCurrentStaff({
                         ...currentStaff,
                         salaryDetails: {
-                          ...currentStaff.salaryDetails,
+                          ...(currentStaff.salaryDetails || {}),
                           basicSalary: Number(e.target.value)
                         }
                       })
@@ -371,12 +398,12 @@ const StaffForm = ({
                   <label className="block text-sm font-medium mb-1">Allowances</label>
                   <input
                     type="number"
-                    value={currentStaff.salaryDetails?.allowances || ''}
+                    value={currentStaff.salaryDetails?.allowances ?? ''}
                     onChange={(e) =>
                       setCurrentStaff({
                         ...currentStaff,
                         salaryDetails: {
-                          ...currentStaff.salaryDetails,
+                          ...(currentStaff.salaryDetails || {}),
                           allowances: Number(e.target.value)
                         }
                       })
@@ -393,12 +420,12 @@ const StaffForm = ({
                   <label className="block text-sm font-medium mb-1">Deductions</label>
                   <input
                     type="number"
-                    value={currentStaff.salaryDetails?.deductions || ''}
+                    value={currentStaff.salaryDetails?.deductions ?? ''}
                     onChange={(e) =>
                       setCurrentStaff({
                         ...currentStaff,
                         salaryDetails: {
-                          ...currentStaff.salaryDetails,
+                          ...(currentStaff.salaryDetails || {}),
                           deductions: Number(e.target.value)
                         }
                       })

@@ -131,46 +131,37 @@ const StaffList = () => {
       idNumber: "",
       phoneNumber: "",
       photo: "",
-      bankDetails: {
-        accountNumber: "",
-        ifscCode: "",
-        bankName: "",
-        accountHolderName: ""
-      },
-      salaryDetails: {
-        basicSalary: 0,
-        allowances: 0,
-        deductions: 0,
-        netSalary: 0
-      }
+      bankDetails: {},
+      salaryDetails: {}
     });
     setShowModal(true);
   };
 
   const handleEditStaff = (staffMember) => {
+    console.log('Editing staff member:', staffMember);
     setEditMode(true);
     setCurrentStaff({
       _id: staffMember._id,
-      email: staffMember.email,
-      username: staffMember.username,
+      email: staffMember.email || "",
+      username: staffMember.username || "",
       password: "",
-      role: staffMember.role,
+      role: staffMember.role || "",
       department: staffMember.department || [],
       validId: staffMember.validId || "",
       idNumber: staffMember.idNumber || "",
       phoneNumber: staffMember.phoneNumber || "",
       photo: staffMember.photo || "",
-      bankDetails: staffMember.bankDetails || {
-        accountNumber: "",
-        ifscCode: "",
-        bankName: "",
-        accountHolderName: ""
+      bankDetails: {
+        accountNumber: staffMember.bankDetails?.accountNumber || "",
+        ifscCode: staffMember.bankDetails?.ifscCode || "",
+        bankName: staffMember.bankDetails?.bankName || "",
+        accountHolderName: staffMember.bankDetails?.accountHolderName || ""
       },
-      salaryDetails: staffMember.salaryDetails || {
-        basicSalary: 0,
-        allowances: 0,
-        deductions: 0,
-        netSalary: 0
+      salaryDetails: {
+        basicSalary: staffMember.salaryDetails?.basicSalary || 0,
+        allowances: staffMember.salaryDetails?.allowances || 0,
+        deductions: staffMember.salaryDetails?.deductions || 0,
+        netSalary: staffMember.salaryDetails?.netSalary || 0
       }
     });
     setShowModal(true);
@@ -196,16 +187,56 @@ const StaffList = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate required fields
+    if (!currentStaff.username || !currentStaff.email || !currentStaff.password || !currentStaff.role) {
+      showToast.error('Please fill in all required fields: Username, Email, Password, and Role');
+      return;
+    }
+
     try {
-      const staffData = { ...currentStaff };
+      // Prepare data in the correct format for the backend - start with required fields only
+      const staffData = {
+        username: currentStaff.username.trim(),
+        email: currentStaff.email.trim(),
+        password: currentStaff.password,
+        role: currentStaff.role,
+        department: currentStaff.department || []
+      };
       
-      // Calculate net salary if salary details are provided
-      if (staffData.salaryDetails) {
-        const basicSalary = staffData.salaryDetails.basicSalary || 0;
-        const allowances = staffData.salaryDetails.allowances || 0;
-        const deductions = staffData.salaryDetails.deductions || 0;
-        staffData.salaryDetails.netSalary = basicSalary + allowances - deductions;
+      // Add optional fields only if they have values
+      if (currentStaff.validId) {
+        staffData.validId = currentStaff.validId;
       }
+      if (currentStaff.idNumber) {
+        staffData.idNumber = currentStaff.idNumber;
+      }
+      if (currentStaff.phoneNumber) {
+        staffData.phoneNumber = currentStaff.phoneNumber;
+      }
+      if (currentStaff.photo) {
+        staffData.photo = currentStaff.photo;
+      }
+      
+      // Add bank details if any field is filled
+      if (currentStaff.bankDetails && Object.values(currentStaff.bankDetails).some(val => val)) {
+        staffData.bankDetails = {};
+        if (currentStaff.bankDetails.accountNumber) staffData.bankDetails.accountNumber = currentStaff.bankDetails.accountNumber;
+        if (currentStaff.bankDetails.ifscCode) staffData.bankDetails.ifscCode = currentStaff.bankDetails.ifscCode;
+        if (currentStaff.bankDetails.bankName) staffData.bankDetails.bankName = currentStaff.bankDetails.bankName;
+        if (currentStaff.bankDetails.accountHolderName) staffData.bankDetails.accountHolderName = currentStaff.bankDetails.accountHolderName;
+      }
+      
+      // Add salary details if any field is filled
+      if (currentStaff.salaryDetails && (currentStaff.salaryDetails.basicSalary || currentStaff.salaryDetails.allowances || currentStaff.salaryDetails.deductions)) {
+        staffData.salaryDetails = {
+          basicSalary: currentStaff.salaryDetails.basicSalary || 0,
+          allowances: currentStaff.salaryDetails.allowances || 0,
+          deductions: currentStaff.salaryDetails.deductions || 0,
+          netSalary: (currentStaff.salaryDetails.basicSalary || 0) + (currentStaff.salaryDetails.allowances || 0) - (currentStaff.salaryDetails.deductions || 0)
+        };
+      }
+      
+      console.log('Staff data being sent:', staffData);
       
       const config = {
         headers: {
@@ -231,7 +262,7 @@ const StaffList = () => {
         );
         showToast.success("Staff member updated successfully");
       } else {
-        if (staffData.role === "staff" && staffData.department.length === 0) {
+        if (staffData.role === "staff" && (!staffData.department || staffData.department.length === 0)) {
           showToast.error("Please select a department for staff member");
           return;
         }
@@ -256,6 +287,7 @@ const StaffList = () => {
       setShowModal(false);
     } catch (err) {
       console.error("Error saving staff:", err);
+      console.error("Error response:", err.response?.data);
       showToast.error(err.response?.data?.message || "Failed to save staff member");
     }
   };

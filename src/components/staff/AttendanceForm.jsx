@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Calendar, Users, CheckCircle } from 'lucide-react';
+import { useAppContext } from '../../context/AppContext';
 
 const AttendanceForm = () => {
+  const { axios } = useAppContext();
   const [staff, setStaff] = useState([]);
   const [selectedStaff, setSelectedStaff] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -33,101 +35,71 @@ const AttendanceForm = () => {
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://ashoka-backend.vercel.app/api/staff/all', {
+      const { data } = await axios.get('/api/auth/all-users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        const staffArray = Array.isArray(data) ? data : data.staff || [];
+      const staffArray = Array.isArray(data) ? data : data.users || [];
+      
+      const formattedStaff = staffArray.map(staffMember => {
+        const username = staffMember.username || 'Staff Member';
+        const department = Array.isArray(staffMember.department) 
+          ? staffMember.department.map(d => d.name || d).join(', ')
+          : staffMember.department?.name || staffMember.department || 'General';
         
-        console.log('Raw staff data:', staffArray); // Debug log
-        
-        const formattedStaff = staffArray.map(staffMember => {
-          console.log('Processing staff member:', JSON.stringify(staffMember, null, 2));
-          
-          // Extract username with proper type checking
-          let username = 'Staff Member';
-          if (typeof staffMember.userId?.username === 'string') {
-            username = staffMember.userId.username;
-          } else if (typeof staffMember.username === 'string') {
-            username = staffMember.username;
-          } else if (typeof staffMember.name === 'string') {
-            username = staffMember.name;
-          } else if (staffMember.userId?.username?.name) {
-            username = staffMember.userId.username.name;
-          }
-          
-          // Extract department - handle array of departments
-          let department = 'General';
-          if (staffMember.department) {
-            if (typeof staffMember.department === 'string') {
-              department = staffMember.department;
-            } else if (Array.isArray(staffMember.department)) {
-              // Join all department names with comma
-              department = staffMember.department.map(dept => dept.name).join(', ');
-            } else if (staffMember.department.name) {
-              department = staffMember.department.name;
-            }
-          }
-          
-          console.log('Department extraction:', {
-            raw: staffMember.department,
-            extracted: department
-          });
-          
-          console.log('Final extracted values:', { username, department });
-          
-          return {
-            _id: staffMember._id,
-            userId: staffMember.userId,
-            username,
-            department,
-            salary: staffMember.salary || 0
-          };
-        });
-        
-        setStaff(formattedStaff);
-      }
+        return {
+          _id: staffMember._id,
+          username,
+          department,
+          basicSalary: staffMember.salaryDetails?.basicSalary || 0
+        };
+      });
+      
+      setStaff(formattedStaff);
     } catch (error) {
+      console.error('Error fetching staff:', error);
       toast.error('Failed to fetch staff data');
     }
   };
 
   const fetchMonthlyAttendance = async () => {
     try {
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/attendance/get`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get('/api/attendance/get', {
+        headers: { 'Authorization': `Bearer ${token}` },
+        params: {
+          staffId: selectedStaff,
+          month: selectedMonth,
+          year: selectedYear
+        }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        const attendanceMap = {};
-        
-        data.forEach(record => {
-          const recordDate = new Date(record.date);
-          if (recordDate.getMonth() + 1 === selectedMonth && 
-              recordDate.getFullYear() === selectedYear &&
-              record.staffId._id === selectedStaff) {
-            const key = `${selectedStaff}-${recordDate.getDate()}`;
-            attendanceMap[key] = {
-              status: record.status,
-              leaveType: record.leaveType,
-              _id: record._id
-            };
-          }
-        });
-        
-        setAttendanceData(attendanceMap);
-      }
+      const attendanceArray = Array.isArray(data) ? data : data.attendance || [];
+      const attendanceMap = {};
+      
+      attendanceArray.forEach(record => {
+        const recordDate = new Date(record.date);
+        const key = `${selectedStaff}-${recordDate.getDate()}`;
+        attendanceMap[key] = {
+          status: record.status,
+          leaveType: record.leaveType,
+          _id: record._id,
+          time_in: record.time_in,
+          time_out: record.time_out,
+          total_hours: record.total_hours
+        };
+      });
+      
+      setAttendanceData(attendanceMap);
     } catch (error) {
       console.error('Error fetching attendance:', error);
+      toast.error('Failed to fetch attendance data');
     }
   };
 
   const markAttendance = async (staffId, day, status, leaveType = null) => {
     setLoading(true);
-    const date = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    const date = new Date(selectedYear, selectedMonth - 1, day);
     
     try {
       const token = localStorage.getItem('token');
@@ -135,52 +107,38 @@ const AttendanceForm = () => {
       const existingAttendance = attendanceData[key];
       
       if (existingAttendance) {
-        const response = await fetch('https://ashoka-backend.vercel.app/api/attendance/status', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            attendanceId: existingAttendance._id,
-            status,
-            leaveType
-          })
+        await axios.patch('/api/attendance/update', {
+          attendanceId: existingAttendance._id,
+          status,
+          leaveType
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (response.ok) {
-          setAttendanceData(prev => ({
-            ...prev,
-            [key]: { ...existingAttendance, status, leaveType }
-          }));
-          toast.success('Attendance updated');
-        }
+        setAttendanceData(prev => ({
+          ...prev,
+          [key]: { ...existingAttendance, status, leaveType }
+        }));
+        toast.success('Attendance updated');
       } else {
-        const response = await fetch('https://ashoka-backend.vercel.app/api/attendance/mark', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            staffId,
-            date,
-            status,
-            leaveType,
-            checkIn: status === 'present' ? new Date() : null
-          })
+        const { data } = await axios.post('/api/attendance/mark', {
+          staffId,
+          date: date.toISOString(),
+          status,
+          leaveType,
+          time_in: status === 'Present' ? new Date() : null
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          setAttendanceData(prev => ({
-            ...prev,
-            [key]: { status, leaveType, _id: result._id }
-          }));
-          toast.success('Attendance marked');
-        }
+        setAttendanceData(prev => ({
+          ...prev,
+          [key]: { status, leaveType, _id: data._id }
+        }));
+        toast.success('Attendance marked');
       }
     } catch (error) {
+      console.error('Error marking attendance:', error);
       toast.error('Failed to mark attendance');
     } finally {
       setLoading(false);
@@ -188,23 +146,26 @@ const AttendanceForm = () => {
   };
 
   const getStatusColor = (status, leaveType) => {
-    if (status === 'present') return 'bg-green-100 text-green-800';
-    if (status === 'absent') return 'bg-red-100 text-red-800';
-    if (status === 'half-day') return 'bg-yellow-100 text-yellow-800';
-    if (status === 'leave') {
+    if (status === 'Present') return 'bg-green-100 text-green-800';
+    if (status === 'Absent') return 'bg-red-100 text-red-800';
+    if (status === 'Half Day') return 'bg-yellow-100 text-yellow-800';
+    if (status === 'Late') return 'bg-orange-100 text-orange-800';
+    if (status === 'Leave') {
       if (leaveType === 'casual') return 'bg-blue-100 text-blue-800';
       if (leaveType === 'sick') return 'bg-orange-100 text-orange-800';
       if (leaveType === 'paid') return 'bg-purple-100 text-purple-800';
       if (leaveType === 'unpaid') return 'bg-gray-100 text-gray-800';
+      if (leaveType === 'emergency') return 'bg-red-100 text-red-800';
     }
     return 'bg-gray-50 text-gray-500';
   };
 
   const getStatusText = (status, leaveType) => {
-    if (status === 'present') return 'P';
-    if (status === 'absent') return 'A';
-    if (status === 'half-day') return 'H';
-    if (status === 'leave') return leaveType ? leaveType.charAt(0).toUpperCase() : 'L';
+    if (status === 'Present') return 'P';
+    if (status === 'Absent') return 'A';
+    if (status === 'Half Day') return 'H';
+    if (status === 'Late') return 'L';
+    if (status === 'Leave') return leaveType ? leaveType.charAt(0).toUpperCase() : 'L';
     return '-';
   };
 
@@ -391,7 +352,7 @@ const AttendanceForm = () => {
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <button
                   onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'present');
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'Present');
                     setOpenDropdown(null);
                   }}
                   className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors text-xs sm:text-sm"
@@ -401,7 +362,7 @@ const AttendanceForm = () => {
                 </button>
                 <button
                   onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'absent');
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'Absent');
                     setOpenDropdown(null);
                   }}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors"
@@ -411,7 +372,7 @@ const AttendanceForm = () => {
                 </button>
                 <button
                   onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'half-day');
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'Half Day');
                     setOpenDropdown(null);
                   }}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors"
@@ -421,7 +382,17 @@ const AttendanceForm = () => {
                 </button>
                 <button
                   onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'leave', 'casual');
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'Late');
+                    setOpenDropdown(null);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition-colors"
+                  disabled={loading}
+                >
+                  ⏰ Late
+                </button>
+                <button
+                  onClick={() => {
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'casual');
                     setOpenDropdown(null);
                   }}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors"
@@ -431,7 +402,7 @@ const AttendanceForm = () => {
                 </button>
                 <button
                   onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'leave', 'sick');
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'sick');
                     setOpenDropdown(null);
                   }}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition-colors"
@@ -441,7 +412,7 @@ const AttendanceForm = () => {
                 </button>
                 <button
                   onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'leave', 'paid');
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'paid');
                     setOpenDropdown(null);
                   }}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200 transition-colors"
@@ -451,7 +422,7 @@ const AttendanceForm = () => {
                 </button>
                 <button
                   onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'leave', 'unpaid');
+                    markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'unpaid');
                     setOpenDropdown(null);
                   }}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"

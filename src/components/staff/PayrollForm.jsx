@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { DollarSign, Calculator, FileText, Download, Eye, X } from 'lucide-react';
+import { useAppContext } from '../../context/AppContext';
 
 const PayrollForm = () => {
+  const { axios } = useAppContext();
   const [staff, setStaff] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -14,54 +16,46 @@ const PayrollForm = () => {
 
   useEffect(() => {
     fetchStaff();
-  }, []);
+    fetchGeneratedPayrolls();
+  }, [selectedMonth, selectedYear]);
+
+  const fetchGeneratedPayrolls = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`/api/salary/get?month=${selectedMonth}&year=${selectedYear}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setGeneratedPayrolls(Array.isArray(data) ? data : data.salaries || []);
+    } catch (error) {
+      console.error('Error fetching payrolls:', error);
+    }
+  };
 
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('PayrollForm - Fetching staff from attendance API');
-      
-      // Get attendance data to extract unique staff members
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/attendance/get`, {
+      const { data } = await axios.get('/api/auth/all-users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('PayrollForm - Attendance API Response Status:', response.status);
+      const staffArray = Array.isArray(data) ? data : data.users || [];
       
-      if (response.ok) {
-        const attendanceData = await response.json();
-        console.log('PayrollForm - Attendance Data:', attendanceData);
+      const formattedStaff = staffArray.map(staffMember => {
+        const username = staffMember.username || 'Staff Member';
+        const department = staffMember.role || 'Staff';
         
-        // Extract unique staff from attendance records
-        const uniqueStaff = [];
-        const staffIds = new Set();
-        
-        attendanceData.forEach(record => {
-          if (record.staffId && !staffIds.has(record.staffId._id || record.staffId)) {
-            const staffId = record.staffId._id || record.staffId;
-            staffIds.add(staffId);
-            
-            // Create staff object from attendance data
-            const staffMember = {
-              _id: staffId,
-              userId: record.staffId.userId || { username: record.staffId.username },
-              department: record.staffId.department,
-              salary: record.staffId.salary
-            };
-            
-            uniqueStaff.push(staffMember);
-          }
-        });
-        
-        console.log('PayrollForm - Unique Staff Extracted:', uniqueStaff);
-        setStaff(uniqueStaff);
-      } else {
-        const errorData = await response.json();
-        console.error('PayrollForm - API Error:', errorData);
-        toast.error('Failed to fetch staff from attendance records');
-      }
+        return {
+          _id: staffMember._id,
+          username,
+          department,
+          basicSalary: staffMember.salaryDetails?.basicSalary || 0,
+          salaryDetails: staffMember.salaryDetails
+        };
+      });
+      
+      setStaff(formattedStaff);
     } catch (error) {
-      console.error('PayrollForm - Network Error:', error);
+      console.error('Error fetching staff:', error);
       toast.error('Error loading staff data');
     }
   };
@@ -71,29 +65,31 @@ const PayrollForm = () => {
   const generatePayroll = async (staffId) => {
     setLoading(true);
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/payroll/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          staffId,
-          month: selectedMonth,
-          year: selectedYear
-        })
+      const token = localStorage.getItem('token');
+      const staffMember = staff.find(s => s._id === staffId);
+      
+      if (!staffMember) {
+        toast.error('Staff member not found');
+        setLoading(false);
+        return;
+      }
+      
+      const basicSalary = staffMember.salaryDetails?.basicSalary || staffMember.basicSalary || 0;
+      
+      const { data } = await axios.post('/api/salary/generate', {
+        staffId,
+        month: selectedMonth,
+        year: selectedYear,
+        basicSalary
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success('Payroll generated successfully');
-        setGeneratedPayrolls(prev => [data.payroll, ...prev]);
-      } else {
-        const error = await response.json();
-        toast.error(error.message || 'Failed to generate payroll');
-      }
+      toast.success('Salary generated successfully');
+      fetchGeneratedPayrolls();
     } catch (error) {
-      toast.error('Error generating payroll');
+      console.error('Error generating salary:', error);
+      toast.error(error.response?.data?.message || 'Failed to generate salary');
     } finally {
       setLoading(false);
     }
@@ -159,22 +155,14 @@ const PayrollForm = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Choose staff member ({staff.length} available)</option>
-                {staff.map((member, index) => {
-                  console.log(`PayrollForm Staff Member ${index + 1}:`, member);
-                  const staffName = typeof member.userId?.username === 'object'
-                    ? member.userId?.username?.username || member.userId?.username?.name || member.username || 'No Name'
-                    : member.userId?.username || member.username || 'No Name';
-                  const department = Array.isArray(member.department) 
-                    ? member.department.map(d => typeof d === 'object' ? d.name || 'Unknown' : d).join(', ')
-                    : typeof member.department === 'object' 
-                      ? member.department?.name || 'No Department'
-                      : member.department || 'No Department';
-                  
-                  console.log(`Staff ${index + 1} - Name: ${staffName}, Dept: ${department}, ID: ${member._id}`);
+                {staff.map((member) => {
+                  const staffName = member.username || 'No Name';
+                  const department = member.department || 'No Department';
+                  const salary = member.salaryDetails?.basicSalary || member.basicSalary || 0;
                   
                   return (
                     <option key={member._id} value={member._id}>
-                      {String(staffName)} - {String(department)} (Salary: ₹{member.salary?.toLocaleString() || 'N/A'})
+                      {staffName} - {department} (Salary: ₹{salary.toLocaleString()})
                     </option>
                   );
                 })}
@@ -218,20 +206,20 @@ const PayrollForm = () => {
           ) : (
             <div className="space-y-4">
               {generatedPayrolls.map(payroll => {
-                const staffMember = staff.find(s => s._id === payroll.staffId);
-                const staffName = typeof staffMember?.userId?.username === 'object' 
-                  ? staffMember?.userId?.username?.username || staffMember?.userId?.username?.name || 'Unknown Staff'
-                  : staffMember?.userId?.username || 'Unknown Staff';
-                const staffDept = typeof staffMember?.department === 'object' 
-                  ? staffMember?.department?.name || 'Unknown Dept'
-                  : staffMember?.department || 'Unknown Dept';
+                // Handle case where staffId is an object containing staff data
+                const staffData = typeof payroll.staffId === 'object' && payroll.staffId !== null 
+                  ? payroll.staffId 
+                  : staff.find(s => s._id === (payroll.staffId?.$oid || payroll.staffId));
+                
+                const staffName = staffData?.username || 'Unknown Staff';
+                const staffDept = staffData?.role || staffData?.department || 'Unknown Dept';
                 
                 return (
-                  <div key={payroll._id} className="border rounded-lg p-4 hover:bg-gray-50">
+                  <div key={payroll._id?.$oid || payroll._id} className="border rounded-lg p-4 hover:bg-gray-50">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="font-semibold text-gray-800">{String(staffName)}</h3>
-                        <p className="text-sm text-gray-600">{String(staffDept)} • {months[payroll.month - 1]} {payroll.year}</p>
+                        <h3 className="font-semibold text-gray-800">{staffName}</h3>
+                        <p className="text-sm text-gray-600">{staffDept} • {months[payroll.month - 1]} {payroll.year}</p>
                       </div>
                       <button
                         onClick={() => {
@@ -248,19 +236,19 @@ const PayrollForm = () => {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <p className="text-gray-600">Total Salary</p>
-                        <p className="font-semibold text-green-600">₹{payroll.totalSalary?.toLocaleString()}</p>
+                        <p className="font-semibold text-green-600">₹{(payroll.grossSalary || 0).toLocaleString()}</p>
                       </div>
                       <div>
                         <p className="text-gray-600">Paid Days</p>
-                        <p className="font-semibold">{payroll.paidDays}/{payroll.workingDays}</p>
+                        <p className="font-semibold">{payroll.attendanceData?.presentDays || 0}/{payroll.attendanceData?.totalDays || 0}</p>
                       </div>
                       <div>
                         <p className="text-gray-600">Deductions</p>
-                        <p className="font-semibold text-red-600">₹{payroll.deductions?.toLocaleString()}</p>
+                        <p className="font-semibold text-red-600">₹{(payroll.totalDeductions || 0).toLocaleString()}</p>
                       </div>
                       <div>
                         <p className="text-gray-600">Net Salary</p>
-                        <p className="font-bold text-blue-600">₹{payroll.netSalary?.toLocaleString()}</p>
+                        <p className={`font-bold ${payroll.netSalary < 0 ? 'text-red-600' : 'text-blue-600'}`}>₹{(payroll.netSalary || 0).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
