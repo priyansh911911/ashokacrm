@@ -239,7 +239,7 @@ const Sidebar = () => {
       isDropdown: true,
       children: [
         { label: "Staff List", path: "/staff", icon: Users },
-        // { label: "Staff Dashboard", path: "/staff-dashboard", icon: LayoutDashboard },
+        { label: "Staff Dashboard", path: "/staff-dashboard", icon: LayoutDashboard },
         { label: "Attendance", path: "/staff/attendance", icon: UserCheck },
         { label: "Payroll", path: "/staff/payroll", icon: BarChart2 },
         { label: "Attendance Manager", path: "/staff/attendance-manager", icon: FileText },
