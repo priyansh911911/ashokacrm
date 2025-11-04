@@ -153,9 +153,8 @@ const Sidebar = () => {
     
     const items = [];
 
-    // Check if user has pantry access (either pantry role or staff with pantry department)
-    const hasPantryAccess = role === "pantry" || 
-      (role === "staff" && userDepartments.some(dept => dept && dept.name === "pantry"));
+    // Check if user has pantry access (staff with pantry department)
+    const hasPantryAccess = role === "staff" && userDepartments.some(dept => dept && dept.name === "pantry");
     
     // If pantry access only, return empty - only pantry items will be added separately
     if (hasPantryAccess) {
@@ -314,17 +313,16 @@ const Sidebar = () => {
     ...(() => {
       const role = localStorage.getItem("role");
       
-      // Check if user has pantry access (either pantry role or staff with pantry department)
-      const hasPantryAccess = role === "pantry" || 
-        (role === "staff" && (() => {
-          try {
-            const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
-            const departments = deptData && deptData !== 'undefined' ? JSON.parse(deptData) : [];
-            return departments.some(dept => dept && dept.name === "pantry");
-          } catch (e) {
-            return false;
-          }
-        })());
+      // Check if user has pantry access (staff with pantry department)
+      const hasPantryAccess = role === "staff" && (() => {
+        try {
+          const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
+          const departments = deptData && deptData !== 'undefined' ? JSON.parse(deptData) : [];
+          return departments.some(dept => dept && dept.name === "pantry");
+        } catch (e) {
+          return false;
+        }
+      })();
       
       if (hasPantryAccess) {
         return [
@@ -399,10 +397,7 @@ const Sidebar = () => {
       const hasKitchen = userDepartments.some(dept => dept && dept.name === "kitchen");
       const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
       
-      // Hide restaurant for pantry role only
-      if (mainRole === "pantry") {
-        return [];
-      }
+
       
       // Show restaurant for admin, restaurant roles, or staff with kitchen/reception
       if (mainRole === "admin" || mainRole === "restaurant" || 
@@ -532,10 +527,8 @@ const Sidebar = () => {
   ];
 
   const bottomNavItems = [
-    ...(localStorage.getItem("role") !== "pantry" ? [
-      { icon: HelpCircle, label: "Help & Support", path: "/help" },
-      { icon: Settings, label: "Settings", isSlider: true },
-    ] : []),
+    { icon: HelpCircle, label: "Help & Support", path: "/help" },
+    { icon: Settings, label: "Settings", isSlider: true },
   ];
 
   return (
