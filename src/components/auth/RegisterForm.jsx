@@ -4,12 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 
 const DEPARTMENTS = [
-  { id: 1, name: 'kitchen' },
-  { id: 2, name: 'laundry' },
-  { id: 3, name: 'reception' },
-  { id: 4, name: 'maintenance' },
-  { id: 5, name: 'other' },
-  { id: 6, name: 'housekeeping' }
+  { id: 1, name: 'laundry' },
+  { id: 2, name: 'reception' },
+  { id: 3, name: 'maintenance' },
+  { id: 4, name: 'other' },
+  { id: 5, name: 'housekeeping' }
 ];
 
 const departmentOptions = DEPARTMENTS.map(dep => ({ value: dep, label: `${dep.name} (${dep.id})` }));
