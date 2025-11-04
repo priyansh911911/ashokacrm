@@ -21,6 +21,22 @@ const StaffList = () => {
     password: "",
     role: "staff",
     department: [],
+    validId: "",
+    idNumber: "",
+    phoneNumber: "",
+    photo: "",
+    bankDetails: {
+      accountNumber: "",
+      ifscCode: "",
+      bankName: "",
+      accountHolderName: ""
+    },
+    salaryDetails: {
+      basicSalary: 0,
+      allowances: 0,
+      deductions: 0,
+      netSalary: 0
+    }
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -111,6 +127,22 @@ const StaffList = () => {
       password: "",
       role: "",
       department: [],
+      validId: "",
+      idNumber: "",
+      phoneNumber: "",
+      photo: "",
+      bankDetails: {
+        accountNumber: "",
+        ifscCode: "",
+        bankName: "",
+        accountHolderName: ""
+      },
+      salaryDetails: {
+        basicSalary: 0,
+        allowances: 0,
+        deductions: 0,
+        netSalary: 0
+      }
     });
     setShowModal(true);
   };
@@ -123,7 +155,23 @@ const StaffList = () => {
       username: staffMember.username,
       password: "",
       role: staffMember.role,
-      department: staffMember.department,
+      department: staffMember.department || [],
+      validId: staffMember.validId || "",
+      idNumber: staffMember.idNumber || "",
+      phoneNumber: staffMember.phoneNumber || "",
+      photo: staffMember.photo || "",
+      bankDetails: staffMember.bankDetails || {
+        accountNumber: "",
+        ifscCode: "",
+        bankName: "",
+        accountHolderName: ""
+      },
+      salaryDetails: staffMember.salaryDetails || {
+        basicSalary: 0,
+        allowances: 0,
+        deductions: 0,
+        netSalary: 0
+      }
     });
     setShowModal(true);
   };
@@ -150,6 +198,15 @@ const StaffList = () => {
 
     try {
       const staffData = { ...currentStaff };
+      
+      // Calculate net salary if salary details are provided
+      if (staffData.salaryDetails) {
+        const basicSalary = staffData.salaryDetails.basicSalary || 0;
+        const allowances = staffData.salaryDetails.allowances || 0;
+        const deductions = staffData.salaryDetails.deductions || 0;
+        staffData.salaryDetails.netSalary = basicSalary + allowances - deductions;
+      }
+      
       const config = {
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,
@@ -168,6 +225,9 @@ const StaffList = () => {
         );
         setStaff(
           staff.map((s) => (s._id === currentStaff._id ? data : s))
+        );
+        setFilteredStaff(
+          filteredStaff.map((s) => (s._id === currentStaff._id ? data : s))
         );
         showToast.success("Staff member updated successfully");
       } else {
@@ -188,6 +248,7 @@ const StaffList = () => {
 
         if (data) {
           setStaff([...staff, data]);
+          setFilteredStaff([...filteredStaff, data]);
           showToast.success("Staff member added successfully");
         }
       }
@@ -242,6 +303,7 @@ const StaffList = () => {
         (staffMember.username || '').toLowerCase().includes(query) ||
         (staffMember.email || '').toLowerCase().includes(query) ||
         (staffMember.role || '').toLowerCase().includes(query) ||
+        (staffMember.phoneNumber || '').toLowerCase().includes(query) ||
         getDepartmentName(staffMember.department).toLowerCase().includes(query)
       );
       setFilteredStaff(filtered);
@@ -272,7 +334,7 @@ const StaffList = () => {
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search staff by username, email, role, or department..."
+          placeholder="Search staff by username, email, role, phone, or department..."
           value={searchQuery}
           onChange={handleSearch}
           className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm sm:text-base"
@@ -280,124 +342,155 @@ const StaffList = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-sm sm:text-base">Loading staff...</div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading staff...</p>
+        </div>
       ) : error ? (
-        <div className="text-center py-8 text-red-600 text-sm sm:text-base">{error}</div>
+        <div className="text-center py-8 text-red-600">
+          <p>{error}</p>
+          <button 
+            onClick={fetchStaff}
+            className="mt-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Username
-                  </th>
-                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                    Email
-                  </th>
-                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    Password
-                  </th>
-                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                    Department
-                  </th>
-                  <th className="px-2 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedStaff.map((staffMember) => (
-                  <tr key={staffMember._id} className="hover:bg-gray-50">
-                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full bg-primary text-white flex items-center justify-center mr-2 sm:mr-3 text-xs sm:text-sm lg:text-base">
-                          {staffMember.username
-                            ? staffMember.username.charAt(0).toUpperCase()
-                            : "?"}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-xs sm:text-sm lg:text-base truncate">
-                            {staffMember.username || "Unknown"}
+        <>
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Staff Details
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact & ID
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Department
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Salary
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedStaff.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                        {searchQuery ? 'No staff found matching your search.' : 'No staff members found.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedStaff.map((staffMember) => (
+                      <tr key={staffMember._id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              {staffMember.photo ? (
+                                <img
+                                  className="h-10 w-10 rounded-full object-cover"
+                                  src={staffMember.photo}
+                                  alt={staffMember.username}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div 
+                                className={`h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center ${staffMember.photo ? 'hidden' : 'flex'}`}
+                              >
+                                <User className="h-6 w-6 text-gray-600" />
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {staffMember.username}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {staffMember.email}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                Role: {staffMember.role}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500 sm:hidden truncate">
-                            {staffMember.email}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {staffMember.phoneNumber || 'No phone'}
                           </div>
-                          <div className="text-xs text-gray-500 lg:hidden truncate">
+                          <div className="text-sm text-gray-500">
+                            {staffMember.validId ? (
+                              <>
+                                {staffMember.validId.replace('_', ' ').toUpperCase()}
+                                {staffMember.idNumber && (
+                                  <div className="text-xs text-gray-400">
+                                    {staffMember.idNumber}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              'ID: Not provided'
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
                             {getDepartmentName(staffMember.department)}
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm lg:text-base hidden sm:table-cell">
-                      <div className="truncate max-w-32 sm:max-w-48">{staffMember.email}</div>
-                    </td>
-                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm lg:text-base hidden md:table-cell">
-                      {staffMember.password ? "••••••••" : "N/A"}
-                    </td>
-                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap capitalize text-xs sm:text-sm lg:text-base">
-                      {staffMember.role}
-                    </td>
-                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm lg:text-base hidden lg:table-cell">
-                      <div className="truncate max-w-32">
-                        {staffMember.role === "admin"
-                          ? "N/A"
-                          : staffMember.department &&
-                            staffMember.department.length > 0
-                          ? staffMember.department
-                              .map(
-                                (dept) =>
-                                  dept.name.charAt(0).toUpperCase() +
-                                  dept.name.slice(1)
-                              )
-                              .join(", ")
-                          : "None"}
-                      </div>
-                    </td>
-                    <td className="px-2 sm:px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => handleEditStaff(staffMember)}
-                          className="text-indigo-600 hover:text-indigo-900 p-1"
-                          title="Edit"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteStaff(staffMember._id)}
-                          className="text-red-600 hover:text-red-900 p-1"
-                          title="Delete"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {paginatedStaff.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-3 sm:px-6 py-6 sm:py-8 text-center text-gray-500 text-xs sm:text-sm lg:text-base"
-                    >
-                      No staff found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            ₹{staffMember.salaryDetails?.netSalary || staffMember.salaryDetails?.basicSalary || 'Not set'}
+                          </div>
+                          {staffMember.salaryDetails?.basicSalary && (
+                            <div className="text-xs text-gray-500">
+                              Basic: ₹{staffMember.salaryDetails.basicSalary}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleEditStaff(staffMember)}
+                              className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
+                              title="Edit staff"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStaff(staffMember._id)}
+                              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                              title="Delete staff"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            itemsPerPage={itemsPerPage}
-            totalItems={filteredStaff.length}
-          />
-        </div>
+          
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          )}
+        </>
       )}
 
       <StaffForm
