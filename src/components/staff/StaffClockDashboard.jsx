@@ -25,29 +25,44 @@ const StaffClockDashboard = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Fetch staff profile
-      const profileResponse = await axios.get('/api/auth/staff-profile', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setStaffData(profileResponse.data);
+      // Use basic staff data from localStorage
+      const username = localStorage.getItem('username') || 'Staff Member';
+      setStaffData({ username });
 
       // Fetch today's attendance
-      const todayResponse = await axios.get(`/api/attendance/today/${staffId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const today = new Date().toISOString().split('T')[0];
+      const todayResponse = await axios.get('/api/attendance/get', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          staffId: staffId,
+          date: today
+        }
       });
-      setTodayAttendance(todayResponse.data);
+      const todayData = Array.isArray(todayResponse.data) ? todayResponse.data[0] : todayResponse.data;
+      setTodayAttendance(todayData);
 
       // Fetch monthly report
-      const monthlyResponse = await axios.get(`/api/attendance/monthly-report/${staffId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      const monthlyResponse = await axios.get('/api/attendance/get', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          staffId: staffId,
+          month: currentMonth,
+          year: currentYear
+        }
       });
-      setMonthlyReport(monthlyResponse.data);
+      const monthlyData = Array.isArray(monthlyResponse.data) ? monthlyResponse.data : [];
+      const summary = {
+        presentDays: monthlyData.filter(r => r.status === 'Present').length,
+        absentDays: monthlyData.filter(r => r.status === 'Absent').length,
+        halfDays: monthlyData.filter(r => r.status === 'Half Day').length,
+        leaveDays: monthlyData.filter(r => r.status === 'Leave').length
+      };
+      setMonthlyReport(summary);
 
-      // Fetch salary history
-      const salaryResponse = await axios.get(`/api/salary/history/${staffId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setSalaryHistory(salaryResponse.data);
+      // Skip salary history for now
+      setSalaryHistory([]);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -67,7 +82,7 @@ const StaffClockDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setTodayAttendance(response.data);
+      setTodayAttendance(response.data.attendance);
       showToast.success('Clocked in successfully!');
     } catch (error) {
       showToast.error(error.response?.data?.message || 'Failed to clock in');
@@ -86,7 +101,7 @@ const StaffClockDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setTodayAttendance(response.data);
+      setTodayAttendance(response.data.attendance);
       showToast.success('Clocked out successfully!');
     } catch (error) {
       showToast.error(error.response?.data?.message || 'Failed to clock out');

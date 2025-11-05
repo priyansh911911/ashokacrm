@@ -65,11 +65,8 @@ const Sidebar = () => {
     setUserRole(role ? role.toUpperCase() : "");
     setRestaurantRole(restRole ? restRole.toUpperCase() : "");
 
-    if (role === "staff") {
-      fetchTaskCount();
-      const interval = setInterval(fetchTaskCount, 30000);
-      return () => clearInterval(interval);
-    }
+    // Remove task fetching since not using tasks
+    setTaskCount(0);
   }, []);
 
   const fetchTaskCount = async () => {
