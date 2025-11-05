@@ -155,18 +155,13 @@ const Sidebar = () => {
 
     // Check if user has pantry access (staff with pantry department)
     const hasPantryAccess = role === "staff" && userDepartments.some(dept => dept && dept.name === "pantry");
-    
-    // If pantry access only, return empty - only pantry items will be added separately
-    if (hasPantryAccess) {
-      return items;
-    }
 
     // If chef role, return empty - only kitchen items will be added separately
     if (role === "chef") {
       return items;
     }
 
-    // Dashboard - accessible to all except pantry users
+    // Dashboard - accessible to all users including pantry staff
     items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
     
     // Easy Dashboard - admin only
@@ -189,8 +184,8 @@ const Sidebar = () => {
       return items;
     }
     
-    // Cash Management - accessible to admin and staff (but not pantry users)
-    if (role === "admin" || (role === "staff" && !userDepartments.some(dept => dept && dept.name === "pantry"))) {
+    // Cash Management - accessible to admin and all staff including pantry
+    if (role === "admin" || role === "staff") {
       items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
     }
 
@@ -313,24 +308,14 @@ const Sidebar = () => {
     ...(() => {
       const role = localStorage.getItem("role");
       
-      // Check if user has pantry access (staff with pantry department)
-      const hasPantryAccess = role === "staff" && (() => {
-        try {
-          const deptData = localStorage.getItem("department") || localStorage.getItem("departments");
-          const departments = deptData && deptData !== 'undefined' ? JSON.parse(deptData) : [];
-          return departments.some(dept => dept && dept.name === "pantry");
-        } catch (e) {
-          return false;
-        }
-      })();
-      
-      if (hasPantryAccess) {
+      // Give pantry access to all staff members
+      if (role === "staff") {
         return [
-          { icon: LayoutDashboard, label: "Dashboard", path: "/pantry/dashboard" },
-          { icon: ListChecks, label: "Items", path: "/pantry/item" },
-          { icon: ChartBarStacked, label: "Categories", path: "/pantry/category" },
-          { icon: Package, label: "Orders", path: "/pantry/orders" },
-          { icon: Users, label: "Vendors", path: "/pantry/vendors" },
+          { icon: LayoutDashboard, label: "Pantry Dashboard", path: "/pantry/dashboard" },
+          { icon: ListChecks, label: "Pantry Items", path: "/pantry/item" },
+          { icon: ChartBarStacked, label: "Pantry Categories", path: "/pantry/category" },
+          { icon: Package, label: "Pantry Orders", path: "/pantry/orders" },
+          { icon: Users, label: "Pantry Vendors", path: "/pantry/vendors" },
         ];
       }
       
