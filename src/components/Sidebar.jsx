@@ -141,6 +141,7 @@ const Sidebar = () => {
     const hasHousekeeping = userDepartments.some(dept => dept && dept.name === "housekeeping");
     const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
     const hasLaundry = userDepartments.some(dept => dept && dept.name === "laundry");
+    const hasPantryAccess = role === "staff" && userDepartments.some(dept => dept && dept.name === "pantry");
     
     console.log('=== DEPARTMENT CHECK ===');
     console.log('Role:', role);
@@ -149,20 +150,26 @@ const Sidebar = () => {
     console.log('Has Housekeeping:', hasHousekeeping);
     console.log('Has Reception:', hasReception);
     console.log('Has Laundry:', hasLaundry);
+    console.log('Has Pantry:', hasPantryAccess);
     console.log('=======================');
     
     const items = [];
-
-    // Check if user has pantry access (staff with pantry department)
-    const hasPantryAccess = role === "staff" && userDepartments.some(dept => dept && dept.name === "pantry");
 
     // If chef role, return empty - only kitchen items will be added separately
     if (role === "chef") {
       return items;
     }
 
-    // Dashboard - accessible to all users including pantry staff
-    items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
+    // If staff has only pantry department, add attendance and return
+    if (role === "staff" && userDepartments.length === 1 && hasPantryAccess) {
+      items.push({ icon: UserCheck, label: "My Attendance", path: "/staff/clock-dashboard" });
+      return items;
+    }
+
+    // Dashboard - accessible to non-pantry users
+    if (!hasPantryAccess) {
+      items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
+    }
     
     // Easy Dashboard - admin only
     if (role === "admin") {
@@ -184,8 +191,8 @@ const Sidebar = () => {
       return items;
     }
     
-    // Cash Management - accessible to admin and all staff including pantry
-    if (role === "admin" || role === "staff") {
+    // Cash Management - accessible to admin and non-pantry staff
+    if (role === "admin" || (role === "staff" && !hasPantryAccess)) {
       items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
     }
 
@@ -216,8 +223,8 @@ const Sidebar = () => {
       items.push({ icon: Bell, label: "My Task", path: "/staff-work", count: taskCount });
     }
     
-    // Staff clock dashboard - for all staff members
-    if (role === "staff") {
+    // Staff clock dashboard - for all staff and restaurant members
+    if (role === "staff" || role === "restaurant") {
       items.push({ icon: UserCheck, label: "My Attendance", path: "/staff/clock-dashboard" });
     }
 
