@@ -342,7 +342,22 @@ const Sidebar = () => {
         ];
       }
       
-      // Pantry dropdown removed - only direct pantry role users have access
+      // Admin pantry access
+      if (role === "admin") {
+        return [{
+          icon: Warehouse,
+          label: "Pantry",
+          path: "/pantry",
+          isDropdown: true,
+          children: [
+            { label: "Dashboard", path: "/pantry/dashboard", icon: LayoutDashboard },
+            { label: "Items", path: "/pantry/item", icon: ListChecks },
+            { label: "Categories", path: "/pantry/category", icon: ChartBarStacked },
+            { label: "Orders", path: "/pantry/orders", icon: Package },
+            { label: "Vendors", path: "/pantry/vendors", icon: Users },
+          ],
+        }];
+      }
       
       return [];
     })(),
