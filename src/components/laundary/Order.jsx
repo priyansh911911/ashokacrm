@@ -29,6 +29,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import LaundryEditForm from './Editform';
 import AddOrderForm from './AddOrderForm';
 import DashboardLoader from '../DashboardLoader';
+import LaundryInvoice from './LaundryInvoice';
 
 // Apply theme styles
 const themeStyles = {
@@ -80,6 +81,9 @@ const App = () => {
     selectedItems: [],
     lossNote: ''
   });
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [laundryVendors, setLaundryVendors] = useState([]);
 
   const getAuthToken = () => localStorage.getItem("token");
 
@@ -106,7 +110,8 @@ const App = () => {
       await Promise.all([
         fetchOrders(),
         fetchBookings(),
-        fetchLaundryRates()
+        fetchLaundryRates(),
+        fetchLaundryVendors()
       ]);
       setIsLoading(false);
     };
@@ -125,6 +130,22 @@ const App = () => {
     } catch (error) {
       console.error("Error fetching laundry rates:", error);
       setLaundryRates([]);
+    }
+  };
+
+  const fetchLaundryVendors = async () => {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    try {
+      const response = await axios.get("/api/laundry-vendors", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const vendorsData = Array.isArray(response.data) ? response.data : response.data?.data || [];
+      setLaundryVendors(vendorsData);
+    } catch (error) {
+      console.error("Error fetching laundry vendors:", error);
+      setLaundryVendors([]);
     }
   };
 
@@ -352,6 +373,17 @@ const App = () => {
   const openLossModal = (order) => {
     setSelectedOrder(order);
     setShowLossModal(true);
+  };
+
+  const handleShowInvoice = (order) => {
+    const vendor = laundryVendors.find(v => v._id === (typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId));
+    setInvoiceData({
+      order,
+      vendor,
+      invoiceNumber: `LAUNDRY-INV-${Date.now()}`,
+      date: new Date().toLocaleDateString()
+    });
+    setShowInvoice(true);
   };
 
   // Add items to existing order
@@ -831,48 +863,60 @@ const App = () => {
                       </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-1">
+                      <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleEditOrder(order)}
+                            className="flex-1 px-1 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleShowInvoice(order)}
+                            className="flex-1 px-1 py-1 bg-purple-100 text-purple-800 rounded hover:bg-purple-200"
+                          >
+                            Invoice
+                          </button>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleReturnOrder(order._id)}
+                            className="flex-1 px-1 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200"
+                          >
+                            Return
+                          </button>
+                          <button
+                            onClick={() => handleCancelOrder(order._id)}
+                            className="flex-1 px-1 py-1 bg-orange-100 text-orange-800 rounded hover:bg-orange-200"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => openLossModal(order)}
+                            className="flex-1 px-1 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200"
+                          >
+                            Loss
+                          </button>
+                          <button
+                            onClick={() => handleDeleteOrder(order._id)}
+                            className="flex-1 px-1 py-1 bg-red-100 text-red-800 rounded hover:bg-red-200"
+                          >
+                            Delete
+                          </button>
+                        </div>
                         {order.vendorId?.UpiID && (
                           <button
                             onClick={() => {
                               const upiUrl = `upi://pay?pa=${order.vendorId.UpiID}&pn=${encodeURIComponent(order.vendorId.vendorName)}&am=${order.totalAmount}&cu=INR&tn=${encodeURIComponent(`Laundry Order ${order._id.slice(-6)}`)}`;;
                               window.open(upiUrl, '_blank');
                             }}
-                            className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
+                            className="w-full px-1 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200"
                           >
                             Pay Now
                           </button>
                         )}
-                        <button
-                          onClick={() => handleEditOrder(order)}
-                          className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleReturnOrder(order._id)}
-                          className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
-                        >
-                          Return
-                        </button>
-                        <button
-                          onClick={() => handleCancelOrder(order._id)}
-                          className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded hover:bg-orange-200 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => openLossModal(order)}
-                          className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors"
-                        >
-                          Loss
-                        </button>
-                        <button
-                          onClick={() => handleDeleteOrder(order._id)}
-                          className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors"
-                        >
-                          Delete
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -977,48 +1021,60 @@ const App = () => {
                 )}
                 
                 {/* Actions */}
-                <div className="flex justify-end space-x-2 pt-3 border-t border-border">
+                <div className="flex flex-col gap-1 pt-3 border-t border-border text-xs">
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleEditOrder(order)}
+                      className="flex-1 px-1 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleShowInvoice(order)}
+                      className="flex-1 px-1 py-1 bg-purple-100 text-purple-800 rounded hover:bg-purple-200"
+                    >
+                      Invoice
+                    </button>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleReturnOrder(order._id)}
+                      className="flex-1 px-1 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200"
+                    >
+                      Return
+                    </button>
+                    <button
+                      onClick={() => handleCancelOrder(order._id)}
+                      className="flex-1 px-1 py-1 bg-orange-100 text-orange-800 rounded hover:bg-orange-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => openLossModal(order)}
+                      className="flex-1 px-1 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200"
+                    >
+                      Loss
+                    </button>
+                    <button
+                      onClick={() => handleDeleteOrder(order._id)}
+                      className="flex-1 px-1 py-1 bg-red-100 text-red-800 rounded hover:bg-red-200"
+                    >
+                      Delete
+                    </button>
+                  </div>
                   {order.vendorId?.UpiID && (
                     <button
                       onClick={() => {
                         const upiUrl = `upi://pay?pa=${order.vendorId.UpiID}&pn=${encodeURIComponent(order.vendorId.vendorName)}&am=${order.totalAmount}&cu=INR&tn=${encodeURIComponent(`Laundry Order ${order._id.slice(-6)}`)}`;;
                         window.open(upiUrl, '_blank');
                       }}
-                      className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
+                      className="w-full px-1 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200"
                     >
                       Pay Now
                     </button>
                   )}
-                  <button
-                    onClick={() => handleEditOrder(order)}
-                    className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleReturnOrder(order._id)}
-                    className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
-                  >
-                    Return
-                  </button>
-                  <button
-                    onClick={() => handleCancelOrder(order._id)}
-                    className="px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded hover:bg-orange-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => openLossModal(order)}
-                    className="px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors"
-                  >
-                    Loss
-                  </button>
-                  <button
-                    onClick={() => handleDeleteOrder(order._id)}
-                    className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors"
-                  >
-                    Delete
-                  </button>
                 </div>
               </div>
             ))}
@@ -1214,6 +1270,14 @@ const App = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showInvoice && invoiceData && (
+        <LaundryInvoice
+          invoiceData={invoiceData}
+          onClose={() => setShowInvoice(false)}
+          vendors={laundryVendors}
+        />
       )}
       
       <Toaster
