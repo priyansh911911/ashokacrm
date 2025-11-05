@@ -12,6 +12,7 @@ const StaffClockDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [clockLoading, setClockLoading] = useState(false);
   const [liveHours, setLiveHours] = useState(0);
+  const [selectedShift, setSelectedShift] = useState('morning');
 
   const staffId = localStorage.getItem('userId'); // Assuming staff ID is stored in localStorage
 
@@ -91,14 +92,17 @@ const StaffClockDashboard = () => {
     setClockLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/attendance/clock-in', {
-        staffId
-      }, {
+      const requestData = {
+        staffId,
+        shift: selectedShift
+      };
+      console.log('Frontend sending:', requestData); // Debug log
+      const response = await axios.post('/api/attendance/clock-in', requestData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       setTodayAttendance(response.data.attendance);
-      showToast.success('Clocked in successfully!');
+      showToast.success(`Clocked in for ${selectedShift} shift successfully!`);
     } catch (error) {
       showToast.error(error.response?.data?.message || 'Failed to clock in');
     } finally {
@@ -210,6 +214,22 @@ const StaffClockDashboard = () => {
             </div>
           </div>
           
+          {!todayAttendance?.time_in && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Shift:
+              </label>
+              <select
+                value={selectedShift}
+                onChange={(e) => setSelectedShift(e.target.value)}
+                className="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="morning">Morning Shift (10 AM - 4 PM)</option>
+                <option value="evening">Evening Shift (4:00 PM - 10 PM)</option>
+              </select>
+            </div>
+          )}
+          
           <div className="flex gap-4 mt-6 justify-center">
             {!todayAttendance?.time_in ? (
               <button
@@ -218,7 +238,7 @@ const StaffClockDashboard = () => {
                 className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2"
               >
                 <CheckCircle size={20} />
-                {clockLoading ? 'Checking In...' : 'Check In'}
+                {clockLoading ? 'Checking In...' : `Check In (${selectedShift.charAt(0).toUpperCase() + selectedShift.slice(1)} Shift)`}
               </button>
             ) : !todayAttendance?.time_out ? (
               <button
@@ -238,15 +258,24 @@ const StaffClockDashboard = () => {
           </div>
           
           {todayAttendance?.status && (
-            <div className="mt-4 text-center">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                todayAttendance.status === 'Present' ? 'bg-green-100 text-green-800' :
-                todayAttendance.status === 'Late' ? 'bg-orange-100 text-orange-800' :
-                todayAttendance.status === 'Half Day' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                Status: {todayAttendance.status}
-              </span>
+            <div className="mt-4 text-center space-y-2">
+              <div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  todayAttendance.status === 'Present' ? 'bg-green-100 text-green-800' :
+                  todayAttendance.status === 'Late' ? 'bg-orange-100 text-orange-800' :
+                  todayAttendance.status === 'Half Day' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  Status: {todayAttendance.status}
+                </span>
+              </div>
+              {todayAttendance.shift && (
+                <div>
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    {todayAttendance.shift.charAt(0).toUpperCase() + todayAttendance.shift.slice(1)} Shift
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
