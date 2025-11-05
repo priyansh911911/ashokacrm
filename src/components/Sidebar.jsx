@@ -157,9 +157,8 @@ const Sidebar = () => {
       return items;
     }
 
-    // If staff has only pantry department, add attendance and return
+    // If staff has only pantry department, return empty (attendance added separately)
     if (role === "staff" && userDepartments.length === 1 && hasPantryAccess) {
-      items.push({ icon: UserCheck, label: "My Attendance", path: "/staff/clock-dashboard" });
       return items;
     }
 
@@ -220,16 +219,21 @@ const Sidebar = () => {
       items.push({ icon: Bell, label: "My Task", path: "/staff-work", count: taskCount });
     }
     
-    // Staff clock dashboard - for all staff and restaurant members
-    if (role === "staff" || role === "restaurant") {
-      items.push({ icon: UserCheck, label: "My Attendance", path: "/staff/clock-dashboard" });
-    }
-
     return items;
+  };
+
+  // Add attendance link for all staff and restaurant users (outside getAuthorizedNavItems)
+  const getAttendanceItem = () => {
+    const role = localStorage.getItem("role");
+    if (role === "staff" || role === "restaurant") {
+      return [{ icon: UserCheck, label: "My Attendance", path: "/staff/clock-dashboard" }];
+    }
+    return [];
   };
 
   const navItems = [
     ...getAuthorizedNavItems(),
+    ...getAttendanceItem(),
     ...(localStorage.getItem("role") === "admin" ? [{
       icon: UserRound,
       label: "Staff Management",
