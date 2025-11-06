@@ -533,7 +533,12 @@ const AllBookings = ({ setActiveTab }) => {
                             </button>
                           )
                         )}
-                        {booking.status !== 'cancelled' && booking.status !== 'completed' && booking.status !== 'ready' && booking.status !== 'served' && (
+                        {booking.status !== 'cancelled' && booking.status !== 'completed' && booking.status !== 'ready' && booking.status !== 'served' && booking.status !== 'paid' && (() => {
+                          const orderTime = new Date(booking.createdAt);
+                          const currentTime = new Date();
+                          const timeDiff = (currentTime - orderTime) / (1000 * 60); // difference in minutes
+                          return timeDiff <= 2; // Show cancel button only within 2 minutes
+                        })() && (
                           <button
                             onClick={() => updateOrderStatusWithNotification(booking._id, 'cancelled')}
                             className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 transition-colors"
