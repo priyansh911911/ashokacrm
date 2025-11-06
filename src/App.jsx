@@ -79,6 +79,8 @@ import AttendanceTable from "./components/staff/AttendanceTable.jsx";
 import StaffClockDashboard from "./components/staff/StaffClockDashboard.jsx";
 import AttendanceManager from "./components/staff/AttendanceManager.jsx";
 import RestaurantDashboard from "./components/restaurant/RestaurantDashboard.jsx";
+import ManageTables from "./components/restaurant/ManageTables.jsx";
+import AvailableTables from "./components/restaurant/AvailableTables.jsx";
 import EasyDashboard from "./components/easy dashboard/easydashboard.jsx";
 import CashManagement from "./components/CashManagement/CashManagement.jsx";
 import RegisterForm from "./components/auth/RegisterForm.jsx";
@@ -162,6 +164,8 @@ const App = () => {
 
                       <Route path="/menu" element={<Menu />} />
                       <Route path="/table" element={<Table />} />
+                      <Route path="/restaurant/manage-tables" element={<ManageTables />} />
+                      <Route path="/restaurant/available-tables" element={<AvailableTables />} />
                       <Route path="/resturant/bookings" element={<RestaurantBooking />} />
                       <Route path="/resturant/category" element={<Category />} />
                       <Route path="/book-table" element={<BookTable />} />
