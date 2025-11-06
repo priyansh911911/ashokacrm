@@ -30,6 +30,7 @@ const KOT = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [userRole, setUserRole] = useState(null);
   const [userRestaurantRole, setUserRestaurantRole] = useState(null);
+  const [lastOrderCount, setLastOrderCount] = useState(0);
 
   const { socket } = useSocket();
 
@@ -61,9 +62,10 @@ const KOT = () => {
     } else {
       // Fallback: More frequent polling when WebSocket is not available
       const pollInterval = setInterval(() => {
+        checkForNewOrders();
         fetchKOTs();
         fetchOrders();
-      }, 10000); // Poll every 10 seconds
+      }, 5000); // Poll every 5 seconds
       
       return () => clearInterval(pollInterval);
     }
@@ -107,6 +109,33 @@ const KOT = () => {
       fetchKOTs();
     }
   }, [menuItems]);
+
+  const checkForNewOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/restaurant-orders/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const currentOrderCount = response.data.length;
+      
+      if (lastOrderCount > 0 && currentOrderCount > lastOrderCount) {
+        // New order detected
+        const newOrder = response.data[0]; // Latest order
+        setNewOrderNotification({
+          tableNo: newOrder.tableNo,
+          itemCount: newOrder.items?.length || 0,
+          orderId: newOrder._id,
+          items: newOrder.items || []
+        });
+        setTimeout(() => setNewOrderNotification(null), 10000);
+      }
+      
+      setLastOrderCount(currentOrderCount);
+    } catch (error) {
+      console.error('Error checking for new orders:', error);
+    }
+  };
 
   const fetchKOTs = async () => {
     try {
