@@ -11,6 +11,14 @@ const Billing = () => {
   const [showForm, setShowForm] = useState(false);
   const [showPayment, setShowPayment] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
+  const [showCouponModal, setShowCouponModal] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [coupons, setCoupons] = useState([]);
+  const [couponForm, setCouponForm] = useState({
+    couponCode: '',
+    isLoyalty: false,
+    membership: ''
+  });
   const [formData, setFormData] = useState({
     orderId: '',
     tableNo: '',
@@ -56,9 +64,24 @@ const Billing = () => {
     }
   };
 
+  const fetchCoupons = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/coupons/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const couponsData = Array.isArray(response.data) ? response.data : (response.data.coupons || []);
+      setCoupons(couponsData);
+    } catch (error) {
+      console.error('Error fetching coupons:', error);
+      setCoupons([]);
+    }
+  };
+
   useEffect(() => {
     fetchBills();
     fetchOrders();
+    fetchCoupons();
   }, []);
 
   const handleOrderSelect = (orderId) => {
@@ -151,7 +174,7 @@ const Billing = () => {
   const handlePayment = async (e) => {
     e.preventDefault();
     if (!showPayment || !showPayment._id) {
-      showToast.error('Invalid bill selected');
+      showToast.error('Invalid order/bill selected');
       return;
     }
     
@@ -165,18 +188,84 @@ const Billing = () => {
         return;
       }
       
+      // Apply coupon if selected
+      if (couponForm.couponCode && showPayment.orderId) {
+        await axios.post('/api/coupons/apply', {
+          orderId: showPayment.orderId,
+          couponCode: couponForm.couponCode,
+          isLoyalty: couponForm.isLoyalty,
+          membership: couponForm.membership
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showToast.success('Coupon applied successfully!');
+        // Refresh orders to get updated amount
+        await fetchOrders();
+      }
+      
+      let billId = showPayment._id;
+      
+      // If this is an order (not a bill), create a bill first
+      if (showPayment.orderId) {
+        const user = JSON.parse(localStorage.getItem('user'));
+        const subtotal = showPayment.totalAmount || 0;
+        const tax = Math.round(subtotal * 0.18 * 100) / 100;
+        const totalAmount = Math.round((subtotal + tax) * 100) / 100;
+        
+        const billData = {
+          orderId: showPayment.orderId,
+          tableNo: showPayment.tableNo,
+          subtotal,
+          discount: 0,
+          tax,
+          totalAmount,
+          paymentMethod: paymentData.paymentMethod,
+          billNumber: `BILL-${Date.now().toString().slice(-6)}`,
+          cashierId: user?._id || user?.id || 'default'
+        };
+        
+        const billResponse = await axios.post('/api/bills/create', billData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        billId = billResponse.data._id;
+      }
+      
       const paymentPayload = {
         ...paymentData,
         changeAmount: paymentAmount > totalDue ? paymentAmount - totalDue : 0
       };
       
-      await axios.patch(`/api/bills/${showPayment._id}/payment`, paymentPayload, {
+      await axios.patch(`/api/bills/${billId}/payment`, paymentPayload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Update order status to paid
+      if (showPayment.orderId) {
+        await axios.patch(`/api/restaurant-orders/${showPayment.orderId}/status`, {
+          status: 'paid'
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Force table status update as backup
+        try {
+          await axios.patch(`/api/restaurant/tables/status`, {
+            tableNumber: showPayment.tableNo,
+            status: 'available'
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (tableError) {
+          console.error('Direct table update failed:', tableError);
+        }
+      }
+      
       fetchBills();
+      fetchOrders();
       setShowPayment(null);
       setPaymentData({ paidAmount: 0, paymentMethod: 'cash', cardNumber: '', upiId: '', splitDetails: { cash: 0, card: 0, upi: 0 } });
+      setCouponForm({ couponCode: '', isLoyalty: false, membership: '' });
       showToast.success('💰 Payment processed successfully!');
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -212,19 +301,65 @@ const Billing = () => {
     }
   };
 
+  const applyCoupon = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('/api/coupons/apply', {
+        orderId: showCouponModal._id,
+        couponCode: couponForm.couponCode,
+        isLoyalty: couponForm.isLoyalty,
+        membership: couponForm.membership
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      showToast.success('Coupon applied successfully!');
+      setShowCouponModal(null);
+      setCouponForm({ couponCode: '', isLoyalty: false, membership: '' });
+      fetchOrders();
+      
+      // Proceed to payment after coupon application
+      if (selectedOrder) {
+        // Fetch updated order data after coupon application
+        const updatedOrder = orders.find(o => o._id === selectedOrder._id) || selectedOrder;
+        const paymentAmount = updatedOrder.amount || updatedOrder.totalAmount || updatedOrder.total || 0;
+        console.log('After coupon payment amount:', paymentAmount, 'Updated order:', updatedOrder); // Debug log
+        setShowPayment({
+          _id: updatedOrder._id,
+          billNumber: `ORDER-${updatedOrder._id.slice(-6)}`,
+          totalAmount: paymentAmount,
+          paidAmount: 0,
+          tableNo: updatedOrder.tableNo,
+          orderId: updatedOrder._id
+        });
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      showToast.error('Failed to apply coupon: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const skipCouponAndPay = () => {
+    if (selectedOrder) {
+      const paymentAmount = selectedOrder.amount || selectedOrder.totalAmount || selectedOrder.total || 0;
+      console.log('Payment amount:', paymentAmount, 'Selected order:', selectedOrder); // Debug log
+      setShowPayment({
+        _id: selectedOrder._id,
+        billNumber: `ORDER-${selectedOrder._id.slice(-6)}`,
+        totalAmount: paymentAmount,
+        paidAmount: 0,
+        tableNo: selectedOrder.tableNo,
+        orderId: selectedOrder._id
+      });
+      setShowCouponModal(null);
+      setCouponForm({ couponCode: '', isLoyalty: false, membership: '' });
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6" style={{ backgroundColor: 'hsl(45, 100%, 95%)', color: 'hsl(45, 100%, 20%)' }}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-xl sm:text-2xl font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>Restaurant Billing</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="px-4 py-2 rounded-lg w-full sm:w-auto"
-          style={{ backgroundColor: 'hsl(45, 43%, 58%)', color: 'white' }}
-          onMouseOver={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-          onMouseOut={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
-        >
-          Create Bill
-        </button>
       </div>
 
       {showForm && (
@@ -239,7 +374,7 @@ const Billing = () => {
               required
             >
               <option value="">Select Order</option>
-              {orders.filter(order => order.status === 'completed').map((order) => {
+              {orders.filter(order => order.status === 'served' || order.status === 'completed').map((order) => {
                 const isInHouse = order.bookingId || order.grcNo || order.roomNumber;
                 return (
                   <option key={order._id} value={order._id}>
@@ -344,81 +479,103 @@ const Billing = () => {
       )}
 
       <div className="rounded-lg shadow-md overflow-hidden" style={{ backgroundColor: 'white', border: '1px solid hsl(45, 100%, 85%)' }}>
+        <div className="p-4" style={{ backgroundColor: 'hsl(45, 100%, 80%)' }}>
+          <h3 className="text-lg font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>All Orders</h3>
+          <p className="text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Complete order list with payment status</p>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: 'hsl(45, 100%, 80%)' }}>
+            <thead style={{ backgroundColor: 'hsl(45, 71%, 69%)' }}>
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Bill #</th>
+                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Order ID</th>
                 <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Type</th>
                 <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Table</th>
-                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Subtotal</th>
-                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Discount</th>
-                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Tax</th>
-                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Total</th>
-                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Paid</th>
-                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Staff</th>
+                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Amount</th>
+                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Order Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Payment Status</th>
                 <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>Actions</th>
               </tr>
             </thead>
-            <tbody style={{ borderColor: 'hsl(45, 100%, 85%)' }}>
-              {bills.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((bill, index) => (
-                <tr key={bill._id} style={{ backgroundColor: index % 2 === 0 ? 'white' : 'hsl(45, 100%, 95%)', borderColor: 'hsl(45, 100%, 85%)' }}>
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                    {bill.billNumber}
-                  </td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                    {(() => {
-                      const order = orders.find(o => o._id === bill.orderId);
-                      const isInHouse = order && (order.bookingId || order.grcNo || order.roomNumber);
-                      return isInHouse ? '🏨 In-House' : '🍽️ Regular';
-                    })()
-                    }
-                  </td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>{bill.tableNo}</td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>₹{bill.subtotal}</td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>₹{bill.discount}</td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>₹{bill.tax}</td>
-                  <td className="px-4 py-3 text-sm font-semibold" style={{ color: 'hsl(45, 43%, 58%)' }}>₹{bill.totalAmount}</td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 43%, 58%)' }}>₹{bill.paidAmount}</td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={bill.paymentStatus}
-                      onChange={(e) => handleStatusChange(bill._id, e.target.value)}
-                      className={`px-2 py-1 rounded text-xs border-0 ${
-                        bill.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+            <tbody>
+              {orders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((order, index) => {
+                const orderBill = bills.find(bill => bill.orderId === order._id);
+                const paymentStatus = orderBill ? orderBill.paymentStatus : (order.status === 'paid' ? 'paid' : 'pending');
+                const isInHouse = order.bookingId || order.grcNo || order.roomNumber;
+                
+                return (
+                  <tr key={order._id} style={{ backgroundColor: index % 2 === 0 ? 'white' : 'hsl(45, 100%, 95%)' }}>
+                    <td className="px-4 py-3 text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                      {order._id.slice(-6)}
+                    </td>
+                    <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                      {isInHouse ? '🏨 In-House' : '🍽️ Regular'}
+                    </td>
+                    <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>{order.tableNo}</td>
+                    <td className="px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>{order.staffName}</td>
+                    <td className="px-4 py-3 text-sm font-semibold" style={{ color: 'hsl(45, 43%, 58%)' }}>₹{order.amount}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        order.status === 'served' ? 'bg-green-100 text-green-800' :
+                        order.status === 'ready' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'preparing' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'paid' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
                         'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="paid">Paid</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => getBillDetails(bill._id)}
-                      className="px-2 py-1 rounded text-xs hover:bg-blue-100 transition-colors"
-                      style={{ backgroundColor: 'hsl(45, 71%, 69%)', color: 'hsl(45, 100%, 20%)' }}
-                    >
-                      📄 Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      }`}>
+                        {paymentStatus}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {order.status === 'served' && paymentStatus === 'pending' && (
+                        <button
+                          onClick={() => {
+                            console.log('Order data:', order); // Debug log
+                            setSelectedOrder(order);
+                            setShowCouponModal(order);
+                            setCouponForm({ couponCode: '', isLoyalty: false, membership: '' });
+                          }}
+                          className="px-3 py-1 rounded text-sm text-white hover:bg-green-600 transition-colors mr-2"
+                          style={{ backgroundColor: 'hsl(120, 60%, 50%)' }}
+                        >
+                          💰 Pay Now
+                        </button>
+                      )}
+                      {orderBill && (
+                        <button
+                          onClick={() => getBillDetails(orderBill._id)}
+                          className="px-2 py-1 rounded text-xs hover:bg-blue-100 transition-colors"
+                          style={{ backgroundColor: 'hsl(45, 71%, 69%)', color: 'hsl(45, 100%, 20%)' }}
+                        >
+                          📄 Bill
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
         
         <Pagination
           currentPage={currentPage}
-          totalPages={Math.ceil(bills.length / itemsPerPage)}
+          totalPages={Math.ceil(orders.length / itemsPerPage)}
           onPageChange={setCurrentPage}
           itemsPerPage={itemsPerPage}
-          totalItems={bills.length}
+          totalItems={orders.length}
         />
         
-        {bills.length === 0 && (
+        {orders.length === 0 && (
           <div className="text-center py-8" style={{ color: 'hsl(45, 100%, 20%)' }}>
-            No bills found.
+            No orders found.
           </div>
         )}
       </div>
@@ -434,7 +591,10 @@ const Billing = () => {
                   <p className="text-blue-100 text-sm">Bill #{showPayment.billNumber || 'N/A'}</p>
                 </div>
                 <button
-                  onClick={() => setShowPayment(null)}
+                  onClick={() => {
+                    setShowPayment(null);
+                    setCouponForm({ couponCode: '', isLoyalty: false, membership: '' });
+                  }}
                   className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -480,6 +640,53 @@ const Billing = () => {
                     placeholder="0.00"
                     required
                   />
+                </div>
+              </div>
+
+              {/* Coupon Section */}
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="bg-orange-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">🎫</span>
+                  Apply Coupon
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Coupon</label>
+                    <select
+                      value={couponForm.couponCode}
+                      onChange={(e) => setCouponForm({...couponForm, couponCode: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">No coupon</option>
+                      {coupons.map(coupon => (
+                        <option key={coupon._id} value={coupon.code || coupon.couponCode}>
+                          {coupon.code || coupon.couponCode} - {coupon.discount || coupon.discountPercent || 0}% off
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="paymentLoyalty"
+                      checked={couponForm.isLoyalty}
+                      onChange={(e) => setCouponForm({...couponForm, isLoyalty: e.target.checked})}
+                      className="rounded text-orange-500 focus:ring-orange-500"
+                    />
+                    <label htmlFor="paymentLoyalty" className="text-sm font-medium text-gray-700">Loyalty Member</label>
+                  </div>
+                  {couponForm.isLoyalty && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Membership ID</label>
+                      <input
+                        type="text"
+                        value={couponForm.membership}
+                        onChange={(e) => setCouponForm({...couponForm, membership: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        placeholder="Enter membership ID"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -603,7 +810,10 @@ const Billing = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowPayment(null)}
+                  onClick={() => {
+                    setShowPayment(null);
+                    setCouponForm({ couponCode: '', isLoyalty: false, membership: '' });
+                  }}
                   className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
                 >
                   Cancel
@@ -784,6 +994,106 @@ const Billing = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coupon Modal */}
+      {showCouponModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold">🎫 Apply Coupon</h3>
+                  <p className="text-orange-100 text-sm">Order #{showCouponModal._id.slice(-6)} - Table {showCouponModal.tableNo}</p>
+                </div>
+                <button
+                  onClick={() => setShowCouponModal(null)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={applyCoupon} className="p-6 space-y-4">
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <div className="text-sm text-orange-800">
+                  <div className="font-semibold">Order Amount: ₹{showCouponModal.amount}</div>
+                  <div>Staff: {showCouponModal.staffName}</div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Select Coupon</label>
+                <select
+                  value={couponForm.couponCode}
+                  onChange={(e) => setCouponForm({...couponForm, couponCode: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Choose a coupon...</option>
+                  {coupons.map(coupon => (
+                    <option key={coupon._id} value={coupon.code || coupon.couponCode}>
+                      {coupon.code || coupon.couponCode} - {coupon.discount || coupon.discountPercent || 0}% off
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isLoyalty"
+                  checked={couponForm.isLoyalty}
+                  onChange={(e) => setCouponForm({...couponForm, isLoyalty: e.target.checked})}
+                  className="rounded text-orange-500 focus:ring-orange-500"
+                />
+                <label htmlFor="isLoyalty" className="text-sm font-medium text-gray-700">Loyalty Member</label>
+              </div>
+
+              {couponForm.isLoyalty && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Membership ID</label>
+                  <input
+                    type="text"
+                    value={couponForm.membership}
+                    onChange={(e) => setCouponForm({...couponForm, membership: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    placeholder="Enter membership ID"
+                  />
+                </div>
+              )}
+
+              <div className="flex space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCouponModal(null);
+                    setSelectedOrder(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={skipCouponAndPay}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                >
+                  Skip & Pay
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all"
+                >
+                  Apply & Pay
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

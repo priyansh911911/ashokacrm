@@ -56,27 +56,31 @@ const Order = () => {
         console.error('Error fetching bookings:', error);
       }
       
-      // Fetch staff with fallback
+      // Fetch all users and filter restaurant staff
       try {
         const token = localStorage.getItem('token');
-        const staffRes = await axios.get('/api/staff/all', {
+        const usersRes = await axios.get('/api/auth/all-users', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const staffData = Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.staff || []);
+        const usersData = Array.isArray(usersRes.data) ? usersRes.data : (usersRes.data.users || []);
+        
+        // Filter only restaurant staff (exclude chef and cashier)
+        const restaurantStaff = usersData.filter(user => 
+          user.role === 'restaurant' && 
+          user.restaurantRole !== 'chef' && 
+          user.restaurantRole !== 'cashier'
+        );
         
         // Format staff data to ensure consistent structure
-        const formattedStaff = staffData.map(member => ({
+        const formattedStaff = restaurantStaff.map(member => ({
           _id: member._id,
-          name: member.userId?.username || member.username || member.name || 'Staff Member',
-          username: member.userId?.username || member.username || member.name || 'Staff Member',
-          department: Array.isArray(member.department) 
-            ? member.department.map(dept => dept.name).join(', ') 
-            : (member.department?.name || member.department || 'General'),
-          restaurantRole: 'staff'
+          name: member.username || member.name || 'Staff Member',
+          username: member.username || member.name || 'Staff Member',
+          restaurantRole: member.restaurantRole || 'staff'
         }));
         
         setStaff(formattedStaff);
-        console.log('Staff loaded:', formattedStaff);
+        console.log('Restaurant staff loaded:', formattedStaff);
       } catch (error) {
         console.error('Error fetching staff:', error);
         // Set fallback staff data

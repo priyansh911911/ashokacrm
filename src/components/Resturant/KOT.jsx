@@ -7,6 +7,7 @@ const KOT = () => {
   const { axios } = useAppContext();
   const [activeTab, setActiveTab] = useState('kots');
   const [kots, setKots] = useState([]);
+  const [kotHistory, setKotHistory] = useState([]);
   const [orders, setOrders] = useState([]);
   const [chefs, setChefs] = useState([]);
   const [tables, setTables] = useState([]);
@@ -159,15 +160,19 @@ const KOT = () => {
   const fetchKOTs = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Fetching KOTs...');
       const response = await axios.get('/api/kot/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log('KOT API Response:', response.data);
       
       // Get all orders to check payment status
       const ordersResponse = await axios.get('/api/restaurant-orders/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const allOrders = ordersResponse.data;
+      console.log('Orders for KOT matching:', allOrders.length);
       
       // Enhance KOTs with item names and order status
       const enhancedKots = response.data.map(kot => {
@@ -217,13 +222,26 @@ const KOT = () => {
       });
       
 
-      // Filter out served KOTs and KOTs for paid/completed/cancelled orders
-      const activeKots = enhancedKots.filter(kot => 
-        kot.status !== 'served' && 
-        kot.orderStatus !== 'paid' && 
-        kot.orderStatus !== 'completed' &&
-        kot.orderStatus !== 'cancelled'
-      );
+      // Separate active KOTs from history
+      const activeKots = enhancedKots.filter(kot => {
+        const isServed = kot.status === 'served';
+        const isPaid = kot.orderStatus === 'paid';
+        const isCompleted = kot.orderStatus === 'completed';
+        const isCancelled = kot.orderStatus === 'cancelled';
+        
+        // Active if not served AND order is not in final states
+        return !isServed && !isPaid && !isCompleted && !isCancelled;
+      });
+      
+      const historyKots = enhancedKots.filter(kot => {
+        const isServed = kot.status === 'served';
+        const isPaid = kot.orderStatus === 'paid';
+        const isCompleted = kot.orderStatus === 'completed';
+        const isCancelled = kot.orderStatus === 'cancelled';
+        
+        // History if served OR order is in final states
+        return isServed || isPaid || isCompleted || isCancelled;
+      });
       
       // Check for new KOTs
       if (kots.length > 0 && activeKots.length > kots.length) {
@@ -240,8 +258,21 @@ const KOT = () => {
         }, 10000);
       }
       
-      setKots(activeKots);
-      setFilteredKots(activeKots);
+      console.log('Enhanced KOTs:', enhancedKots.length);
+      console.log('Active KOTs:', activeKots.length);
+      console.log('History KOTs:', historyKots.length);
+      
+      // If no active KOTs but we have KOTs, show all for debugging
+      if (activeKots.length === 0 && enhancedKots.length > 0) {
+        console.log('No active KOTs found, showing all KOTs for debugging');
+        setKots(enhancedKots);
+        setFilteredKots(enhancedKots);
+      } else {
+        setKots(activeKots);
+        setFilteredKots(activeTab === 'history' ? historyKots : activeKots);
+      }
+      
+      setKotHistory(historyKots);
     } catch (error) {
       console.error('Error fetching KOTs:', error);
     }
@@ -469,15 +500,16 @@ const KOT = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    const sourceKots = activeTab === 'history' ? kotHistory : kots;
     if (searchQuery.trim()) {
-      const filtered = kots.filter(kot => 
+      const filtered = sourceKots.filter(kot => 
         kot.orderId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         kot._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         kot.tableNo?.toString().includes(searchQuery)
       );
       setFilteredKots(filtered);
     } else {
-      setFilteredKots(kots);
+      setFilteredKots(sourceKots);
     }
   };
 
@@ -547,14 +579,30 @@ const KOT = () => {
           <div className="border-b border-border">
             <nav className="flex">
               <button
-                onClick={() => setActiveTab('kots')}
+                onClick={() => {
+                  setActiveTab('kots');
+                  setFilteredKots(kots);
+                }}
                 className={`px-6 py-4 text-sm font-medium transition-colors ${
                   activeTab === 'kots'
                     ? 'bg-primary text-text border-b-2 border-primary'
                     : 'text-gray-500 hover:text-text hover:bg-accent'
                 }`}
               >
-                All KOTs
+                Active KOTs
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('history');
+                  setFilteredKots(kotHistory);
+                }}
+                className={`px-6 py-4 text-sm font-medium transition-colors ${
+                  activeTab === 'history'
+                    ? 'bg-primary text-text border-b-2 border-primary'
+                    : 'text-gray-500 hover:text-text hover:bg-accent'
+                }`}
+              >
+                KOT History
               </button>
               <button
                 onClick={() => setActiveTab('create')}
@@ -570,7 +618,7 @@ const KOT = () => {
           </div>
           
           <div className="p-0">
-            {activeTab === 'kots' && (
+            {(activeTab === 'kots' || activeTab === 'history') && (
               <div className="p-6">
                 <form onSubmit={handleSearch} className="mb-4">
                   <div className="flex flex-col sm:flex-row gap-2 max-w-md">

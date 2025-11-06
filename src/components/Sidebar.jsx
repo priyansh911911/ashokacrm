@@ -476,6 +476,7 @@ const Sidebar = () => {
                 { label: "Dashboard", path: "/resturant/dashboard", icon: LayoutDashboard },
                 { label: "Create Order", path: "/resturant/order-table", icon: ShoppingCart },
                 { label: "All Orders", path: "/resturant/all-orders", icon: ListChecks },
+                { label: "Chef Dashboard", path: "/chef-dashboard", icon: UserRound },
                 { label: "Reservation", path: "/resturant/reservation", icon: FileText },
                 { label: "KOT", path: "/kot", icon: ListChecks },
                 { label: "Billing", path: "/billing", icon: FileText },

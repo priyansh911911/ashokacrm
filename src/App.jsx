@@ -86,6 +86,7 @@ import CashManagement from "./components/CashManagement/CashManagement.jsx";
 import RegisterForm from "./components/auth/RegisterForm.jsx";
 import Kitchen from "./components/Kitchen.jsx";
 import KitchenStore from "./components/KitchenStore.jsx";
+import ChefDashboard from "./components/Resturant/ChefDashboard.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -175,6 +176,7 @@ const App = () => {
                       <Route path="/kot" element={<KOT />} />
                       <Route path="/resturant/reservation" element={<Resturantreservation />} />
                       <Route path="/billing" element={<Billing />} />
+                      <Route path="/chef-dashboard" element={<ChefDashboard />} />
                       <Route path="/payment" element={<Payment />} />
                       <Route path="/invoice" element={<Invoice />} />
                       <Route path="/users" element={<Users />} />
