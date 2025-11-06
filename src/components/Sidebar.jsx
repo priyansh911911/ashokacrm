@@ -25,7 +25,7 @@ import {
 import logoImage from "../assets/Lakeview Rooftop.png";
 
 const Sidebar = () => {
-  const [openDropdown, setOpenDropdown] = useState(null);
+  const [openDropdowns, setOpenDropdowns] = useState(new Set());
   const [showSettingsSlider, setShowSettingsSlider] = useState(false);
 
 
@@ -100,7 +100,15 @@ const Sidebar = () => {
   };
 
   const toggleDropdown = (label) => {
-    setOpenDropdown((prev) => (prev === label ? null : label));
+    setOpenDropdowns((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(label)) {
+        newSet.delete(label);
+      } else {
+        newSet.add(label);
+      }
+      return newSet;
+    });
   };
 
   // Touch handler for mobile - tap anywhere to close sidebar when open
@@ -472,7 +480,8 @@ const Sidebar = () => {
                 { label: "KOT", path: "/kot", icon: ListChecks },
                 { label: "Billing", path: "/billing", icon: FileText },
                 { label: "Menu", path: "/menu", icon: UserRound },
-                { label: "Tables", path: "/table", icon: UserRound },
+                { label: "Manage Tables", path: "/restaurant/manage-tables", icon: UserRound },
+                { label: "Available Tables", path: "/restaurant/available-tables", icon: UserRound },
                 { label: "Wastage", path: "/wastage", icon: Package },
               ];
             }
@@ -589,13 +598,13 @@ const Sidebar = () => {
                     <item.icon className="w-4 sm:w-5 h-4 sm:h-5 mr-2 sm:mr-3" />
                     <span className="truncate">{item.label}</span>
                   </div>
-                  {openDropdown === item.label ? (
+                  {openDropdowns.has(item.label) ? (
                     <ChevronUp className="w-3 sm:w-4 h-3 sm:h-4" />
                   ) : (
                     <ChevronDown className="w-3 sm:w-4 h-3 sm:h-4" />
                   )}
                 </button>
-                {openDropdown === item.label && (
+                {openDropdowns.has(item.label) && (
                   <div className="ml-6 sm:ml-8 mt-1 space-y-1">
                     {item.children.map((subItem, subIndex) => (
                       <Link

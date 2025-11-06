@@ -319,7 +319,7 @@ const QUICK_ACCESS_LINKS = [
     { 
         name: "Create Order", 
         icon: ShoppingCart, 
-        link: "/create-order", 
+        link: "/book-table", 
         color: "#22c55e",
         description: "Create a new food order",
         shortcut: "Ctrl+N" 
@@ -327,7 +327,7 @@ const QUICK_ACCESS_LINKS = [
     { 
         name: "All Orders", 
         icon: ListChecks, 
-        link: "/all-orders", 
+        link: "/resturant/all-orders", 
         color: "#3b82f6",
         description: "View and manage orders",
         shortcut: "Ctrl+O"
@@ -335,7 +335,7 @@ const QUICK_ACCESS_LINKS = [
     { 
         name: "Reservation", 
         icon: CalendarCheck, 
-        link: "/reservation", 
+        link: "/resturant/reservation", 
         color: "#8b5cf6",
         description: "Manage table bookings",
         shortcut: "Ctrl+R"
@@ -351,7 +351,7 @@ const QUICK_ACCESS_LINKS = [
     { 
         name: "Table Status", 
         icon: Table, 
-        link: "/tables", 
+        link: "/table", 
         color: "#ef4444",
         description: "View table availability",
         shortcut: "Ctrl+T"
@@ -378,7 +378,11 @@ const DashboardContent = () => {
         pendingOrders: 0,
         avgPrepTime: 0,
         availableTables: 0,
-        totalTables: 0
+        totalTables: 0,
+        revenueChange: 0,
+        ordersChange: 0,
+        pendingChange: 0,
+        tablesChange: 0
     });
     const [orders, setOrders] = useState([]);
     const [tables, setTables] = useState([]);
@@ -395,6 +399,30 @@ const DashboardContent = () => {
     const fetchDashboardData = async () => {
         try {
             const token = localStorage.getItem('token');
+            
+            // Fetch dashboard stats with percentage changes
+            let dashboardStats = {
+                todayOrders: 0,
+                totalRevenue: 0,
+                pendingOrders: 0,
+                availableTables: 0,
+                totalTables: 0,
+                revenueChange: 0,
+                ordersChange: 0,
+                pendingChange: 0,
+                tablesChange: 0
+            };
+            
+            try {
+                const statsRes = await axios.get('/api/restaurant/dashboard-stats', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (statsRes.data) {
+                    dashboardStats = { ...dashboardStats, ...statsRes.data };
+                }
+            } catch (error) {
+                console.log('Dashboard stats API failed, calculating manually');
+            }
             
             // Fetch orders
             const ordersRes = await axios.get('/api/restaurant-orders/all', {
@@ -461,11 +489,7 @@ const DashboardContent = () => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const reservationsArray = Array.isArray(reservationsRes.data) ? reservationsRes.data : reservationsRes.data?.reservations || reservationsRes.data?.data || [];
-                console.log('Reservations API Response:', {
-                    raw: reservationsRes.data,
-                    processed: reservationsArray,
-                    count: reservationsArray.length
-                });
+
                 setReservations(reservationsArray);
             } catch (error) {
                 console.log('Reservations API failed, using mock data');
@@ -518,8 +542,11 @@ const DashboardContent = () => {
                 return orderDate.toDateString() === today;
             });
             const pendingOrders = ordersData.filter(order => 
-                order.status === 'pending' || order.status === 'preparing' || order.status === 'in-progress'
+                order.status === 'pending' || order.status === 'preparing' || order.status === 'in-progress' ||
+                order.status === 'new' || order.status === 'received' || order.status === 'confirmed'
             );
+            
+
             const totalRevenue = todayOrders.reduce((sum, order) => sum + (order.totalAmount || order.amount || order.total || 0), 0);
             
             // Calculate available tables (exclude occupied and reserved tables)
@@ -534,38 +561,28 @@ const DashboardContent = () => {
                 table.status === 'available' && !reservedTableNumbers.includes(table.tableNumber)
             ).length;
             
-            console.log('Table Analysis:', {
-                totalTables: tablesData.length,
-                currentReservations: currentReservations.length,
-                reservedTableNumbers,
-                availableTables
-            });
+
             
-            console.log('Orders Analysis:', {
-                totalOrders: ordersData.length,
-                todayOrdersCount: todayOrders.length,
-                todayOrdersData: todayOrders,
-                pendingCount: pendingOrders.length,
-                revenue: totalRevenue
-            });
+
             
-            const dashboardStats = {
-                todayOrders: todayOrders.length,
-                totalRevenue,
-                pendingOrders: pendingOrders.length,
-                avgPrepTime: 8, // Mock data
-                availableTables,
-                totalTables: tablesData.length
-            };
+            // Update stats with calculated values if API didn't provide them
+            if (dashboardStats.todayOrders === 0) {
+                dashboardStats.todayOrders = todayOrders.length;
+            }
+            if (dashboardStats.totalRevenue === 0) {
+                dashboardStats.totalRevenue = totalRevenue;
+            }
+            if (dashboardStats.pendingOrders === 0) {
+                dashboardStats.pendingOrders = pendingOrders.length;
+            }
+            if (dashboardStats.availableTables === 0) {
+                dashboardStats.availableTables = availableTables;
+            }
+            if (dashboardStats.totalTables === 0) {
+                dashboardStats.totalTables = tablesData.length;
+            }
             
-            console.log('Restaurant Dashboard Data:', {
-                stats: dashboardStats,
-                orders: ordersData.length,
-                tables: tablesData.length,
-                kotData: kotData.length,
-                wastage: wastageData.length,
-                reservations: reservations.length
-            });
+
             
             setStats(dashboardStats);
         } catch (error) {
@@ -701,21 +718,21 @@ const DashboardContent = () => {
                             <StatCard 
                                 title="Today's Revenue" 
                                 value={`₹${stats.totalRevenue.toLocaleString()}`} 
-                                change={15.5} 
+                                change={stats.revenueChange || 0} 
                                 icon={DollarSign} 
                                 color="#22c55e"  // Success green
                             />
                             <StatCard 
                                 title="Today's Orders" 
                                 value={stats.todayOrders} 
-                                change={8.0} 
+                                change={stats.ordersChange || 0} 
                                 icon={ShoppingCart} 
                                 color="#3b82f6"  // Information blue
                             />
                             <StatCard 
                                 title="Pending Orders" 
                                 value={stats.pendingOrders} 
-                                change={-10} 
+                                change={stats.pendingChange || 0} 
                                 icon={ListChecks} 
                                 color="#f59e0b"  // Warning yellow
                                 isNegativeBetter={true} 
@@ -723,7 +740,7 @@ const DashboardContent = () => {
                             <StatCard 
                                 title="Available Tables" 
                                 value={`${stats.availableTables}/${stats.totalTables}`} 
-                                change={-5.0} 
+                                change={stats.tablesChange || 0} 
                                 icon={Table} 
                                 color="#b39b5a"  // Theme color
                             />
