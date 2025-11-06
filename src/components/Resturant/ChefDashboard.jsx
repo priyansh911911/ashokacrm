@@ -12,6 +12,10 @@ const ChefDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Get menu items for price lookup
+      const menuResponse = await axios.get('/api/items/all');
+      const menuItems = Array.isArray(menuResponse.data) ? menuResponse.data : (menuResponse.data.items || []);
+      
       // Get all orders to check payment status
       const ordersResponse = await axios.get('/api/restaurant-orders/all', {
         headers: { Authorization: `Bearer ${token}` }
@@ -23,11 +27,27 @@ const ChefDashboard = () => {
         .filter(kot => kot.status !== 'served')
         .map(kot => {
           const relatedOrder = allOrders.find(order => order._id === kot.orderId);
-          const totalAmount = kot.items?.reduce((sum, item) => {
-            const price = item.rate || item.price || 0;
-            const quantity = item.quantity || 1;
-            return sum + (price * quantity);
-          }, 0) || 0;
+          
+          const enhancedItems = kot.items?.map(item => {
+            // Find menu item to get price
+            const menuItem = menuItems.find(mi => 
+              mi._id === item.itemId || 
+              mi.name === item.itemName || 
+              mi.name === item.name
+            );
+            
+            const price = item.price || item.rate || menuItem?.Price || menuItem?.price || 0;
+            
+            return {
+              name: item.itemName || item.name || menuItem?.name || 'Unknown Item',
+              quantity: item.quantity || 1,
+              price: price
+            };
+          }) || [];
+          
+          const totalAmount = enhancedItems.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+          }, 0);
           
           return {
             _id: kot.orderId || kot._id,
@@ -36,11 +56,7 @@ const ChefDashboard = () => {
             status: kot.status || 'pending',
             createdAt: kot.createdAt,
             amount: totalAmount,
-            items: kot.items?.map(item => ({
-              name: item.itemName || item.name || 'Unknown Item',
-              quantity: item.quantity || 1,
-              price: item.rate || item.price || 0
-            })) || []
+            items: enhancedItems
           };
         });
       
@@ -155,18 +171,15 @@ const ChefDashboard = () => {
                 <span className="text-right">Price</span>
               </div>
               <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-1">
-                {order.items?.map((item, index) => {
-                  const itemPrice = item.rate || item.price || item.Price || 0;
-                  return (
-                    <div key={index} className="grid grid-cols-3 text-xs sm:text-sm gap-1">
-                      <span className="text-gray-700 truncate" title={item.name || item.itemName || 'Unknown'}>
-                        {item.name || item.itemName || 'Unknown'}
-                      </span>
-                      <span className="text-center text-gray-600">{item.quantity || 1}</span>
-                      <span className="text-right text-gray-600">₹{itemPrice}</span>
-                    </div>
-                  );
-                })}
+                {order.items?.map((item, index) => (
+                  <div key={index} className="grid grid-cols-3 text-xs sm:text-sm gap-1">
+                    <span className="text-gray-700 truncate" title={item.name || 'Unknown'}>
+                      {item.name || 'Unknown'}
+                    </span>
+                    <span className="text-center text-gray-600">{item.quantity || 1}</span>
+                    <span className="text-right text-gray-600">₹{item.price || 0}</span>
+                  </div>
+                ))}
               </div>
             </div>
 

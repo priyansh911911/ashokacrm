@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import { useSocket } from '../../context/SocketContext';
+import { useLocation } from 'react-router-dom';
 
 const Order = () => {
   const { axios } = useAppContext();
   const { socket } = useSocket();
+  const location = useLocation();
   const [menuItems, setMenuItems] = useState([]);
   const [staff, setStaff] = useState([]);
   const [tables, setTables] = useState([]);
@@ -34,7 +36,15 @@ const Order = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    
+    // Pre-fill table data if coming from table selection
+    if (location.state?.tableNumber) {
+      setOrderData(prev => ({
+        ...prev,
+        tableNo: location.state.tableNumber
+      }));
+    }
+  }, [location.state]);
 
   const fetchData = async () => {
     try {
