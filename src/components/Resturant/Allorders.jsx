@@ -40,8 +40,9 @@ const AllBookings = ({ setActiveTab }) => {
     fetchCoupons();
     fetchBills();
     
-    // Auto-refresh bookings every 30 seconds to sync with KOT updates
-    const interval = setInterval(fetchBookings, 30000);
+    // Auto-refresh bookings (less frequent if WebSocket is available)
+    const refreshRate = socket ? 60000 : 15000; // 1 minute with WebSocket, 15 seconds without
+    const interval = setInterval(fetchBookings, refreshRate);
     setRefreshInterval(interval);
     
     return () => {
@@ -49,7 +50,7 @@ const AllBookings = ({ setActiveTab }) => {
     };
   }, []);
 
-  // WebSocket listener for real-time updates
+  // WebSocket listener for real-time updates (fallback to polling if no socket)
   useEffect(() => {
     if (socket) {
       socket.on('kot-status-updated', () => {
@@ -64,6 +65,10 @@ const AllBookings = ({ setActiveTab }) => {
         socket.off('kot-status-updated');
         socket.off('order-status-updated');
       };
+    } else {
+      // Fallback: More frequent polling when WebSocket is not available
+      const pollInterval = setInterval(fetchBookings, 10000); // Poll every 10 seconds
+      return () => clearInterval(pollInterval);
     }
   }, [socket]);
 

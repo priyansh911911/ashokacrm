@@ -58,6 +58,17 @@ const KOT = () => {
         fetchOrders();
         setTimeout(() => setNewOrderNotification(null), 10000);
       });
+    } else {
+      // Fallback: More frequent polling when WebSocket is not available
+      const pollInterval = setInterval(() => {
+        fetchKOTs();
+        fetchOrders();
+      }, 10000); // Poll every 10 seconds
+      
+      return () => clearInterval(pollInterval);
+    }
+    
+    if (socket) {
 
       socket.on('new-kot', (data) => {
         setNewOrderNotification({
