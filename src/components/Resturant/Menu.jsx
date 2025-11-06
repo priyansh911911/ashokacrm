@@ -15,7 +15,8 @@ const Menu = () => {
     status: 'available',
     in_oostock: true,
     image: '',
-    description: ''
+    description: '',
+    timeToPrepare: 0
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(9);
@@ -47,7 +48,7 @@ const Menu = () => {
       fetchMenuItems();
       setShowForm(false);
       setEditingItem(null);
-      setFormData({ name: '', Price: 0, category: '', Discount: 0, status: 'available', in_oostock: true, image: '', description: '' });
+      setFormData({ name: '', Price: 0, category: '', Discount: 0, status: 'available', in_oostock: true, image: '', description: '', timeToPrepare: 0 });
     } catch (error) {
       console.error('Error saving menu item:', error);
     }
@@ -149,6 +150,18 @@ const Menu = () => {
                 <option value="unavailable">Unavailable</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'hsl(45, 100%, 20%)' }}>Time to Prepare (minutes)</label>
+              <input
+                type="number"
+                placeholder="Enter preparation time"
+                value={formData.timeToPrepare}
+                onChange={(e) => setFormData({...formData, timeToPrepare: Number(e.target.value)})}
+                className="w-full rounded-lg px-3 py-2"
+                style={{ border: '1px solid hsl(45, 100%, 85%)', backgroundColor: 'white', color: 'hsl(45, 100%, 20%)' }}
+                min="0"
+              />
+            </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-1" style={{ color: 'hsl(45, 100%, 20%)' }}>Description</label>
               <textarea
@@ -173,7 +186,7 @@ const Menu = () => {
                 onClick={() => {
                   setShowForm(false);
                   setEditingItem(null);
-                  setFormData({ name: '', Price: 0, category: '', Discount: 0, status: 'available', in_oostock: true, image: '', description: '' });
+                  setFormData({ name: '', Price: 0, category: '', Discount: 0, status: 'available', in_oostock: true, image: '', description: '', timeToPrepare: 0 });
                 }}
                 className="px-4 py-2 rounded-lg"
                 style={{ backgroundColor: 'hsl(45, 32%, 46%)', color: 'white' }}
@@ -193,6 +206,7 @@ const Menu = () => {
             <p className="font-semibold" style={{ color: 'hsl(45, 43%, 58%)' }}>₹{item.Price}</p>
             {item.Discount > 0 && <p className="text-sm" style={{ color: 'hsl(120, 60%, 50%)' }}>Discount: ₹{item.Discount}</p>}
             <p className="text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>Category: {item.category}</p>
+            {item.timeToPrepare > 0 && <p className="text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>Prep Time: {item.timeToPrepare} min</p>}
             <div className="flex justify-between items-center text-sm">
               <span className={`${item.status === 'available' ? 'text-green-600' : 'text-red-600'}`}>
                 {item.status}

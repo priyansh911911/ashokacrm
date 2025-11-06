@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import { Users, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const AvailableTables = () => {
   const { axios } = useAppContext();
+  const navigate = useNavigate();
   const [tables, setTables] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -98,6 +100,18 @@ const AvailableTables = () => {
     }
   };
 
+  const handleTableClick = (table) => {
+    if (table.status === 'available') {
+      navigate('/resturant/order-table', { 
+        state: { 
+          tableNumber: table.tableNumber,
+          tableId: table._id,
+          capacity: table.capacity || 4
+        }
+      });
+    }
+  };
+
   const TableComponent = ({ table }) => {
     const style = getTableStyle(table.status);
     const isAvailable = table.status === 'available';
@@ -145,12 +159,15 @@ const AvailableTables = () => {
     return (
       <div className="relative">
         {/* Table representation */}
-        <div className={`
-          ${style.bg} ${style.border} ${style.text}
-          border-2 rounded-lg p-4 min-h-[120px] flex flex-col items-center justify-center
-          transition-all duration-200 cursor-pointer hover:shadow-lg
-          ${isAvailable ? 'hover:bg-green-50 hover:border-green-300' : ''}
-        `}>
+        <div 
+          className={`
+            ${style.bg} ${style.border} ${style.text}
+            border-2 rounded-lg p-4 min-h-[120px] flex flex-col items-center justify-center
+            transition-all duration-200 cursor-pointer hover:shadow-lg
+            ${isAvailable ? 'hover:bg-green-50 hover:border-green-300' : ''}
+          `}
+          onClick={() => handleTableClick(table)}
+        >
           {/* Table number */}
           <div className="font-bold text-lg mb-2">
             {table.tableNumber}
@@ -184,13 +201,19 @@ const AvailableTables = () => {
           <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
             <div className="flex gap-1">
               <button
-                onClick={() => updateTableStatus(table._id, 'reserved')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateTableStatus(table._id, 'reserved');
+                }}
                 className="bg-orange-500 text-white px-2 py-1 rounded text-xs hover:bg-orange-600"
               >
                 Reserve
               </button>
               <button
-                onClick={() => updateTableStatus(table._id, 'occupied')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateTableStatus(table._id, 'occupied');
+                }}
                 className="bg-gray-800 text-white px-2 py-1 rounded text-xs hover:bg-gray-900"
               >
                 Occupy
