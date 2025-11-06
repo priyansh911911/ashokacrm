@@ -43,7 +43,11 @@ const KOT = () => {
     
     // 🔥 WebSocket listeners (fallback to polling if no socket)
     if (socket) {
+      // Join the waiters room to receive notifications
+      socket.emit('join-waiter-dashboard');
+      
       socket.on('new-order', (data) => {
+        console.log('New order received in KOT:', data);
         setNewOrderNotification({
           tableNo: data.tableNo,
           itemCount: data.itemCount,
@@ -52,7 +56,7 @@ const KOT = () => {
         });
         fetchKOTs();
         fetchOrders();
-        setTimeout(() => setNewOrderNotification(null), 5000);
+        setTimeout(() => setNewOrderNotification(null), 10000);
       });
 
       socket.on('new-kot', (data) => {
@@ -63,7 +67,7 @@ const KOT = () => {
           items: data.kot.items || []
         });
         fetchKOTs();
-        setTimeout(() => setNewOrderNotification(null), 5000);
+        setTimeout(() => setNewOrderNotification(null), 10000);
       });
 
       socket.on('kot-status-updated', () => {
@@ -154,11 +158,12 @@ const KOT = () => {
       });
       
 
-      // Filter out served KOTs and KOTs for paid/completed orders
+      // Filter out served KOTs and KOTs for paid/completed/cancelled orders
       const activeKots = enhancedKots.filter(kot => 
         kot.status !== 'served' && 
         kot.orderStatus !== 'paid' && 
-        kot.orderStatus !== 'completed'
+        kot.orderStatus !== 'completed' &&
+        kot.orderStatus !== 'cancelled'
       );
       
       // Check for new KOTs
@@ -173,7 +178,7 @@ const KOT = () => {
         
         setTimeout(() => {
           setNewOrderNotification(null);
-        }, 5000);
+        }, 10000);
       }
       
       setKots(activeKots);

@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import Pagination from '../common/Pagination';
+import { useSocket } from '../../context/SocketContext';
 
 const AllBookings = ({ setActiveTab }) => {
   const { axios } = useAppContext();
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,6 +27,10 @@ const AllBookings = ({ setActiveTab }) => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [loadingInvoice, setLoadingInvoice] = useState(null);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [selectedOrderForTransfer, setSelectedOrderForTransfer] = useState(null);
+  const [showAddItemsModal, setShowAddItemsModal] = useState(false);
+  const [selectedOrderForItems, setSelectedOrderForItems] = useState(null);
 
   useEffect(() => {
     fetchUserRole();
@@ -42,6 +48,24 @@ const AllBookings = ({ setActiveTab }) => {
       if (interval) clearInterval(interval);
     };
   }, []);
+
+  // WebSocket listener for real-time updates
+  useEffect(() => {
+    if (socket) {
+      socket.on('kot-status-updated', () => {
+        fetchBookings(); // Refresh orders when KOT status changes
+      });
+      
+      socket.on('order-status-updated', () => {
+        fetchBookings(); // Refresh orders when order status changes
+      });
+      
+      return () => {
+        socket.off('kot-status-updated');
+        socket.off('order-status-updated');
+      };
+    }
+  }, [socket]);
 
   const fetchUserRole = async () => {
     try {
@@ -268,6 +292,8 @@ const AllBookings = ({ setActiveTab }) => {
       });
       showToast.success('Table transferred successfully!');
       setTransferForm({ orderId: '', newTable: '' });
+      setShowTransferModal(false);
+      setSelectedOrderForTransfer(null);
       fetchBookings();
     } catch (error) {
       console.error('Error transferring table:', error);
@@ -322,6 +348,8 @@ const AllBookings = ({ setActiveTab }) => {
       
       showToast.success('Item added successfully!');
       setAddItemsForm({ orderId: '', itemId: '' });
+      setShowAddItemsModal(false);
+      setSelectedOrderForItems(null);
     } catch (error) {
       console.error('Error adding items:', error);
       showToast.error('Failed to add items');
@@ -421,235 +449,7 @@ const AllBookings = ({ setActiveTab }) => {
           <h2 className="text-2xl sm:text-3xl font-bold text-text">All Bookings</h2>
         </div>
         
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="font-semibold mb-3 text-text text-sm sm:text-base">Transfer Table</h3>
-            <form onSubmit={transferTable} className="flex flex-col gap-2">
-              <select
-                value={transferForm.orderId}
-                onChange={(e) => setTransferForm({...transferForm, orderId: e.target.value})}
-                className="p-2 border border-border rounded text-sm"
-                style={{ appearance: 'menulist', WebkitAppearance: 'menulist' }}
-                required
-              >
-                <option value="">Select Order</option>
-                {bookings.map(booking => (
-                  <option key={booking._id} value={booking._id}>
-                    Order {booking._id.slice(-6)} - Table {booking.tableNo}
-                  </option>
-                ))}
-              </select>
-              {transferForm.orderId && (
-                <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                  {(() => {
-                    const selectedBooking = bookings.find(b => b._id === transferForm.orderId);
-                    return selectedBooking ? (
-                      <div>
-                        <div className="font-semibold">Current: Table {selectedBooking.tableNo}</div>
-                        <div className="text-xs mt-1">
-                          Items: {selectedBooking.items?.length || 0} | Amount: ${selectedBooking.amount || 0} | Status: {selectedBooking.status || 'N/A'}
-                        </div>
-                        {selectedBooking.items && selectedBooking.items.length > 0 && (
-                          <div className="text-xs mt-1 text-gray-600">
-                            Items: {selectedBooking.items.map(item => {
-                              if (typeof item === 'string') return item;
-                              if (item.itemId) {
-                                const foundItem = items.find(i => i._id === item.itemId);
-                                return foundItem ? foundItem.name : (item.name || item.itemName || 'Unknown Item');
-                              }
-                              return item.name || item.itemName || 'Unknown Item';
-                            }).join(', ')}
-                          </div>
-                        )}
-                      </div>
-                    ) : null;
-                  })()
-                  }
-                </div>
-              )}
-              <div className="flex gap-2">
-                <select
-                  value={transferForm.newTable}
-                  onChange={(e) => setTransferForm({...transferForm, newTable: e.target.value})}
-                  className="flex-1 p-2 border border-border rounded text-sm"
-                  style={{ appearance: 'menulist', WebkitAppearance: 'menulist' }}
-                  required
-                >
-                  <option value="">Select New Table</option>
-                  {tables.map(table => (
-                    <option key={table._id} value={table.tableNumber}>
-                      Table {table.tableNumber}
-                    </option>
-                  ))}
-                </select>
-                <button type="submit" className="bg-secondary text-text px-4 py-2 rounded hover:bg-hover text-sm whitespace-nowrap">
-                  Transfer
-                </button>
-              </div>
-            </form>
-          </div>
 
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="font-semibold mb-3 text-text text-sm sm:text-base">Add Items</h3>
-            <form onSubmit={addItems} className="flex flex-col gap-2">
-              {addItemsForm.orderId && (
-                <div className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                  {(() => {
-                    const selectedBooking = bookings.find(b => b._id === addItemsForm.orderId);
-                    return selectedBooking ? (
-                      <div>
-                        <div className="font-semibold">Order {addItemsForm.orderId.slice(-6)} - Table {selectedBooking.tableNo}</div>
-                        <div className="text-xs mt-1">
-                          Current Items: {selectedBooking.items?.length || 0} items | Amount: ${selectedBooking.amount || 0}
-                        </div>
-                        {selectedBooking.items && selectedBooking.items.length > 0 && (
-                          <div className="text-xs mt-1 text-gray-600">
-                            Items: {selectedBooking.items.map(item => {
-                              if (typeof item === 'string') return item;
-                              if (item.itemId) {
-                                const foundItem = items.find(i => i._id === item.itemId);
-                                return foundItem ? foundItem.name : (item.name || item.itemName || 'Unknown Item');
-                              }
-                              return item.name || item.itemName || 'Unknown Item';
-                            }).join(', ')}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div>Selected: Order {addItemsForm.orderId.slice(-6)}</div>
-                    );
-                  })()
-                  }
-                </div>
-              )}
-              <select
-                value={addItemsForm.itemId}
-                onChange={(e) => setAddItemsForm({...addItemsForm, itemId: e.target.value})}
-                className="p-2 border border-border rounded text-sm"
-                style={{ appearance: 'menulist', WebkitAppearance: 'menulist' }}
-                required
-              >
-                <option value="">Select Item</option>
-                {items.map(item => (
-                  <option key={item._id} value={item._id}>
-                    {item.name} - {item.category} - ${item.Price}
-                  </option>
-                ))}
-              </select>
-              <button 
-                type="submit" 
-                className="bg-secondary text-text px-4 py-2 rounded hover:bg-hover text-sm"
-                disabled={!addItemsForm.orderId}
-              >
-                Add Item
-              </button>
-            </form>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="font-semibold mb-3 text-text text-sm sm:text-base">Apply Coupon</h3>
-            <form onSubmit={applyCoupon} className="flex flex-col gap-2">
-              <select
-                value={couponForm.orderId}
-                onChange={(e) => setCouponForm({...couponForm, orderId: e.target.value})}
-                className="p-2 border border-border rounded text-sm"
-                style={{ appearance: 'menulist', WebkitAppearance: 'menulist' }}
-                required
-              >
-                <option value="">Select Order</option>
-                {bookings.map(booking => (
-                  <option key={booking._id} value={booking._id}>
-                    Order {booking._id.slice(-6)} - Table {booking.tableNo}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={couponForm.couponCode}
-                onChange={(e) => setCouponForm({...couponForm, couponCode: e.target.value})}
-                className="p-2 border border-border rounded text-sm"
-                style={{ appearance: 'menulist', WebkitAppearance: 'menulist' }}
-                required
-              >
-                <option value="">Select Coupon ({coupons.length} available)</option>
-                {coupons.length > 0 ? coupons.map(coupon => (
-                  <option key={coupon._id || coupon.id} value={coupon.code || coupon.couponCode}>
-                    {coupon.code || coupon.couponCode || 'No Code'} - {coupon.discount || coupon.discountPercent || 0}% off
-                  </option>
-                )) : (
-                  <option disabled>No coupons available</option>
-                )}
-              </select>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isLoyalty"
-                  checked={couponForm.isLoyalty}
-                  onChange={(e) => setCouponForm({...couponForm, isLoyalty: e.target.checked})}
-                  className="rounded"
-                />
-                <label htmlFor="isLoyalty" className="text-sm">Loyalty Member</label>
-              </div>
-              <input
-                type="text"
-                placeholder="Membership ID (optional)"
-                value={couponForm.membership}
-                onChange={(e) => setCouponForm({...couponForm, membership: e.target.value})}
-                className="p-2 border border-border rounded text-sm"
-              />
-              <button type="submit" className="bg-accent text-text px-4 py-2 rounded hover:bg-hover text-sm">
-                Apply Coupon
-              </button>
-            </form>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="font-semibold mb-3 text-text text-sm sm:text-base">Process Payment</h3>
-            <form onSubmit={processPayment} className="flex flex-col gap-2">
-              <select
-                value={paymentForm.orderId}
-                onChange={(e) => {
-                  const selectedBooking = bookings.find(b => b._id === e.target.value);
-                  const amount = selectedBooking ? (selectedBooking.amount || selectedBooking.advancePayment || 0) : '';
-                  setPaymentForm({...paymentForm, orderId: e.target.value, amount: amount.toString()});
-                }}
-                className="p-2 border border-border rounded text-sm"
-                style={{ appearance: 'menulist', WebkitAppearance: 'menulist' }}
-                required
-              >
-                <option value="">Select Order</option>
-                {bookings.filter(b => {
-                  const bill = bills.find(bill => bill.orderId === b._id);
-                  return (!bill || bill.paymentStatus !== 'paid');
-                }).map(booking => (
-                  <option key={booking._id} value={booking._id}>
-                    {booking._id.slice(-6)}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                placeholder="Payment Amount"
-                value={paymentForm.amount}
-                onChange={(e) => setPaymentForm({...paymentForm, amount: e.target.value})}
-                className="p-2 border border-border rounded text-sm"
-                required
-              />
-              <select
-                value={paymentForm.method}
-                onChange={(e) => setPaymentForm({...paymentForm, method: e.target.value})}
-                className="p-2 border border-border rounded text-sm"
-                style={{ appearance: 'menulist', WebkitAppearance: 'menulist' }}
-              >
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="upi">UPI</option>
-              </select>
-              <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 text-sm">
-                Process Payment
-              </button>
-            </form>
-          </div>
-        </div>
 
         <form onSubmit={handleSearch} className="mb-4">
           <div className="flex flex-col sm:flex-row gap-2 max-w-md">
@@ -728,7 +528,7 @@ const AllBookings = ({ setActiveTab }) => {
                             </button>
                           )
                         )}
-                        {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                        {booking.status !== 'cancelled' && booking.status !== 'completed' && booking.status !== 'ready' && booking.status !== 'served' && (
                           <button
                             onClick={() => updateOrderStatusWithNotification(booking._id, 'cancelled')}
                             className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 transition-colors"
@@ -746,41 +546,56 @@ const AllBookings = ({ setActiveTab }) => {
                         >
                           View
                         </button>
-                        <button
-                          onClick={() => generateInvoice(booking._id)}
-                          disabled={loadingInvoice === booking._id}
-                          className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap disabled:opacity-50"
-                        >
-                          {loadingInvoice === booking._id ? 'Loading...' : 'Invoice'}
-                        </button>
-                        {booking.status === 'completed' ? (
-                          <button
-                            onClick={() => setPaymentForm({...paymentForm, orderId: booking._id, amount: (booking.amount || booking.advancePayment || 0).toString()})}
-                            className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 whitespace-nowrap"
-                          >
-                            Pay Now
-                          </button>
-                        ) : booking.status === 'paid' ? (
-                          <button
-                            onClick={() => generateInvoice(booking._id)}
-                            className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap"
-                          >
-                            Invoice
-                          </button>
-                        ) : (
+                        {booking.status !== 'cancelled' && (
                           <>
                             <button
-                              onClick={() => setAddItemsForm({orderId: booking._id, itemId: ''})}
-                              className="bg-purple-500 text-white px-2 py-1 rounded text-xs hover:bg-purple-600 whitespace-nowrap"
+                              onClick={() => generateInvoice(booking._id)}
+                              disabled={loadingInvoice === booking._id}
+                              className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap disabled:opacity-50"
                             >
-                              Add Items
+                              {loadingInvoice === booking._id ? 'Loading...' : 'Invoice'}
                             </button>
-                            <button
-                              onClick={() => setTransferForm({...transferForm, orderId: booking._id})}
-                              className="bg-orange-500 text-white px-2 py-1 rounded text-xs hover:bg-orange-600 whitespace-nowrap"
-                            >
-                              Transfer
-                            </button>
+                            {booking.status === 'served' ? (
+                              // Only show Invoice button for served orders
+                              null
+                            ) : booking.status === 'completed' ? (
+                              <button
+                                onClick={() => setPaymentForm({...paymentForm, orderId: booking._id, amount: (booking.amount || booking.advancePayment || 0).toString()})}
+                                className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 whitespace-nowrap"
+                              >
+                                Pay Now
+                              </button>
+                            ) : booking.status === 'paid' ? (
+                              <button
+                                onClick={() => generateInvoice(booking._id)}
+                                className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap"
+                              >
+                                Invoice
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedOrderForItems(booking);
+                                    setAddItemsForm({orderId: booking._id, itemId: ''});
+                                    setShowAddItemsModal(true);
+                                  }}
+                                  className="bg-purple-500 text-white px-2 py-1 rounded text-xs hover:bg-purple-600 whitespace-nowrap"
+                                >
+                                  Add Items
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedOrderForTransfer(booking);
+                                    setTransferForm({orderId: booking._id, newTable: ''});
+                                    setShowTransferModal(true);
+                                  }}
+                                  className="bg-orange-500 text-white px-2 py-1 rounded text-xs hover:bg-orange-600 whitespace-nowrap"
+                                >
+                                  Transfer
+                                </button>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
@@ -806,6 +621,169 @@ const AllBookings = ({ setActiveTab }) => {
           totalItems={bookings.length}
         />
       </div>
+
+      {/* Add Items Modal */}
+      {showAddItemsModal && selectedOrderForItems && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Add Items to Order</h3>
+              <button
+                onClick={() => {
+                  setShowAddItemsModal(false);
+                  setSelectedOrderForItems(null);
+                  setAddItemsForm({orderId: '', itemId: ''});
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-100 rounded">
+                <div className="font-semibold">Current Order Details:</div>
+                <div className="text-sm mt-1">
+                  <div>Order ID: {selectedOrderForItems._id?.slice(-6)}</div>
+                  <div>Table: {selectedOrderForItems.tableNo}</div>
+                  <div>Current Items: {selectedOrderForItems.items?.length || 0}</div>
+                  <div>Amount: ₹{selectedOrderForItems.amount || 0}</div>
+                  <div>Status: {selectedOrderForItems.status || 'pending'}</div>
+                </div>
+                {selectedOrderForItems.items && selectedOrderForItems.items.length > 0 && (
+                  <div className="text-xs mt-2 text-gray-600">
+                    <div className="font-medium">Current Items:</div>
+                    {selectedOrderForItems.items.map((item, index) => {
+                      let itemName = 'Unknown Item';
+                      if (typeof item === 'string') {
+                        itemName = item;
+                      } else if (item.itemId) {
+                        const foundItem = items.find(i => i._id === item.itemId);
+                        itemName = foundItem ? foundItem.name : (item.name || item.itemName || 'Unknown Item');
+                      } else {
+                        itemName = item.name || item.itemName || 'Unknown Item';
+                      }
+                      return <div key={index}>• {itemName}</div>;
+                    })}
+                  </div>
+                )}
+              </div>
+              
+              <form onSubmit={addItems} className="space-y-4">
+                <div>
+                  <label className="block font-semibold mb-2">Select Item to Add:</label>
+                  <select
+                    value={addItemsForm.itemId}
+                    onChange={(e) => setAddItemsForm({...addItemsForm, itemId: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded focus:border-purple-500 focus:outline-none"
+                    required
+                  >
+                    <option value="">Choose an item...</option>
+                    {items.map(item => (
+                      <option key={item._id} value={item._id}>
+                        {item.name} - {item.category} - ₹{item.Price}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddItemsModal(false);
+                      setSelectedOrderForItems(null);
+                      setAddItemsForm({orderId: '', itemId: ''});
+                    }}
+                    className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+                  >
+                    Add Item
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Table Modal */}
+      {showTransferModal && selectedOrderForTransfer && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Transfer Table</h3>
+              <button
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setSelectedOrderForTransfer(null);
+                  setTransferForm({orderId: '', newTable: ''});
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-100 rounded">
+                <div className="font-semibold">Current Order Details:</div>
+                <div className="text-sm mt-1">
+                  <div>Order ID: {selectedOrderForTransfer._id?.slice(-6)}</div>
+                  <div>Current Table: {selectedOrderForTransfer.tableNo}</div>
+                  <div>Items: {selectedOrderForTransfer.items?.length || 0}</div>
+                  <div>Amount: ₹{selectedOrderForTransfer.amount || 0}</div>
+                  <div>Status: {selectedOrderForTransfer.status || 'pending'}</div>
+                </div>
+              </div>
+              
+              <form onSubmit={transferTable} className="space-y-4">
+                <div>
+                  <label className="block font-semibold mb-2">Select New Table:</label>
+                  <select
+                    value={transferForm.newTable}
+                    onChange={(e) => setTransferForm({...transferForm, newTable: e.target.value})}
+                    className="w-full p-3 border border-gray-300 rounded focus:border-orange-500 focus:outline-none"
+                    required
+                  >
+                    <option value="">Choose a table...</option>
+                    {tables.filter(table => table.tableNumber !== selectedOrderForTransfer.tableNo).map(table => (
+                      <option key={table._id} value={table.tableNumber}>
+                        Table {table.tableNumber} ({table.status || 'available'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTransferModal(false);
+                      setSelectedOrderForTransfer(null);
+                      setTransferForm({orderId: '', newTable: ''});
+                    }}
+                    className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
+                  >
+                    Transfer Table
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Order Details Modal */}
       {showDetailsModal && selectedOrderDetails && (
