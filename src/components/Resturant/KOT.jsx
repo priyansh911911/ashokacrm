@@ -30,6 +30,7 @@ const KOT = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [userRole, setUserRole] = useState(null);
   const [userRestaurantRole, setUserRestaurantRole] = useState(null);
+  const [lastOrderCount, setLastOrderCount] = useState(0);
 
   const { socket } = useSocket();
 
@@ -43,7 +44,11 @@ const KOT = () => {
     
     // 🔥 WebSocket listeners (fallback to polling if no socket)
     if (socket) {
+      // Join the waiters room to receive notifications
+      socket.emit('join-waiter-dashboard');
+      
       socket.on('new-order', (data) => {
+        console.log('New order received in KOT:', data);
         setNewOrderNotification({
           tableNo: data.tableNo,
           itemCount: data.itemCount,
@@ -52,8 +57,27 @@ const KOT = () => {
         });
         fetchKOTs();
         fetchOrders();
-        setTimeout(() => setNewOrderNotification(null), 5000);
+        setTimeout(() => setNewOrderNotification(null), 10000);
       });
+    } else {
+      // Fallback: More frequent polling when WebSocket is not available
+      console.log('WebSocket not available, using polling fallback');
+      
+      // Initial check after a delay to set baseline
+      setTimeout(() => {
+        checkForNewOrders();
+      }, 2000);
+      
+      const pollInterval = setInterval(() => {
+        checkForNewOrders();
+        fetchKOTs();
+        fetchOrders();
+      }, 3000); // Poll every 3 seconds
+      
+      return () => clearInterval(pollInterval);
+    }
+    
+    if (socket) {
 
       socket.on('new-kot', (data) => {
         setNewOrderNotification({
@@ -63,7 +87,7 @@ const KOT = () => {
           items: data.kot.items || []
         });
         fetchKOTs();
-        setTimeout(() => setNewOrderNotification(null), 5000);
+        setTimeout(() => setNewOrderNotification(null), 10000);
       });
 
       socket.on('kot-status-updated', () => {
@@ -92,6 +116,45 @@ const KOT = () => {
       fetchKOTs();
     }
   }, [menuItems]);
+
+  const checkForNewOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/restaurant-orders/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const orders = response.data || [];
+      const currentOrderCount = orders.length;
+      
+      console.log('Checking orders - Current:', currentOrderCount, 'Last:', lastOrderCount);
+      
+      if (lastOrderCount > 0 && currentOrderCount > lastOrderCount) {
+        // New order detected - get the most recent order
+        const sortedOrders = orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const newOrder = sortedOrders[0];
+        
+        console.log('New order detected:', newOrder);
+        
+        setNewOrderNotification({
+          tableNo: newOrder.tableNo,
+          itemCount: newOrder.items?.length || 0,
+          orderId: newOrder._id,
+          items: newOrder.items || []
+        });
+        setTimeout(() => setNewOrderNotification(null), 10000);
+      }
+      
+      // Initialize lastOrderCount on first load
+      if (lastOrderCount === 0) {
+        setLastOrderCount(currentOrderCount);
+      } else {
+        setLastOrderCount(currentOrderCount);
+      }
+    } catch (error) {
+      console.error('Error checking for new orders:', error);
+    }
+  };
 
   const fetchKOTs = async () => {
     try {
@@ -154,11 +217,12 @@ const KOT = () => {
       });
       
 
-      // Filter out served KOTs and KOTs for paid/completed orders
+      // Filter out served KOTs and KOTs for paid/completed/cancelled orders
       const activeKots = enhancedKots.filter(kot => 
         kot.status !== 'served' && 
         kot.orderStatus !== 'paid' && 
-        kot.orderStatus !== 'completed'
+        kot.orderStatus !== 'completed' &&
+        kot.orderStatus !== 'cancelled'
       );
       
       // Check for new KOTs
@@ -173,7 +237,7 @@ const KOT = () => {
         
         setTimeout(() => {
           setNewOrderNotification(null);
-        }, 5000);
+        }, 10000);
       }
       
       setKots(activeKots);
