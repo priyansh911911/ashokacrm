@@ -164,6 +164,35 @@ const Sidebar = () => {
     if (role === "chef") {
       return items;
     }
+    
+    // If restaurant chef, add Chef Dashboard directly
+    if (role === "restaurant" && restaurantRole === "chef") {
+      items.push({ icon: LayoutDashboard, label: "Chef Dashboard", path: "/chef-dashboard" });
+      return items;
+    }
+    
+    // If restaurant staff, add direct menu items
+    if (role === "restaurant" && restaurantRole === "staff") {
+      items.push(
+        { icon: ShoppingCart, label: "Create Order", path: "/resturant/order-table" },
+        { icon: ListChecks, label: "All Orders", path: "/resturant/all-orders" },
+        { icon: FileText, label: "Reservation", path: "/resturant/reservation" },
+        { icon: UserRound, label: "Available Tables", path: "/restaurant/available-tables" }
+      );
+      return items;
+    }
+    
+    // If restaurant cashier, add direct menu items
+    if (role === "restaurant" && restaurantRole === "cashier") {
+      items.push(
+        { icon: ShoppingCart, label: "Create Order", path: "/resturant/order-table" },
+        { icon: ListChecks, label: "All Orders", path: "/resturant/all-orders" },
+        { icon: FileText, label: "Billing", path: "/billing" },
+        { icon: ListChecks, label: "KOT", path: "/kot" },
+        { icon: UserRound, label: "Available Tables", path: "/restaurant/available-tables" }
+      );
+      return items;
+    }
 
     // If staff has only pantry department, return empty (attendance added separately)
     if (role === "staff" && userDepartments.length === 1 && hasPantryAccess) {
@@ -185,8 +214,13 @@ const Sidebar = () => {
       return [];
     }
     
-    // If restaurant role (cashier, waiter), return only dashboard items
-    if (role === "restaurant" && (restaurantRole === "cashier" || restaurantRole === "staff")) {
+    // If restaurant role staff, return empty (no dashboard)
+    if (role === "restaurant" && restaurantRole === "staff") {
+      return [];
+    }
+    
+    // If restaurant role cashier, return only dashboard items
+    if (role === "restaurant" && restaurantRole === "cashier") {
       return items;
     }
     
@@ -415,8 +449,8 @@ const Sidebar = () => {
       
 
       
-      // Show restaurant for admin, restaurant roles, or staff with kitchen/reception
-      if (mainRole === "admin" || mainRole === "restaurant" || 
+      // Show restaurant dropdown only for admin or staff with kitchen/reception
+      if (mainRole === "admin" || 
           (mainRole === "staff" && (hasKitchen || hasReception))) {
         return [{
           icon: UserRound,
@@ -433,9 +467,9 @@ const Sidebar = () => {
             // For restaurant role users - use restaurantRole
             if (mainRole === 'restaurant') {
               if (restRole === 'chef') {
-                console.log('Chef menu selected - showing only KOT');
+                console.log('Chef menu selected - showing Chef Dashboard');
                 return [
-                  { label: "KOT", path: "/kot", icon: ListChecks },
+                  { label: "Chef Dashboard", path: "/chef-dashboard", icon: LayoutDashboard },
                 ];
               } else if (restRole === 'cashier') {
                 console.log('Cashier menu selected - showing Order, Billing, KOT');

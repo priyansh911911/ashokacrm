@@ -69,7 +69,11 @@ const LoginPage = () => {
           response.data.department.some(dept => dept.name === "pantry")) {
         navigate("/pantry/dashboard", { replace: true });
       } else if (response.data.role === "restaurant" && response.data.restaurantRole === "chef") {
-        navigate("/kot", { replace: true });
+        navigate("/staff/clock-dashboard", { replace: true });
+      } else if (response.data.role === "restaurant" && response.data.restaurantRole === "staff") {
+        navigate("/staff/clock-dashboard", { replace: true });
+      } else if (response.data.role === "restaurant" && response.data.restaurantRole === "cashier") {
+        navigate("/staff/clock-dashboard", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
       }
