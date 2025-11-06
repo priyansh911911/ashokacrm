@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
-import { Search, Users, MapPin, CheckCircle, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Users, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const AvailableTables = () => {
   const { axios } = useAppContext();
   const [tables, setTables] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -25,7 +24,7 @@ const AvailableTables = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const tablesData = Array.isArray(response.data) ? response.data : (response.data.tables || []);
-      setTables(tablesData.filter(table => table.status === 'available' && table.isActive));
+      setTables(tablesData.filter(table => table.isActive));
     } catch (error) {
       console.error('Error fetching tables:', error);
       if (error.response?.status === 401 || error.response?.data?.message === 'Invalid token') {
@@ -35,34 +34,6 @@ const AvailableTables = () => {
       }
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const searchTables = async (query) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showToast.error('Please login again');
-        return;
-      }
-      const response = await axios.get('/api/restaurant/tables', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const tablesData = Array.isArray(response.data) ? response.data : (response.data.tables || []);
-      const filteredTables = tablesData.filter(table => 
-        table.status === 'available' && 
-        table.isActive &&
-        (table.tableNumber.toLowerCase().includes(query.toLowerCase()) ||
-         table.location.toLowerCase().includes(query.toLowerCase()))
-      );
-      setTables(filteredTables);
-    } catch (error) {
-      console.error('Error searching tables:', error);
-      if (error.response?.status === 401 || error.response?.data?.message === 'Invalid token') {
-        localStorage.removeItem('token');
-        showToast.error('Session expired. Please login again.');
-        window.location.href = '/login';
-      }
     }
   };
 
@@ -92,172 +63,196 @@ const AvailableTables = () => {
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    searchTables(searchQuery);
-  };
-
-  const getLocationIcon = (location) => {
-    switch (location) {
-      case 'restaurant': return '🍽️';
-      case 'bar': return '🍸';
-      case 'terrace': return '🌿';
-      case 'private_dining': return '🏠';
-      default: return '📍';
+  const getTableStyle = (status) => {
+    switch (status) {
+      case 'available':
+        return {
+          bg: 'bg-gray-100',
+          border: 'border-gray-300',
+          text: 'text-gray-800'
+        };
+      case 'occupied':
+        return {
+          bg: 'bg-gray-800',
+          border: 'border-gray-900',
+          text: 'text-white'
+        };
+      case 'reserved':
+        return {
+          bg: 'bg-orange-400',
+          border: 'border-orange-500',
+          text: 'text-white'
+        };
+      case 'maintenance':
+        return {
+          bg: 'bg-red-400',
+          border: 'border-red-500',
+          text: 'text-white'
+        };
+      default:
+        return {
+          bg: 'bg-gray-100',
+          border: 'border-gray-300',
+          text: 'text-gray-800'
+        };
     }
   };
 
-  const groupTablesByLocation = () => {
-    const grouped = {};
-    tables.forEach(table => {
-      const location = table.location || 'restaurant';
-      if (!grouped[location]) grouped[location] = [];
-      grouped[location].push(table);
-    });
-    return grouped;
+  const TableComponent = ({ table }) => {
+    const style = getTableStyle(table.status);
+    const isAvailable = table.status === 'available';
+    const capacity = table.capacity || 4;
+    
+    const renderChairs = () => {
+      const chairs = [];
+      const chairClass = "absolute w-6 h-8 bg-gray-600 rounded";
+      
+      if (capacity === 1) {
+        chairs.push(<div key="top" className={`${chairClass} -top-3 left-1/2 transform -translate-x-1/2`}></div>);
+      } else if (capacity === 2) {
+        chairs.push(<div key="top" className={`${chairClass} -top-3 left-1/2 transform -translate-x-1/2`}></div>);
+        chairs.push(<div key="bottom" className={`${chairClass} -bottom-3 left-1/2 transform -translate-x-1/2`}></div>);
+      } else if (capacity === 3) {
+        chairs.push(<div key="top" className={`${chairClass} -top-3 left-1/2 transform -translate-x-1/2`}></div>);
+        chairs.push(<div key="left" className={`${chairClass} -left-3 top-1/2 transform -translate-y-1/2`}></div>);
+        chairs.push(<div key="right" className={`${chairClass} -right-3 top-1/2 transform -translate-y-1/2`}></div>);
+      } else if (capacity === 4) {
+        chairs.push(<div key="top" className={`${chairClass} -top-3 left-1/2 transform -translate-x-1/2`}></div>);
+        chairs.push(<div key="bottom" className={`${chairClass} -bottom-3 left-1/2 transform -translate-x-1/2`}></div>);
+        chairs.push(<div key="left" className={`${chairClass} -left-3 top-1/2 transform -translate-y-1/2`}></div>);
+        chairs.push(<div key="right" className={`${chairClass} -right-3 top-1/2 transform -translate-y-1/2`}></div>);
+      } else if (capacity === 6) {
+        chairs.push(<div key="top-left" className={`${chairClass} -top-3 left-1/4 transform -translate-x-1/2`}></div>);
+        chairs.push(<div key="top-right" className={`${chairClass} -top-3 right-1/4 transform translate-x-1/2`}></div>);
+        chairs.push(<div key="bottom-left" className={`${chairClass} -bottom-3 left-1/4 transform -translate-x-1/2`}></div>);
+        chairs.push(<div key="bottom-right" className={`${chairClass} -bottom-3 right-1/4 transform translate-x-1/2`}></div>);
+        chairs.push(<div key="left" className={`${chairClass} -left-3 top-1/2 transform -translate-y-1/2`}></div>);
+        chairs.push(<div key="right" className={`${chairClass} -right-3 top-1/2 transform -translate-y-1/2`}></div>);
+      } else if (capacity >= 8) {
+        chairs.push(<div key="top-1" className={`${chairClass} -top-3 left-1/4 transform -translate-x-1/2`}></div>);
+        chairs.push(<div key="top-2" className={`${chairClass} -top-3 right-1/4 transform translate-x-1/2`}></div>);
+        chairs.push(<div key="bottom-1" className={`${chairClass} -bottom-3 left-1/4 transform -translate-x-1/2`}></div>);
+        chairs.push(<div key="bottom-2" className={`${chairClass} -bottom-3 right-1/4 transform translate-x-1/2`}></div>);
+        chairs.push(<div key="left-1" className={`${chairClass} -left-3 top-1/3 transform -translate-y-1/2`}></div>);
+        chairs.push(<div key="left-2" className={`${chairClass} -left-3 bottom-1/3 transform translate-y-1/2`}></div>);
+        chairs.push(<div key="right-1" className={`${chairClass} -right-3 top-1/3 transform -translate-y-1/2`}></div>);
+        chairs.push(<div key="right-2" className={`${chairClass} -right-3 bottom-1/3 transform translate-y-1/2`}></div>);
+      }
+      
+      return chairs;
+    };
+    
+    return (
+      <div className="relative">
+        {/* Table representation */}
+        <div className={`
+          ${style.bg} ${style.border} ${style.text}
+          border-2 rounded-lg p-4 min-h-[120px] flex flex-col items-center justify-center
+          transition-all duration-200 cursor-pointer hover:shadow-lg
+          ${isAvailable ? 'hover:bg-green-50 hover:border-green-300' : ''}
+        `}>
+          {/* Table number */}
+          <div className="font-bold text-lg mb-2">
+            {table.tableNumber}
+          </div>
+          
+          {/* Capacity */}
+          <div className="flex items-center text-sm mb-2">
+            <Users size={14} className="mr-1" />
+            {capacity}
+          </div>
+          
+          {/* Status indicator */}
+          {table.status === 'occupied' && (
+            <div className="text-xs bg-white text-gray-800 px-2 py-1 rounded">
+              17:00 PM
+            </div>
+          )}
+          
+          {table.status === 'reserved' && (
+            <div className="text-xs bg-white text-gray-800 px-2 py-1 rounded">
+              In Progress
+            </div>
+          )}
+        </div>
+        
+        {/* Dynamic chair representations based on capacity */}
+        {renderChairs()}
+        
+        {/* Action buttons for available tables */}
+        {isAvailable && (
+          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+            <div className="flex gap-1">
+              <button
+                onClick={() => updateTableStatus(table._id, 'reserved')}
+                className="bg-orange-500 text-white px-2 py-1 rounded text-xs hover:bg-orange-600"
+              >
+                Reserve
+              </button>
+              <button
+                onClick={() => updateTableStatus(table._id, 'occupied')}
+                className="bg-gray-800 text-white px-2 py-1 rounded text-xs hover:bg-gray-900"
+              >
+                Occupy
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
-  const tablesByLocation = groupTablesByLocation();
-
   return (
-    <div 
-      className="min-h-screen p-4 sm:p-10 font-sans" 
-      style={{backgroundColor: 'var(--color-background)'}}
-    >
+    <div className="min-h-screen bg-gray-50 p-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 pb-5 border-b gap-4" style={{borderColor: 'var(--color-border)'}}>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-wider flex items-center" style={{color: 'var(--color-text)'}}>
-          <CheckCircle size={24} className="sm:w-7 sm:h-7 lg:w-8 lg:h-8 mr-2 sm:mr-3" style={{color: 'var(--color-primary)'}} /> 
-          <span className="hidden sm:inline">AVAILABLE TABLES</span>
-          <span className="sm:hidden">TABLES</span>
-        </h1>
+      <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-semibold">Select Table</h1>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+              <span>Available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-gray-800 rounded"></div>
+              <span>Not Available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-orange-400 rounded"></div>
+              <span>Reserved</span>
+            </div>
+          </div>
+        </div>
         <button 
           onClick={fetchTables}
-          className="flex items-center px-4 py-2 text-sm rounded-lg transition-colors shadow-md"
-          style={{backgroundColor: 'var(--color-primary)', color: 'white'}}
+          className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
           <RefreshCw size={16} className="mr-2" />
           Refresh
         </button>
       </div>
 
-      {/* Search Section */}
-      <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 border mb-6 sm:mb-8" style={{borderColor: 'var(--color-border)'}}>
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by table number or location..."
-              className="w-full pl-10 pr-4 py-3 border-2 rounded-lg bg-white text-gray-700 focus:outline-none transition-colors"
-              style={{borderColor: 'var(--color-border)', focusBorderColor: 'var(--color-primary)'}}
-            />
-          </div>
-          <button
-            type="submit"
-            className="px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap shadow-md"
-            style={{backgroundColor: 'var(--color-primary)', color: 'white'}}
-          >
-            Search Tables
-          </button>
-        </form>
+      {/* Floor tabs */}
+      <div className="flex gap-2 mb-6">
+        <button className="px-4 py-2 bg-blue-500 text-white rounded-lg">1st Floor</button>
+        <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">2nd Floor</button>
+        <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">3rd Floor</button>
       </div>
 
-      {/* Tables Display */}
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border" style={{borderColor: 'var(--color-border)'}}>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-          <h2 className="text-xl sm:text-2xl font-light tracking-wider" style={{color: 'var(--color-text)'}}>
-            Available Tables ({tables.length})
-          </h2>
-          <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-              Available
-            </span>
-          </div>
-        </div>
-
+      {/* Tables layout */}
+      <div className="bg-white rounded-lg shadow p-8 min-h-[600px]">
         {isLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{borderColor: 'var(--color-primary)'}}></div>
-            <p className="text-gray-500">Loading tables...</p>
+          <div className="flex items-center justify-center h-96">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           </div>
-        ) : Object.keys(tablesByLocation).length > 0 ? (
-          Object.keys(tablesByLocation).map(location => {
-            const locationTables = tablesByLocation[location];
-            return (
-              <div key={location} className="mb-6 sm:mb-8 pb-4 border-b border-gray-200 last:border-b-0">
-                <h3 className="text-lg sm:text-xl font-medium mb-4 sm:mb-5 flex items-center text-gray-700 gap-2">
-                  <span className="text-2xl">{getLocationIcon(location)}</span>
-                  <span className="tracking-wide" style={{color: 'var(--color-text)'}}>
-                    {location.replace('_', ' ').toUpperCase()} ({locationTables.length})
-                  </span>
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {locationTables.map((table) => (
-                    <div
-                      key={table._id}
-                      className="bg-green-50 hover:bg-green-100 rounded-lg shadow-md border-t-2 border-green-500 transition-all duration-300 cursor-pointer hover:shadow-lg min-h-[160px]"
-                    >
-                      <div className="p-4 flex flex-col h-full">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="font-extrabold text-2xl" style={{color: 'var(--color-text)'}}>
-                            Table {table.tableNumber}
-                          </div>
-                          <CheckCircle size={20} className="text-green-600" />
-                        </div>
-                        
-                        <div className="flex-1 space-y-2 mb-4">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Users size={16} className="mr-2" />
-                            <span>{table.capacity} guests</span>
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <MapPin size={16} className="mr-2" />
-                            <span className="capitalize">{table.location.replace('_', ' ')}</span>
-                          </div>
-                          <div className="text-xs font-semibold uppercase tracking-wider text-green-700">
-                            AVAILABLE
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => updateTableStatus(table._id, 'reserved')}
-                            className="flex-1 bg-yellow-500 text-white px-3 py-2 rounded text-xs font-medium hover:bg-yellow-600 transition-colors flex items-center justify-center gap-1"
-                          >
-                            <Clock size={14} />
-                            Reserve
-                          </button>
-                          <button
-                            onClick={() => updateTableStatus(table._id, 'occupied')}
-                            className="flex-1 bg-red-500 text-white px-3 py-2 rounded text-xs font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-1"
-                          >
-                            <Users size={14} />
-                            Occupy
-                          </button>
-                          <button
-                            onClick={() => updateTableStatus(table._id, 'maintenance')}
-                            className="w-full bg-gray-500 text-white px-3 py-2 rounded text-xs font-medium hover:bg-gray-600 transition-colors flex items-center justify-center gap-1 mt-1"
-                          >
-                            <AlertTriangle size={14} />
-                            Maintenance
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })
         ) : (
-          <div className="text-center py-12">
-            <CheckCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-lg text-gray-500">No available tables found</p>
-            <p className="text-sm text-gray-400">All tables are currently occupied or under maintenance</p>
+          <div className="relative">
+            {/* Grid layout for tables */}
+            <div className="grid grid-cols-3 gap-20 auto-rows-max max-w-6xl mx-auto">
+              {tables.map((table) => (
+                <TableComponent key={table._id} table={table} />
+              ))}
+            </div>
           </div>
         )}
       </div>
