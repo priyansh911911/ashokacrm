@@ -365,9 +365,9 @@ const Order = () => {
               className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
             >
               <option value="">Select Table</option>
-              {tables.map(table => (
+              {tables.filter(table => table.status !== 'occupied').map(table => (
                 <option key={table._id} value={table.tableNumber}>
-                  Table {table.tableNumber}
+                  Table {table.tableNumber} ({table.status || 'available'})
                 </option>
               ))}
             </select>

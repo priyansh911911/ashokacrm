@@ -483,8 +483,8 @@ const KOT = () => {
 
   return (
     <div className="p-6 bg-background min-h-screen">
-      {/* New Order Notification */}
-      {newOrderNotification && (
+      {/* New Order Notification - Hidden for now */}
+      {false && newOrderNotification && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white p-4 rounded-lg shadow-lg animate-bounce max-w-sm">
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -518,8 +518,8 @@ const KOT = () => {
         </div>
       )}
       
-      {/* Staff Notification */}
-      {staffNotification && (
+      {/* Staff Notification - Hidden for now */}
+      {false && staffNotification && (
         <div className="fixed top-20 right-4 z-50 bg-blue-500 text-white p-4 rounded-lg shadow-lg animate-pulse max-w-sm">
           <div className="flex items-center justify-between">
             <div className="flex-1">
