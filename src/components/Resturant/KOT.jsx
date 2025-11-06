@@ -61,11 +61,18 @@ const KOT = () => {
       });
     } else {
       // Fallback: More frequent polling when WebSocket is not available
+      console.log('WebSocket not available, using polling fallback');
+      
+      // Initial check after a delay to set baseline
+      setTimeout(() => {
+        checkForNewOrders();
+      }, 2000);
+      
       const pollInterval = setInterval(() => {
         checkForNewOrders();
         fetchKOTs();
         fetchOrders();
-      }, 5000); // Poll every 5 seconds
+      }, 3000); // Poll every 3 seconds
       
       return () => clearInterval(pollInterval);
     }
@@ -117,11 +124,18 @@ const KOT = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const currentOrderCount = response.data.length;
+      const orders = response.data || [];
+      const currentOrderCount = orders.length;
+      
+      console.log('Checking orders - Current:', currentOrderCount, 'Last:', lastOrderCount);
       
       if (lastOrderCount > 0 && currentOrderCount > lastOrderCount) {
-        // New order detected
-        const newOrder = response.data[0]; // Latest order
+        // New order detected - get the most recent order
+        const sortedOrders = orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const newOrder = sortedOrders[0];
+        
+        console.log('New order detected:', newOrder);
+        
         setNewOrderNotification({
           tableNo: newOrder.tableNo,
           itemCount: newOrder.items?.length || 0,
@@ -131,7 +145,12 @@ const KOT = () => {
         setTimeout(() => setNewOrderNotification(null), 10000);
       }
       
-      setLastOrderCount(currentOrderCount);
+      // Initialize lastOrderCount on first load
+      if (lastOrderCount === 0) {
+        setLastOrderCount(currentOrderCount);
+      } else {
+        setLastOrderCount(currentOrderCount);
+      }
     } catch (error) {
       console.error('Error checking for new orders:', error);
     }
