@@ -38,12 +38,14 @@ const ChefDashboard = () => {
             kotsByOrder[kot.orderId] = {
               ...kot,
               allItems: [...(kot.items || [])],
-              allItemStatuses: [...(kot.itemStatuses || [])]
+              allItemStatuses: [...(kot.itemStatuses || [])],
+              kotCount: 1
             };
           } else {
             // Merge items from multiple KOTs for same order
             const existingItemCount = kotsByOrder[kot.orderId].allItems.length;
             kotsByOrder[kot.orderId].allItems.push(...(kot.items || []));
+            kotsByOrder[kot.orderId].kotCount += 1;
             
             // Adjust item statuses indices for merged items
             const adjustedStatuses = (kot.itemStatuses || []).map(status => ({
@@ -84,7 +86,8 @@ const ChefDashboard = () => {
               quantity: item.quantity || 1,
               price: price,
               prepTime: prepTime,
-              status: itemStatus
+              status: itemStatus,
+
             };
           }) || [];
           
@@ -100,7 +103,8 @@ const ChefDashboard = () => {
             status: kot.status || 'pending',
             createdAt: kot.createdAt,
             amount: totalAmount,
-            items: enhancedItems
+            items: enhancedItems,
+            kotCount: kot.kotCount
           };
         });
       

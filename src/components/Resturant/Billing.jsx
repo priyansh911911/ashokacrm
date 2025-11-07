@@ -276,7 +276,7 @@ const Billing = () => {
   const getBillDetails = async (billId) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/bills/${billId}`, {
+      const response = await axios.get(`/api/bills/${billId}/details`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowDetails(response.data);
@@ -538,8 +538,15 @@ const Billing = () => {
                         <button
                           onClick={() => {
                             console.log('Order data:', order); // Debug log
-                            setSelectedOrder(order);
-                            setShowCouponModal(order);
+                            // Use allKotItems for payment calculation
+                            const orderWithAllItems = {
+                              ...order,
+                              amount: (order.allKotItems || order.items || []).reduce((sum, item) => 
+                                sum + ((item.price || item.Price || 0) * (item.quantity || 1)), 0
+                              )
+                            };
+                            setSelectedOrder(orderWithAllItems);
+                            setShowCouponModal(orderWithAllItems);
                             setCouponForm({ couponCode: '', isLoyalty: false, membership: '' });
                           }}
                           className="px-3 py-1 rounded text-sm text-white hover:bg-green-600 transition-colors mr-2"

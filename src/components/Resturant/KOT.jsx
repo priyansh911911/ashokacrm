@@ -160,97 +160,97 @@ const KOT = () => {
   const fetchKOTs = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching KOTs...');
-      const response = await axios.get('/api/kot/all', {
+      console.log('Fetching consolidated orders...');
+      const response = await axios.get('/api/restaurant-orders/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('KOT API Response:', response.data);
+      console.log('Orders API Response:', response.data);
       
-      // Get all orders to check payment status
-      const ordersResponse = await axios.get('/api/restaurant-orders/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const allOrders = ordersResponse.data;
-      console.log('Orders for KOT matching:', allOrders.length);
-      
-      // Enhance KOTs with item names and order status
-      const enhancedKots = response.data.map(kot => {
-        const relatedOrder = allOrders.find(order => order._id === kot.orderId);
+      // Transform orders to show consolidated KOT view
+      const consolidatedOrders = response.data.map(order => {
+        const allItems = (order.allKotItems || order.items || []).map(item => {
+          // Handle different item data structures
+          if (typeof item === 'string') {
+            return { name: item, quantity: 1, kotNumber: 1 };
+          }
+          
+          if (typeof item === 'object') {
+            // Try to find menu item by ID
+            let itemName = item.name || item.itemName;
+            
+            if (item.itemId && menuItems.length > 0) {
+              const menuItem = menuItems.find(mi => mi._id === item.itemId || mi.id === item.itemId);
+              if (menuItem) {
+                itemName = menuItem.name || menuItem.itemName;
+              }
+            }
+            
+            // If still no name, try to match by other properties
+            if (!itemName && menuItems.length > 0) {
+              const menuItem = menuItems.find(mi => 
+                mi.name === item.name || 
+                mi.itemName === item.itemName ||
+                mi._id === item.id
+              );
+              if (menuItem) {
+                itemName = menuItem.name || menuItem.itemName;
+              }
+            }
+            
+            return {
+              ...item,
+              name: itemName || 'Unknown Item',
+              kotNumber: item.kotNumber || 1
+            };
+          }
+          
+          return item;
+        });
+        
         return {
-          ...kot,
-          orderStatus: relatedOrder?.status || 'unknown',
-          items: kot.items?.map(item => {
-            
-            // Handle different item data structures
-            if (typeof item === 'string') {
-              return { name: item, quantity: 1 };
-            }
-            
-            if (typeof item === 'object') {
-              // Try to find menu item by ID
-              let itemName = item.name || item.itemName;
-              
-              if (item.itemId && menuItems.length > 0) {
-                const menuItem = menuItems.find(mi => mi._id === item.itemId || mi.id === item.itemId);
-                if (menuItem) {
-                  itemName = menuItem.name || menuItem.itemName;
-                }
-              }
-              
-              // If still no name, try to match by other properties
-              if (!itemName && menuItems.length > 0) {
-                const menuItem = menuItems.find(mi => 
-                  mi.name === item.name || 
-                  mi.itemName === item.itemName ||
-                  mi._id === item.id
-                );
-                if (menuItem) {
-                  itemName = menuItem.name || menuItem.itemName;
-                }
-              }
-              
-              return {
-                ...item,
-                name: itemName || 'Unknown Item'
-              };
-            }
-            
-            return item;
-          }) || []
+          _id: order._id,
+          orderId: order._id,
+          tableNo: order.tableNo,
+          status: order.status || 'pending',
+          orderStatus: order.status || 'pending',
+          items: allItems,
+          kotCount: order.kotCount || 1,
+          priority: order.priority || 'normal',
+          assignedChef: order.assignedChef,
+          createdAt: order.createdAt
         };
       });
       
-
-      // Separate active KOTs from history
-      const activeKots = enhancedKots.filter(kot => {
-        const isServed = kot.status === 'served';
-        const isPaid = kot.orderStatus === 'paid';
-        const isCompleted = kot.orderStatus === 'completed';
-        const isCancelled = kot.orderStatus === 'cancelled';
+      // Separate active orders from history
+      const activeOrders = consolidatedOrders.filter(order => {
+        const isServed = order.status === 'served';
+        const isPaid = order.status === 'paid';
+        const isCompleted = order.status === 'completed';
+        const isCancelled = order.status === 'cancelled';
         
-        // Active if not served AND order is not in final states
+        // Active if not in final states
         return !isServed && !isPaid && !isCompleted && !isCancelled;
       });
       
-      const historyKots = enhancedKots.filter(kot => {
-        const isServed = kot.status === 'served';
-        const isPaid = kot.orderStatus === 'paid';
-        const isCompleted = kot.orderStatus === 'completed';
-        const isCancelled = kot.orderStatus === 'cancelled';
+      const historyOrders = consolidatedOrders.filter(order => {
+        const isServed = order.status === 'served';
+        const isPaid = order.status === 'paid';
+        const isCompleted = order.status === 'completed';
+        const isCancelled = order.status === 'cancelled';
         
-        // History if served OR order is in final states
+        // History if in final states
         return isServed || isPaid || isCompleted || isCancelled;
       });
       
-      // Check for new KOTs
-      if (kots.length > 0 && activeKots.length > kots.length) {
-        const newKot = activeKots[activeKots.length - 1];
+      // Check for new orders
+      if (kots.length > 0 && activeOrders.length > kots.length) {
+        const newOrder = activeOrders[activeOrders.length - 1];
         setNewOrderNotification({
-          tableNo: newKot.tableNo,
-          itemCount: newKot.items?.length || 0,
-          orderId: newKot.orderId,
-          items: newKot.items || []
+          tableNo: newOrder.tableNo,
+          itemCount: newOrder.items?.length || 0,
+          orderId: newOrder.orderId,
+          items: newOrder.items || []
         });
         
         setTimeout(() => {
@@ -258,23 +258,15 @@ const KOT = () => {
         }, 10000);
       }
       
-      console.log('Enhanced KOTs:', enhancedKots.length);
-      console.log('Active KOTs:', activeKots.length);
-      console.log('History KOTs:', historyKots.length);
+      console.log('Consolidated Orders:', consolidatedOrders.length);
+      console.log('Active Orders:', activeOrders.length);
+      console.log('History Orders:', historyOrders.length);
       
-      // If no active KOTs but we have KOTs, show all for debugging
-      if (activeKots.length === 0 && enhancedKots.length > 0) {
-        console.log('No active KOTs found, showing all KOTs for debugging');
-        setKots(enhancedKots);
-        setFilteredKots(enhancedKots);
-      } else {
-        setKots(activeKots);
-        setFilteredKots(activeTab === 'history' ? historyKots : activeKots);
-      }
-      
-      setKotHistory(historyKots);
+      setKots(activeOrders);
+      setKotHistory(historyOrders);
+      setFilteredKots(activeTab === 'history' ? historyOrders : activeOrders);
     } catch (error) {
-      console.error('Error fetching KOTs:', error);
+      console.error('Error fetching consolidated orders:', error);
     }
   };
   
@@ -644,7 +636,7 @@ const KOT = () => {
                     <thead style={{ backgroundColor: 'hsl(45, 71%, 69%)' }}>
                       <tr>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Order ID</th>
-                        <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>KOT #</th>
+                        <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>KOTs</th>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Table</th>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Items</th>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Priority</th>
@@ -659,20 +651,29 @@ const KOT = () => {
                           <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm font-mono" style={{ color: 'hsl(45, 100%, 20%)' }}>
                             <div className="font-semibold">{kot.orderId?.slice(-6) || 'N/A'}</div>
                           </td>
-                          <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>{kot._id.slice(-6)}</td>
+                          <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                              {kot.kotCount || 1} KOT{(kot.kotCount || 1) > 1 ? 's' : ''}
+                            </span>
+                          </td>
                           <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>{kot.tableNo}</td>
                           <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
                             <div className="max-w-xs">
                               {kot.items && kot.items.length > 0 ? (
                                 <div className="space-y-1">
+                                  <div className="text-xs text-blue-600 font-medium mb-1">
+                                    {kot.kotCount || 1} KOT{(kot.kotCount || 1) > 1 ? 's' : ''} • {kot.items.length} items
+                                  </div>
                                   {kot.items.slice(0, 3).map((item, idx) => {
                                     const itemName = typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item');
                                     const quantity = typeof item === 'object' ? (item.quantity || 1) : 1;
+                                    const kotNumber = typeof item === 'object' ? (item.kotNumber || 1) : 1;
                                     const note = typeof item === 'object' ? item.note : null;
                                     
                                     return (
-                                      <div key={idx} className="truncate">
-                                        • {itemName} x{quantity}
+                                      <div key={idx} className="truncate flex items-center gap-1">
+                                        <span className="bg-blue-500 text-white px-1 rounded text-xs">K{kotNumber}</span>
+                                        <span>• {itemName} x{quantity}</span>
                                         {note && <span className="text-gray-500 text-xs"> ({note})</span>}
                                       </div>
                                     );

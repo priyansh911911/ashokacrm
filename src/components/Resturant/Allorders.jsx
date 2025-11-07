@@ -503,7 +503,14 @@ const AllBookings = ({ setActiveTab }) => {
                     <td className="px-2 sm:px-4 py-3 text-text text-xs sm:text-sm">{booking.staffName || 'N/A'}</td>
                     <td className="px-2 sm:px-4 py-3 text-text text-xs sm:text-sm">{booking.phoneNumber || 'N/A'}</td>
                     <td className="px-2 sm:px-4 py-3 text-text text-xs sm:text-sm">{booking.tableNo || 'N/A'}</td>
-                    <td className="px-2 sm:px-4 py-3 text-text text-xs sm:text-sm">{booking.items?.length || 0} items</td>
+                    <td className="px-2 sm:px-4 py-3 text-text text-xs sm:text-sm">
+                      {booking.allKotItems?.length || booking.items?.length || 0} items
+                      {booking.kotCount > 1 && (
+                        <span className="ml-1 bg-blue-100 text-blue-800 px-1 rounded text-xs">
+                          {booking.kotCount} KOTs
+                        </span>
+                      )}
+                    </td>
                     <td className="px-2 sm:px-4 py-3 text-text text-xs sm:text-sm">₹{booking.advancePayment || 0}</td>
                     <td className="px-2 sm:px-4 py-3">
                       <div className="flex flex-col gap-1">
@@ -660,14 +667,15 @@ const AllBookings = ({ setActiveTab }) => {
                 <div className="text-sm mt-1">
                   <div>Order ID: {selectedOrderForItems._id?.slice(-6)}</div>
                   <div>Table: {selectedOrderForItems.tableNo}</div>
-                  <div>Current Items: {selectedOrderForItems.items?.length || 0}</div>
+                  <div>Items: {selectedOrderForItems.allKotItems?.length || selectedOrderForItems.items?.length || 0}</div>
+                  <div>KOTs: {selectedOrderForItems.kotCount || 1}</div>
                   <div>Amount: ₹{selectedOrderForItems.amount || 0}</div>
                   <div>Status: {selectedOrderForItems.status || 'pending'}</div>
                 </div>
-                {selectedOrderForItems.items && selectedOrderForItems.items.length > 0 && (
+                {(selectedOrderForItems.allKotItems || selectedOrderForItems.items) && (selectedOrderForItems.allKotItems || selectedOrderForItems.items).length > 0 && (
                   <div className="text-xs mt-2 text-gray-600">
                     <div className="font-medium">Current Items:</div>
-                    {selectedOrderForItems.items.map((item, index) => {
+                    {(selectedOrderForItems.allKotItems || selectedOrderForItems.items).map((item, index) => {
                       let itemName = 'Unknown Item';
                       if (typeof item === 'string') {
                         itemName = item;
@@ -677,7 +685,12 @@ const AllBookings = ({ setActiveTab }) => {
                       } else {
                         itemName = item.name || item.itemName || 'Unknown Item';
                       }
-                      return <div key={index}>• {itemName}</div>;
+                      return (
+                        <div key={index} className="flex items-center gap-1">
+                          <span className="bg-blue-500 text-white px-1 rounded text-xs">K{item.kotNumber || 1}</span>
+                          <span>• {itemName}</span>
+                        </div>
+                      );
                     })}
                   </div>
                 )}
@@ -750,7 +763,8 @@ const AllBookings = ({ setActiveTab }) => {
                 <div className="text-sm mt-1">
                   <div>Order ID: {selectedOrderForTransfer._id?.slice(-6)}</div>
                   <div>Current Table: {selectedOrderForTransfer.tableNo}</div>
-                  <div>Items: {selectedOrderForTransfer.items?.length || 0}</div>
+                  <div>Items: {selectedOrderForTransfer.allKotItems?.length || selectedOrderForTransfer.items?.length || 0}</div>
+                  <div>KOTs: {selectedOrderForTransfer.kotCount || 1}</div>
                   <div>Amount: ₹{selectedOrderForTransfer.amount || 0}</div>
                   <div>Status: {selectedOrderForTransfer.status || 'pending'}</div>
                 </div>
@@ -841,11 +855,15 @@ const AllBookings = ({ setActiveTab }) => {
               </div>
               
               <div>
-                <label className="font-semibold">Items:</label>
+                <label className="font-semibold">Items ({selectedOrderDetails.kotCount || 1} KOT{(selectedOrderDetails.kotCount || 1) > 1 ? 's' : ''}):</label>
                 <div className="mt-2 space-y-2">
-                  {selectedOrderDetails.items?.map((item, index) => (
+                  {(selectedOrderDetails.allKotItems || selectedOrderDetails.items || []).map((item, index) => (
                     <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                      <span>{typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item')}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-blue-500 text-white px-1 rounded text-xs">K{item.kotNumber || 1}</span>
+                        <span>{typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item')}</span>
+                        <span className="text-gray-500 text-sm">×{item.quantity || 1}</span>
+                      </div>
                       <span>₹{typeof item === 'object' ? (item.price || item.Price || 0) : 0}</span>
                     </div>
                   ))}
