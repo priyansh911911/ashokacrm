@@ -5,7 +5,9 @@ import CountdownTimer from "./CountdownTimer";
 const ChefDashboard = () => {
   const { axios } = useAppContext();
   const [orders, setOrders] = useState([]);
+  const [historyOrders, setHistoryOrders] = useState([]);
   const [itemStates, setItemStates] = useState({});
+  const [activeTab, setActiveTab] = useState('active');
 
   const fetchOrders = async () => {
     try {
