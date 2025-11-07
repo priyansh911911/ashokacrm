@@ -65,10 +65,16 @@ const ChefDashboard = () => {
           };
         });
       
-      setOrders(kotOrders);
+      // Separate active and history orders
+      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served');
+      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served');
+      
+      setOrders(activeOrders);
+      setHistoryOrders(historyOrders);
     } catch (error) {
       console.error('Error fetching KOT data:', error);
       setOrders([]);
+      setHistoryOrders([]);
     }
   };
 
@@ -115,6 +121,32 @@ const ChefDashboard = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Chef Dashboard</h1>
         <p className="text-gray-600">Manage kitchen orders</p>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="mb-6">
+        <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'active'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Active Orders ({orders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'history'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            History ({historyOrders.length})
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -299,10 +331,12 @@ const ChefDashboard = () => {
         ))}
       </div>
 
-      {orders.length === 0 && (
+      {(activeTab === 'active' ? orders : historyOrders).length === 0 && (
         <div className="text-center py-12">
-          <div className="text-gray-400 text-lg mb-2">🍳</div>
-          <div className="text-gray-500">No active orders in kitchen</div>
+          <div className="text-gray-400 text-lg mb-2">{activeTab === 'active' ? '🍳' : '📋'}</div>
+          <div className="text-gray-500">
+            {activeTab === 'active' ? 'No active orders in kitchen' : 'No order history available'}
+          </div>
         </div>
       )}
     </div>
