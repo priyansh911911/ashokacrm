@@ -29,13 +29,36 @@ const ChefDashboard = () => {
       // Initialize item states from backend
       const newItemStates = {};
       
-      // Transform KOT data to match order format
-      const kotOrders = response.data
+      // Group KOTs by orderId and merge items
+      const kotsByOrder = {};
+      response.data
         .filter(kot => kot.status !== 'served')
-        .map(kot => {
+        .forEach(kot => {
+          if (!kotsByOrder[kot.orderId]) {
+            kotsByOrder[kot.orderId] = {
+              ...kot,
+              allItems: [...(kot.items || [])],
+              allItemStatuses: [...(kot.itemStatuses || [])]
+            };
+          } else {
+            // Merge items from multiple KOTs for same order
+            const existingItemCount = kotsByOrder[kot.orderId].allItems.length;
+            kotsByOrder[kot.orderId].allItems.push(...(kot.items || []));
+            
+            // Adjust item statuses indices for merged items
+            const adjustedStatuses = (kot.itemStatuses || []).map(status => ({
+              ...status,
+              itemIndex: status.itemIndex + existingItemCount
+            }));
+            kotsByOrder[kot.orderId].allItemStatuses.push(...adjustedStatuses);
+          }
+        });
+      
+      // Transform merged KOT data to match order format
+      const kotOrders = Object.values(kotsByOrder).map(kot => {
           const relatedOrder = allOrders.find(order => order._id === kot.orderId);
           
-          const enhancedItems = kot.items?.map((item, index) => {
+          const enhancedItems = kot.allItems?.map((item, index) => {
             // Find menu item to get price and prep time
             const menuItem = menuItems.find(mi => 
               mi._id === item.itemId || 
@@ -49,7 +72,7 @@ const ChefDashboard = () => {
             // Initialize item state from backend
             const orderId = kot.orderId || kot._id;
             const key = `${orderId}-${index}`;
-            const itemStatus = kot.itemStatuses?.find(is => is.itemIndex === index)?.status || 'pending';
+            const itemStatus = kot.allItemStatuses?.find(is => is.itemIndex === index)?.status || 'pending';
             
             newItemStates[key] = {
               status: itemStatus,
@@ -202,16 +225,15 @@ const ChefDashboard = () => {
 
             {/* Items List */}
             <div className="flex-1 mb-3">
-              <div className="grid grid-cols-7 text-xs text-gray-500 font-medium border-b pb-1 mb-2">
+              <div className="grid grid-cols-6 text-xs text-gray-500 font-medium border-b pb-1 mb-2">
                 <span className="text-center">✓</span>
                 <span className="col-span-3 truncate">Items</span>
-                <span className="text-center">Qty</span>
                 <span className="text-right">Price</span>
                 <span className="text-right">Timer</span>
               </div>
               <div className="max-h-32 sm:max-h-40 overflow-y-auto space-y-1">
                 {order.items?.map((item, index) => (
-                  <div key={index} className="grid grid-cols-7 text-xs sm:text-sm gap-1">
+                  <div key={index} className="grid grid-cols-6 text-xs sm:text-sm gap-1">
                     <div className="flex justify-center">
                       <input 
                         type="checkbox" 
@@ -238,19 +260,24 @@ const ChefDashboard = () => {
                           ? 'text-orange-600' 
                           : 'text-gray-700'
                       }`} 
-                      title={item.name || 'Unknown'}
+                      title={`${item.name || 'Unknown'} x ${item.quantity || 1}`}
                     >
-                      {item.name || 'Unknown'}
+                      {item.name || 'Unknown'} x {item.quantity || 1}
                     </span>
-                    <span className="text-center text-gray-600">{item.quantity || 1}</span>
                     <span className="text-right text-gray-600">₹{item.price || 0}</span>
                     <div className="text-right">
                       {item.prepTime > 0 && (
-                        <CountdownTimer 
-                          orderTime={order.createdAt}
-                          prepTime={item.prepTime}
-                          status={order.status}
-                        />
+                        itemStates[`${order._id}-${index}`]?.status === 'delivered' ? (
+                          <div className="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium bg-green-100 text-green-600">
+                            <span className="text-xs">00:00</span>
+                          </div>
+                        ) : (
+                          <CountdownTimer 
+                            orderTime={order.createdAt}
+                            prepTime={item.prepTime}
+                            status={order.status}
+                          />
+                        )
                       )}
                     </div>
                   </div>
