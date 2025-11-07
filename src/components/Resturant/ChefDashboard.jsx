@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../context/AppContext";
+import CountdownTimer from "./CountdownTimer";
 
 const ChefDashboard = () => {
   const { axios } = useAppContext();
   const [orders, setOrders] = useState([]);
-  const [historyOrders, setHistoryOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState('active');
+  const [itemStates, setItemStates] = useState({});
 
   const fetchOrders = async () => {
     try {
@@ -25,41 +25,45 @@ const ChefDashboard = () => {
       const allOrders = ordersResponse.data;
       
       // Transform KOT data to match order format
-      const kotOrders = response.data.map(kot => {
-        const relatedOrder = allOrders.find(order => order._id === kot.orderId);
-        
-        const enhancedItems = kot.items?.map(item => {
-          // Find menu item to get price
-          const menuItem = menuItems.find(mi => 
-            mi._id === item.itemId || 
-            mi.name === item.itemName || 
-            mi.name === item.name
-          );
+      const kotOrders = response.data
+        .filter(kot => kot.status !== 'served')
+        .map(kot => {
+          const relatedOrder = allOrders.find(order => order._id === kot.orderId);
           
-          const price = item.price || item.rate || menuItem?.Price || menuItem?.price || 0;
+          const enhancedItems = kot.items?.map(item => {
+            // Find menu item to get price and prep time
+            const menuItem = menuItems.find(mi => 
+              mi._id === item.itemId || 
+              mi.name === item.itemName || 
+              mi.name === item.name
+            );
+            
+            const price = item.price || item.rate || menuItem?.Price || menuItem?.price || 0;
+            const prepTime = menuItem?.timeToPrepare || 0;
+            
+            return {
+              name: item.itemName || item.name || menuItem?.name || 'Unknown Item',
+              quantity: item.quantity || 1,
+              price: price,
+              prepTime: prepTime
+            };
+          }) || [];
+          
+          const totalAmount = enhancedItems.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+          }, 0);
           
           return {
-            name: item.itemName || item.name || menuItem?.name || 'Unknown Item',
-            quantity: item.quantity || 1,
-            price: price
+            _id: kot.orderId || kot._id,
+            kotId: kot._id,
+            tableNo: kot.tableNo,
+            customerName: relatedOrder?.customerName || 'Guest',
+            status: kot.status || 'pending',
+            createdAt: kot.createdAt,
+            amount: totalAmount,
+            items: enhancedItems
           };
-        }) || [];
-        
-        const totalAmount = enhancedItems.reduce((sum, item) => {
-          return sum + (item.price * item.quantity);
-        }, 0);
-        
-        return {
-          _id: kot.orderId || kot._id,
-          tableNo: kot.tableNo,
-          customerName: relatedOrder?.customerName || 'Guest',
-          status: kot.status || 'pending',
-          createdAt: kot.createdAt,
-          amount: totalAmount,
-          items: enhancedItems,
-          isPaid: relatedOrder?.status === 'paid'
-        };
-      });
+        });
       
       // Separate active and history orders
       const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served');
@@ -112,24 +116,6 @@ const ChefDashboard = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'bg-red-100 text-red-800';
-      case 'preparing': return 'bg-yellow-100 text-yellow-800';
-      case 'ready': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getProgressPercentage = (status) => {
-    switch (status) {
-      case 'pending': return 0;
-      case 'preparing': return 50;
-      case 'ready': return 100;
-      default: return 10; // Default for new orders
-    }
-  };
-
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6">
@@ -163,8 +149,8 @@ const ChefDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {(activeTab === 'active' ? orders : historyOrders).map((order) => (
+      <div className="grid grid-cols-3 gap-4">
+        {orders.map((order) => (
           <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 min-h-[320px] flex flex-col">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3">
@@ -198,19 +184,57 @@ const ChefDashboard = () => {
 
             {/* Items List */}
             <div className="flex-1 mb-3">
-              <div className="grid grid-cols-3 text-xs text-gray-500 font-medium border-b pb-1 mb-2">
-                <span className="truncate">Items</span>
+              <div className="grid grid-cols-7 text-xs text-gray-500 font-medium border-b pb-1 mb-2">
+                <span className="text-center">✓</span>
+                <span className="col-span-3 truncate">Items</span>
                 <span className="text-center">Qty</span>
                 <span className="text-right">Price</span>
+                <span className="text-right">Timer</span>
               </div>
-              <div className="max-h-24 sm:max-h-32 overflow-y-auto space-y-1">
+              <div className="max-h-32 sm:max-h-40 overflow-y-auto space-y-1">
                 {order.items?.map((item, index) => (
-                  <div key={index} className="grid grid-cols-3 text-xs sm:text-sm gap-1">
-                    <span className="text-gray-700 truncate" title={item.name || 'Unknown'}>
+                  <div key={index} className="grid grid-cols-7 text-xs sm:text-sm gap-1">
+                    <div className="flex justify-center">
+                      <input 
+                        type="checkbox" 
+                        className="w-3 h-3" 
+                        checked={itemStates[`${order._id}-${index}`]?.checked || itemStates[`${order._id}-${index}`]?.status === 'delivered'}
+                        disabled={itemStates[`${order._id}-${index}`]?.status === 'delivered'}
+                        onChange={(e) => {
+                          const key = `${order._id}-${index}`;
+                          setItemStates(prev => ({
+                            ...prev,
+                            [key]: { 
+                              ...prev[key], 
+                              checked: e.target.checked 
+                            }
+                          }));
+                        }}
+                      />
+                    </div>
+                    <span 
+                      className={`col-span-3 truncate ${
+                        itemStates[`${order._id}-${index}`]?.status === 'delivered' 
+                          ? 'text-green-600 line-through' 
+                          : itemStates[`${order._id}-${index}`]?.status === 'served' 
+                          ? 'text-orange-600' 
+                          : 'text-gray-700'
+                      }`} 
+                      title={item.name || 'Unknown'}
+                    >
                       {item.name || 'Unknown'}
                     </span>
                     <span className="text-center text-gray-600">{item.quantity || 1}</span>
                     <span className="text-right text-gray-600">₹{item.price || 0}</span>
+                    <div className="text-right">
+                      {item.prepTime > 0 && (
+                        <CountdownTimer 
+                          orderTime={order.createdAt}
+                          prepTime={item.prepTime}
+                          status={order.status}
+                        />
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -225,36 +249,83 @@ const ChefDashboard = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2">
-              {activeTab === 'active' ? (
-                <>
-                  {(!order.status || order.status === 'pending') && (
-                    <button
-                      onClick={() => updateOrderStatus(order._id, 'preparing')}
-                      className="flex-1 bg-blue-500 text-white py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-600 transition-colors"
-                    >
-                      Start Preparing
-                    </button>
-                  )}
-                  {order.status === 'preparing' && (
-                    <button
-                      onClick={() => updateOrderStatus(order._id, 'ready')}
-                      className="flex-1 bg-green-500 text-white py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium hover:bg-green-600 transition-colors"
-                    >
-                      Mark Ready
-                    </button>
-                  )}
-                  {order.status === 'ready' && (
-                    <div className="flex-1 bg-blue-100 text-blue-800 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium text-center">
-                      Ready for Pickup
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex-1 bg-gray-100 text-gray-600 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium text-center">
-                  {order.isPaid ? 'Paid & Completed' : 'Served'}
-                </div>
+            <div className="flex flex-col gap-1">
+              {order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.checked && itemStates[`${order._id}-${index}`]?.status !== 'served' && itemStates[`${order._id}-${index}`]?.status !== 'delivered') && (
+                <button
+                  onClick={async () => {
+                    const token = localStorage.getItem('token');
+                    const itemStatuses = [];
+                    
+                    order.items?.forEach((item, index) => {
+                      const key = `${order._id}-${index}`;
+                      if (itemStates[key]?.checked) {
+                        itemStatuses.push({itemIndex: index, status: 'served'});
+                        setItemStates(prev => ({
+                          ...prev,
+                          [key]: { 
+                            ...prev[key], 
+                            status: 'served',
+                            checked: false
+                          }
+                        }));
+                      }
+                    });
+                    
+                    if (itemStatuses.length > 0) {
+                      try {
+                        await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
+                          {itemStatuses}, 
+                          {headers: {Authorization: `Bearer ${token}`}}
+                        );
+                      } catch (error) {
+                        console.error('Error updating item statuses:', error);
+                      }
+                    }
+                  }}
+                  className="w-full bg-orange-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-orange-600"
+                >
+                  Mark Item to be Served
+                </button>
               )}
+              <button
+                onClick={async () => {
+                  const token = localStorage.getItem('token');
+                  const itemStatuses = order.items?.map((item, index) => ({
+                    itemIndex: index, 
+                    status: 'delivered'
+                  })) || [];
+                  
+                  order.items?.forEach((item, index) => {
+                    const key = `${order._id}-${index}`;
+                    setItemStates(prev => ({
+                      ...prev,
+                      [key]: { 
+                        ...prev[key], 
+                        status: 'delivered',
+                        checked: true
+                      }
+                    }));
+                  });
+                  
+                  try {
+                    await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
+                      {itemStatuses}, 
+                      {headers: {Authorization: `Bearer ${token}`}}
+                    );
+                  } catch (error) {
+                    console.error('Error updating item statuses:', error);
+                  }
+                }}
+                className="w-full bg-blue-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-blue-600"
+              >
+                Mark Order Delivered
+              </button>
+              <button
+                onClick={() => updateOrderStatus(order._id, 'completed')}
+                className="w-full bg-green-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-green-600"
+              >
+                Mark Order Complete
+              </button>
             </div>
           </div>
         ))}
