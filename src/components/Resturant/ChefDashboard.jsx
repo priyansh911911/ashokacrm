@@ -26,13 +26,16 @@ const ChefDashboard = () => {
       });
       const allOrders = ordersResponse.data;
       
+      // Initialize item states from backend
+      const newItemStates = {};
+      
       // Transform KOT data to match order format
       const kotOrders = response.data
         .filter(kot => kot.status !== 'served')
         .map(kot => {
           const relatedOrder = allOrders.find(order => order._id === kot.orderId);
           
-          const enhancedItems = kot.items?.map(item => {
+          const enhancedItems = kot.items?.map((item, index) => {
             // Find menu item to get price and prep time
             const menuItem = menuItems.find(mi => 
               mi._id === item.itemId || 
@@ -43,11 +46,22 @@ const ChefDashboard = () => {
             const price = item.price || item.rate || menuItem?.Price || menuItem?.price || 0;
             const prepTime = menuItem?.timeToPrepare || 0;
             
+            // Initialize item state from backend
+            const orderId = kot.orderId || kot._id;
+            const key = `${orderId}-${index}`;
+            const itemStatus = kot.itemStatuses?.find(is => is.itemIndex === index)?.status || 'pending';
+            
+            newItemStates[key] = {
+              status: itemStatus,
+              checked: false
+            };
+            
             return {
               name: item.itemName || item.name || menuItem?.name || 'Unknown Item',
               quantity: item.quantity || 1,
               price: price,
-              prepTime: prepTime
+              prepTime: prepTime,
+              status: itemStatus
             };
           }) || [];
           
@@ -73,6 +87,8 @@ const ChefDashboard = () => {
       
       setOrders(activeOrders);
       setHistoryOrders(historyOrders);
+      setItemStates(newItemStates);
+      console.log('Item states initialized:', newItemStates);
     } catch (error) {
       console.error('Error fetching KOT data:', error);
       setOrders([]);
@@ -275,18 +291,79 @@ const ChefDashboard = () => {
                     
                     if (itemStatuses.length > 0) {
                       try {
-                        await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
+                        console.log('Updating item statuses:', {kotId: order.kotId, itemStatuses});
+                        const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
                           {itemStatuses}, 
                           {headers: {Authorization: `Bearer ${token}`}}
                         );
+                        console.log('Item statuses updated successfully:', response.data);
+                        fetchOrders();
                       } catch (error) {
-                        console.error('Error updating item statuses:', error);
+                        console.error('Error updating item statuses:', error.response?.data || error.message);
                       }
                     }
                   }}
                   className="w-full bg-orange-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-orange-600"
                 >
                   Mark Item to be Served
+                </button>
+              )}
+              {order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.status === 'served') && (
+                <button
+                  onClick={async () => {
+                    const token = localStorage.getItem('token');
+                    const itemStatuses = [];
+                    
+                    const hasCheckedItems = order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.checked);
+                    
+                    order.items?.forEach((item, index) => {
+                      const key = `${order._id}-${index}`;
+                      if (hasCheckedItems) {
+                        // Only update checked items
+                        if (itemStates[key]?.checked && itemStates[key]?.status === 'served') {
+                          itemStatuses.push({itemIndex: index, status: 'delivered'});
+                          setItemStates(prev => ({
+                            ...prev,
+                            [key]: { 
+                              ...prev[key], 
+                              status: 'delivered',
+                              checked: false
+                            }
+                          }));
+                        }
+                      } else {
+                        // Update all served items
+                        if (itemStates[key]?.status === 'served') {
+                          itemStatuses.push({itemIndex: index, status: 'delivered'});
+                          setItemStates(prev => ({
+                            ...prev,
+                            [key]: { 
+                              ...prev[key], 
+                              status: 'delivered',
+                              checked: false
+                            }
+                          }));
+                        }
+                      }
+                    });
+                    
+                    if (itemStatuses.length > 0) {
+                      try {
+                        console.log('Marking served items delivered:', {kotId: order.kotId, itemStatuses});
+                        const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
+                          {itemStatuses}, 
+                          {headers: {Authorization: `Bearer ${token}`}}
+                        );
+                        console.log('Served items marked delivered:', response.data);
+                        fetchOrders();
+                      } catch (error) {
+                        console.error('Error marking served items delivered:', error.response?.data || error.message);
+                      }
+                    }
+                  }}
+                  className="w-full bg-green-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-green-600"
+                >
+                  Mark Served Items Delivered
                 </button>
               )}
               <button
@@ -304,23 +381,26 @@ const ChefDashboard = () => {
                       [key]: { 
                         ...prev[key], 
                         status: 'delivered',
-                        checked: true
+                        checked: false
                       }
                     }));
                   });
                   
                   try {
-                    await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
+                    console.log('Marking all items delivered:', {kotId: order.kotId, itemStatuses});
+                    const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
                       {itemStatuses}, 
                       {headers: {Authorization: `Bearer ${token}`}}
                     );
+                    console.log('All items marked delivered:', response.data);
+                    fetchOrders();
                   } catch (error) {
-                    console.error('Error updating item statuses:', error);
+                    console.error('Error marking items delivered:', error.response?.data || error.message);
                   }
                 }}
                 className="w-full bg-blue-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-blue-600"
               >
-                Mark Order Delivered
+                Mark All Items Delivered
               </button>
               <button
                 onClick={() => updateOrderStatus(order._id, 'completed')}
