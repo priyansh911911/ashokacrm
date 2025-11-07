@@ -1,33 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../../../context/AppContext';
 import toast from 'react-hot-toast';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit } from 'lucide-react';
 
 const MenuItemManager = () => {
   const { axios } = useAppContext();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-
-const getCategoryName = (category) => {
-  if (typeof category === 'string') {
-    return category.replace(/_/g, ' ');
-  }
-  return category;
-};
-
-
   const [form, setForm] = useState({
     name: '',
     foodType: 'Both'
   });
+  const [editingItem, setEditingItem] = useState(null);
 
   const fetchItems = async () => {
     try {
       setLoading(true);
       const response = await axios.get('/api/menu-items');
       if (response.data.success) {
-        console.log('Menu Items Data:', response.data.data);
         setItems(response.data.data);
       }
     } catch (error) {
@@ -40,7 +31,6 @@ const getCategoryName = (category) => {
   const fetchCategories = async () => {
     try {
       const response = await axios.get('/api/banquet-categories/all');
-      console.log('Categories Data:', response.data);
       setCategories(response.data || []);
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -60,15 +50,64 @@ const getCategoryName = (category) => {
     }
 
     try {
-      const response = await axios.post('/api/menu-items', form);
-      if (response.data.success) {
-        toast.success('Menu item added successfully');
-        setForm({ name: '', category: '', foodType: 'Both' });
-        fetchItems();
+      if (editingItem) {
+        const response = await axios.put(`/api/menu-items/${editingItem._id}`, form);
+        if (response.data.success) {
+          toast.success('Menu item updated successfully');
+          setEditingItem(null);
+        }
+      } else {
+        const response = await axios.post('/api/menu-items', form);
+        if (response.data.success) {
+          toast.success('Menu item added successfully');
+        }
       }
+      setForm({ name: '', category: '', foodType: 'Both' });
+      fetchItems();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to add menu item');
+      toast.error(error.response?.data?.message || `Failed to ${editingItem ? 'update' : 'add'} menu item`);
     }
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    
+    let categoryId = '';
+    
+    if (typeof item.category === 'string') {
+      if (item.category.length === 24 && /^[0-9a-fA-F]{24}$/.test(item.category)) {
+        categoryId = item.category;
+      } else {
+        const matchingCategory = categories.find(cat => 
+          cat.cateName?.toLowerCase() === item.category.toLowerCase()
+        );
+        categoryId = matchingCategory?._id || '';
+      }
+    } else if (item.category?._id) {
+      categoryId = item.category._id;
+    } else if (item.category) {
+      categoryId = item.category.toString();
+    }
+    
+    if (!categoryId) {
+      const displayedCategory = typeof item.category === 'string' ? item.category : 
+        item.category?.cateName || item.category?.name || '';
+      const matchingCategory = categories.find(cat => 
+        cat.cateName?.toLowerCase() === displayedCategory.toLowerCase()
+      );
+      categoryId = matchingCategory?._id || '';
+    }
+    
+    setForm({
+      name: item.name,
+      category: categoryId,
+      foodType: item.foodType
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setForm({ name: '', category: '', foodType: 'Both' });
   };
 
   const handleDelete = async (id) => {
@@ -88,9 +127,8 @@ const getCategoryName = (category) => {
       <div className="p-4 sm:p-6">
         <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6" style={{color: 'hsl(45, 100%, 20%)'}}>Menu Item Manager</h1>
         
-        {/* Add Item Form */}
         <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6" style={{border: '1px solid hsl(45, 100%, 85%)'}}>
-          <h2 className="text-lg font-semibold mb-4" style={{color: 'hsl(45, 100%, 20%)'}}>Add New Menu Item</h2>
+          <h2 className="text-lg font-semibold mb-4" style={{color: 'hsl(45, 100%, 20%)'}}>{editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <input
               type="text"
@@ -123,19 +161,31 @@ const getCategoryName = (category) => {
               <option value="Veg">Veg Only</option>
               <option value="Non-Veg">Non-Veg Only</option>
             </select>
-            <button
-              type="submit"
-              className="text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center"
-              style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-              onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
-            >
-              <Plus size={16} className="mr-2" /> Add Item
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center flex-1"
+                style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
+              >
+                {editingItem ? <Edit size={16} className="mr-2" /> : <Plus size={16} className="mr-2" />}
+                {editingItem ? 'Update Item' : 'Add Item'}
+              </button>
+              {editingItem && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="text-gray-600 px-4 py-3 rounded-lg border transition-colors"
+                  style={{borderColor: 'hsl(45, 100%, 85%)'}}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </form>
         </div>
 
-        {/* Items Table */}
         <div className="bg-white rounded-lg shadow" style={{border: '1px solid hsl(45, 100%, 85%)'}}>
           <div className="p-4 border-b" style={{borderColor: 'hsl(45, 100%, 85%)'}}>
             <h2 className="text-lg font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>Menu Items ({items.length})</h2>
@@ -164,8 +214,14 @@ const getCategoryName = (category) => {
                   items.map(item => {
                     let categoryName = '-';
                     if (item.category) {
-                      const match = item.category.match(/cateName: '([^']+)'/);
-                      categoryName = match ? match[1] : '-';
+                      if (typeof item.category === 'string') {
+                        const match = item.category.match(/cateName: '([^']+)'/);
+                        categoryName = match ? match[1] : item.category;
+                      } else if (item.category.cateName) {
+                        categoryName = item.category.cateName;
+                      } else if (item.category.name) {
+                        categoryName = item.category.name;
+                      }
                     }
                     return (
                       <tr key={item._id} className="border-t" style={{borderColor: 'hsl(45, 100%, 85%)'}}>
@@ -180,12 +236,22 @@ const getCategoryName = (category) => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <button
-                            onClick={() => handleDelete(item._id)}
-                            className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
+                              title="Edit item"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item._id)}
+                              className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
+                              title="Delete item"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

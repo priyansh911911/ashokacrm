@@ -474,23 +474,7 @@ const Order = () => {
           </div>
         )}
         
-        <div className="flex justify-end mt-6">
-          <div className="relative">
-            <button
-              className="p-4 rounded-full shadow-xl bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] text-white transition-all duration-300 transform hover:scale-110 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-[#c3ad6b]/30"
-              onClick={() => setIsCartOpen(true)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.182 1.298.503 1.298H19.5a1 1 0 00.993-.883l.988-7.893z" />
-              </svg>
-            </button>
-            {cartItems.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[#b39b5a] to-[#c3ad6b] text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-lg animate-pulse">
-                {cartItems.length}
-              </span>
-            )}
-          </div>
-        </div>
+
       </div>
 
       {/* Search bar section */}
@@ -559,74 +543,133 @@ const Order = () => {
         ))}
       </div>
 
-      {/* Cart Modal */}
-      {isCartOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-background bg-opacity-95 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-sm sm:max-w-md lg:max-w-lg p-4 sm:p-6 relative border border-border max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl sm:text-2xl font-bold text-center text-text mb-4 sm:mb-6">Your Cart</h2>
-            <button
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 text-primary hover:text-hover transition-colors duration-200"
-              onClick={() => setIsCartOpen(false)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+      {/* Floating Cart Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <div className="relative">
+          <button
+            className="p-4 rounded-full shadow-xl bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] text-white transition-all duration-300 transform hover:scale-110 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-[#c3ad6b]/30"
+            onClick={() => setIsCartOpen(!isCartOpen)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.182 1.298.503 1.298H19.5a1 1 0 00.993-.883l.988-7.893z" />
+            </svg>
+          </button>
+          {cartItems.length > 0 && (
+            <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[#b39b5a] to-[#c3ad6b] text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-lg animate-pulse">
+              {cartItems.length}
+            </span>
+          )}
+        </div>
+      </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 sm:max-h-60 overflow-y-auto">
-              {cartItems.map(item => (
-                <div key={item._id} className="bg-accent rounded-lg p-3">
-                  <div className="text-center">
-                    <h3 className="font-semibold text-text text-xs sm:text-sm truncate">{item.name}</h3>
-                    <p className="text-xs text-primary">{item.category}</p>
-                    <p className="text-xs text-text">₹{(item.Price || item.price || 0).toFixed(2)}</p>
-                  </div>
-                  <div className="flex items-center justify-center space-x-2 mt-2">
-                    <button
-                      className="bg-border text-text w-5 h-5 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-xs"
-                      onClick={() => handleQuantityChange(item._id, -1)}
-                    >
-                      -
-                    </button>
-                    <span className="font-bold text-text text-sm w-6 text-center">{item.quantity}</span>
-                    <button
-                      className="bg-border text-text w-5 h-5 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-xs"
-                      onClick={() => handleQuantityChange(item._id, 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <div className="mt-2 flex items-center justify-center space-x-1">
-                    <input type="checkbox" id={`chargeable-${item._id}`} className="rounded text-primary focus:ring-2 focus:ring-primary" />
-                    <label htmlFor={`chargeable-${item._id}`} className="text-xs text-text">Non-Chargeable</label>
-                  </div>
-                  {item.note && (
-                    <p className="text-xs text-gray-500 italic mt-1 text-center truncate">Note: {item.note}</p>
-                  )}
+      {/* Cart Popup Modal */}
+      {isCartOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-800">Your Cart</h2>
+                <button
+                  className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                  onClick={() => setIsCartOpen(false)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {cartItems.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.182 1.298.503 1.298H19.5a1 1 0 00.993-.883l.988-7.893z" />
+                  </svg>
+                  <p>Your cart is empty</p>
                 </div>
-              ))}
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-2 font-semibold text-gray-700">Item</th>
+                        <th className="text-center py-2 font-semibold text-gray-700">Qty</th>
+                        <th className="text-right py-2 font-semibold text-gray-700">Price</th>
+                        <th className="text-center py-2 font-semibold text-gray-700">Free</th>
+                        <th className="text-center py-2 font-semibold text-gray-700">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cartItems.map(item => (
+                        <tr key={item._id} className="border-b border-gray-100">
+                          <td className="py-3">
+                            <div>
+                              <div className="font-medium text-gray-800">{item.name}</div>
+                              <div className="text-xs text-gray-500">{item.category}</div>
+                              <div className="text-xs text-[#c3ad6b]">₹{(item.Price || item.price || 0).toFixed(2)} each</div>
+                              {item.note && (
+                                <div className="text-xs text-gray-500 italic mt-1">Note: {item.note}</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 text-center">
+                            <div className="flex items-center justify-center space-x-1">
+                              <button
+                                className="bg-gray-200 text-gray-700 w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors text-xs"
+                                onClick={() => handleQuantityChange(item._id, -1)}
+                              >
+                                -
+                              </button>
+                              <span className="font-bold text-gray-800 w-6 text-center">{item.quantity}</span>
+                              <button
+                                className="bg-[#c3ad6b] text-white w-6 h-6 rounded-full flex items-center justify-center hover:bg-[#b39b5a] transition-colors text-xs"
+                                onClick={() => handleQuantityChange(item._id, 1)}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-3 text-right font-semibold text-gray-800">
+                            ₹{((item.Price || item.price || 0) * item.quantity).toFixed(2)}
+                          </td>
+                          <td className="py-3 text-center">
+                            <input 
+                              type="checkbox" 
+                              id={`chargeable-${item._id}`} 
+                              className="rounded text-[#c3ad6b] focus:ring-2 focus:ring-[#c3ad6b]" 
+                            />
+                          </td>
+                          <td className="py-3 text-center">
+                            <button
+                              className="text-red-500 hover:text-red-700 text-lg font-bold"
+                              onClick={() => handleRemoveItem(item._id)}
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {cartItems.length > 0 && (
-              <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
-                <div className="flex justify-between items-center mb-3 sm:mb-4">
-                  <span className="font-bold text-base sm:text-lg">Total: ₹{getTotalAmount().toFixed(2)}</span>
+              <div className="border-t p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold text-lg text-gray-800">Total: ₹{getTotalAmount().toFixed(2)}</span>
                 </div>
-                <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                <div className="space-y-2">
                   <button
-                    className="w-full py-2 px-3 sm:px-4 rounded-md text-text bg-border font-semibold hover:bg-accent transition-colors duration-200 text-sm sm:text-base"
+                    className="w-full py-2 px-4 rounded-md text-gray-700 bg-gray-200 font-semibold hover:bg-gray-300 transition-colors duration-200 text-sm"
                     onClick={handleClearCart}
                   >
                     Clear All
                   </button>
                   <button
-                    className="w-full py-2 px-3 sm:px-4 rounded-md text-text bg-secondary font-semibold hover:bg-accent transition-colors duration-200 text-sm sm:text-base"
-                    onClick={() => openNoteModal(cartItems[0])}
-                  >
-                    Add Note
-                  </button>
-                  <button
-                    className="w-full py-2 px-3 sm:px-4 rounded-md text-background bg-primary font-semibold hover:bg-hover transition-colors duration-200 text-sm sm:text-base"
+                    className="w-full py-3 px-4 rounded-md text-white bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] font-semibold hover:from-[#b39b5a] hover:to-[#c3ad6b] transition-all duration-200 text-sm"
                     onClick={handlePlaceOrder}
                   >
                     Place Order
@@ -640,31 +683,37 @@ const Order = () => {
 
       {/* Note Modal */}
       {isNoteOpen && itemToNote && (
-        <div className="fixed inset-0 bg-text/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-background rounded-xl shadow-2xl w-full max-w-xs sm:max-w-sm p-4 sm:p-6 relative">
-            <h2 className="text-lg sm:text-xl font-bold text-center text-text mb-3 sm:mb-4">Add Your Note</h2>
-            <div className="grid grid-cols-2 gap-2 mb-3 sm:mb-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-60 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative">
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-4">Add Your Note</h2>
+            <div className="grid grid-cols-2 gap-2 mb-4">
               {['Half', 'Dry', 'Gravy', 'Full'].map(option => (
                 <button
                   key={option}
-                  className="px-2 sm:px-4 py-1 sm:py-2 rounded-full border border-border text-text text-xs sm:text-sm hover:bg-accent transition-colors duration-200"
+                  className="px-4 py-2 rounded-full border border-gray-300 text-gray-700 text-sm hover:bg-gray-100 transition-colors duration-200"
                 >
                   {option}
                 </button>
               ))}
             </div>
             <textarea
-              className="w-full h-20 sm:h-24 p-2 border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary text-text text-sm bg-background"
+              className="w-full h-24 p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[#c3ad6b] text-gray-700 text-sm bg-white"
               placeholder="Write your notes here..."
               defaultValue={itemToNote.note}
               id="note-text-area"
             />
-            <div className="mt-4 sm:mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end space-x-2">
               <button
-                className="py-2 px-4 sm:px-6 rounded-md text-text bg-border font-semibold hover:bg-accent transition-colors duration-200 text-sm sm:text-base"
+                className="py-2 px-4 rounded-md text-gray-700 bg-gray-200 font-semibold hover:bg-gray-300 transition-colors duration-200 text-sm"
+                onClick={() => setIsNoteOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="py-2 px-4 rounded-md text-white bg-[#c3ad6b] font-semibold hover:bg-[#b39b5a] transition-colors duration-200 text-sm"
                 onClick={() => handleSaveNote(document.getElementById('note-text-area').value)}
               >
-                Close
+                Save Note
               </button>
             </div>
           </div>

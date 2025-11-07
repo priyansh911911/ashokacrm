@@ -4,6 +4,8 @@ import { useAppContext } from "../../context/AppContext";
 const ChefDashboard = () => {
   const { axios } = useAppContext();
   const [orders, setOrders] = useState([]);
+  const [historyOrders, setHistoryOrders] = useState([]);
+  const [activeTab, setActiveTab] = useState('active');
 
   const fetchOrders = async () => {
     try {
@@ -23,47 +25,52 @@ const ChefDashboard = () => {
       const allOrders = ordersResponse.data;
       
       // Transform KOT data to match order format
-      const kotOrders = response.data
-        .filter(kot => kot.status !== 'served')
-        .map(kot => {
-          const relatedOrder = allOrders.find(order => order._id === kot.orderId);
+      const kotOrders = response.data.map(kot => {
+        const relatedOrder = allOrders.find(order => order._id === kot.orderId);
+        
+        const enhancedItems = kot.items?.map(item => {
+          // Find menu item to get price
+          const menuItem = menuItems.find(mi => 
+            mi._id === item.itemId || 
+            mi.name === item.itemName || 
+            mi.name === item.name
+          );
           
-          const enhancedItems = kot.items?.map(item => {
-            // Find menu item to get price
-            const menuItem = menuItems.find(mi => 
-              mi._id === item.itemId || 
-              mi.name === item.itemName || 
-              mi.name === item.name
-            );
-            
-            const price = item.price || item.rate || menuItem?.Price || menuItem?.price || 0;
-            
-            return {
-              name: item.itemName || item.name || menuItem?.name || 'Unknown Item',
-              quantity: item.quantity || 1,
-              price: price
-            };
-          }) || [];
-          
-          const totalAmount = enhancedItems.reduce((sum, item) => {
-            return sum + (item.price * item.quantity);
-          }, 0);
+          const price = item.price || item.rate || menuItem?.Price || menuItem?.price || 0;
           
           return {
-            _id: kot.orderId || kot._id,
-            tableNo: kot.tableNo,
-            customerName: relatedOrder?.customerName || 'Guest',
-            status: kot.status || 'pending',
-            createdAt: kot.createdAt,
-            amount: totalAmount,
-            items: enhancedItems
+            name: item.itemName || item.name || menuItem?.name || 'Unknown Item',
+            quantity: item.quantity || 1,
+            price: price
           };
-        });
+        }) || [];
+        
+        const totalAmount = enhancedItems.reduce((sum, item) => {
+          return sum + (item.price * item.quantity);
+        }, 0);
+        
+        return {
+          _id: kot.orderId || kot._id,
+          tableNo: kot.tableNo,
+          customerName: relatedOrder?.customerName || 'Guest',
+          status: kot.status || 'pending',
+          createdAt: kot.createdAt,
+          amount: totalAmount,
+          items: enhancedItems,
+          isPaid: relatedOrder?.status === 'paid'
+        };
+      });
       
-      setOrders(kotOrders);
+      // Separate active and history orders
+      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served');
+      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served');
+      
+      setOrders(activeOrders);
+      setHistoryOrders(historyOrders);
     } catch (error) {
       console.error('Error fetching KOT data:', error);
       setOrders([]);
+      setHistoryOrders([]);
     }
   };
 
@@ -130,8 +137,34 @@ const ChefDashboard = () => {
         <p className="text-gray-600">Manage kitchen orders</p>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="mb-6">
+        <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'active'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Active Orders ({orders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'history'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            History ({historyOrders.length})
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {orders.map((order) => (
+        {(activeTab === 'active' ? orders : historyOrders).map((order) => (
           <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 min-h-[320px] flex flex-col">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3">
@@ -193,25 +226,33 @@ const ChefDashboard = () => {
 
             {/* Action Buttons */}
             <div className="flex gap-2">
-              {(!order.status || order.status === 'pending') && (
-                <button
-                  onClick={() => updateOrderStatus(order._id, 'preparing')}
-                  className="flex-1 bg-blue-500 text-white py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-600 transition-colors"
-                >
-                  Start Preparing
-                </button>
-              )}
-              {order.status === 'preparing' && (
-                <button
-                  onClick={() => updateOrderStatus(order._id, 'ready')}
-                  className="flex-1 bg-green-500 text-white py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium hover:bg-green-600 transition-colors"
-                >
-                  Mark Ready
-                </button>
-              )}
-              {order.status === 'ready' && (
-                <div className="flex-1 bg-blue-100 text-blue-800 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium text-center">
-                  Ready for Pickup
+              {activeTab === 'active' ? (
+                <>
+                  {(!order.status || order.status === 'pending') && (
+                    <button
+                      onClick={() => updateOrderStatus(order._id, 'preparing')}
+                      className="flex-1 bg-blue-500 text-white py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-600 transition-colors"
+                    >
+                      Start Preparing
+                    </button>
+                  )}
+                  {order.status === 'preparing' && (
+                    <button
+                      onClick={() => updateOrderStatus(order._id, 'ready')}
+                      className="flex-1 bg-green-500 text-white py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium hover:bg-green-600 transition-colors"
+                    >
+                      Mark Ready
+                    </button>
+                  )}
+                  {order.status === 'ready' && (
+                    <div className="flex-1 bg-blue-100 text-blue-800 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium text-center">
+                      Ready for Pickup
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex-1 bg-gray-100 text-gray-600 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium text-center">
+                  {order.isPaid ? 'Paid & Completed' : 'Served'}
                 </div>
               )}
             </div>
@@ -219,10 +260,12 @@ const ChefDashboard = () => {
         ))}
       </div>
 
-      {orders.length === 0 && (
+      {(activeTab === 'active' ? orders : historyOrders).length === 0 && (
         <div className="text-center py-12">
-          <div className="text-gray-400 text-lg mb-2">🍳</div>
-          <div className="text-gray-500">No active orders in kitchen</div>
+          <div className="text-gray-400 text-lg mb-2">{activeTab === 'active' ? '🍳' : '📋'}</div>
+          <div className="text-gray-500">
+            {activeTab === 'active' ? 'No active orders in kitchen' : 'No order history available'}
+          </div>
         </div>
       )}
     </div>
