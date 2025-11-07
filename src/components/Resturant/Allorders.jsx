@@ -327,19 +327,23 @@ const AllBookings = ({ setActiveTab }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Send notification to kitchen staff
+      // Create/Update KOT for the new item
       try {
-        await axios.post('/api/notifications/create', {
-          title: 'New Item Added',
-          message: `${selectedItem.name} added to Table ${currentOrder?.tableNo || 'N/A'} - Order ${addItemsForm.orderId.slice(-6)}`,
-          type: 'kitchen',
-          priority: 'normal',
-          department: 'kitchen'
+        await axios.post('/api/kot/create', {
+          orderId: addItemsForm.orderId,
+          tableNo: currentOrder?.tableNo,
+          items: [{
+            itemId: selectedItem._id,
+            itemName: selectedItem.name,
+            quantity: 1,
+            price: selectedItem.Price
+          }]
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-      } catch (notifError) {
-        console.error('Notification failed:', notifError);
+        console.log('KOT updated for new item');
+      } catch (kotError) {
+        console.error('KOT update failed:', kotError);
       }
       
       // Update local state immediately
