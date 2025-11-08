@@ -137,18 +137,47 @@ const Order = () => {
       return;
     }
 
+    // Debug current form data
+    console.log('Form data before validation:', formData.selectedItems);
+    
+    // Filter out items without valid pantryItemId and validate quantities
+    const validItems = formData.selectedItems.filter((item, index) => {
+      console.log(`Item ${index}:`, item);
+      if (!item.pantryItemId || item.pantryItemId === '') {
+        showToast.error(`Item ${index + 1} must have a valid selection`);
+        return false;
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        showToast.error(`Item ${index + 1} must have a valid quantity`);
+        return false;
+      }
+      return true;
+    });
+
+    console.log('Valid items after filtering:', validItems);
+
+    if (validItems.length === 0) {
+      showToast.error('Please ensure all items have valid selections and quantities');
+      return;
+    }
+
+    if (validItems.length !== formData.selectedItems.length) {
+      showToast.error(`${formData.selectedItems.length - validItems.length} items were invalid and removed`);
+      return;
+    }
+
     setLoading(true);
     try {
       const orderData = {
         orderType: formData.orderType,
         guestName: formData.guestName || 'Guest',
-        items: formData.selectedItems.map(item => ({
+        items: validItems.map(item => ({
           itemId: item.pantryItemId,
           pantryItemId: item.pantryItemId,
           name: item.name,
-          quantity: item.quantity,
+          quantity: Number(item.quantity),
           unit: item.unit,
-          unitPrice: item.unitPrice || 0,
+          unitPrice: Number(item.unitPrice) || 0,
           notes: item.notes || ''
         })),
         priority: formData.priority,
@@ -208,7 +237,8 @@ const Order = () => {
     }
     
     try {
-      await axios.patch(`/api/pantry/orders/${orderId}/status`, 
+      // Try the status-only endpoint first
+      await axios.put(`/api/pantry/orders/${orderId}`, 
         { status: newStatus },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
@@ -217,7 +247,41 @@ const Order = () => {
       // Refresh both orders and pantry items to reflect inventory changes
       await Promise.all([fetchOrders(), fetchPantryItems()]);
     } catch (error) {
-      showToast.error('Failed to update order status');
+      console.error('Status update error:', error.response?.data);
+      
+      // If that fails, try to get the full order and update it properly
+      try {
+        const { data } = await axios.get(`/api/pantry/orders`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        const currentOrder = data.orders?.find(o => o._id === orderId);
+        
+        if (currentOrder) {
+          // Fix items to have proper itemId
+          const fixedItems = currentOrder.items?.map(item => ({
+            ...item,
+            itemId: item.itemId || item.pantryItemId || item._id
+          })) || [];
+          
+          const updatedOrder = {
+            ...currentOrder,
+            status: newStatus,
+            items: fixedItems
+          };
+          
+          await axios.put(`/api/pantry/orders/${orderId}`, updatedOrder, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          
+          showToast.success(`Order status updated to ${newStatus}`);
+          await Promise.all([fetchOrders(), fetchPantryItems()]);
+        } else {
+          showToast.error('Order not found');
+        }
+      } catch (secondError) {
+        console.error('Second attempt failed:', secondError.response?.data);
+        showToast.error('Failed to update order status');
+      }
     }
   };
 
@@ -241,12 +305,17 @@ const Order = () => {
       }
     }
     
+    if (!availableItem || !availableItem._id) {
+      showToast.error('Invalid item selected. Please try again.');
+      return;
+    }
+    
     console.log('Adding item:', availableItem);
     setFormData(prev => {
       const newItem = {
         pantryItemId: availableItem._id,
         name: availableItem.name,
-        quantity: "",
+        quantity: 1,
         unit: availableItem.unit || 'pcs',
         unitPrice: availableItem.price || 0,
         notes: ''
@@ -346,9 +415,20 @@ const Order = () => {
 
   const handleEditOrder = (order) => {
     setEditingOrder(order);
+    
+    // Ensure items have proper pantryItemId mapping
+    const mappedItems = (order.items || []).map(item => ({
+      pantryItemId: item.itemId || item.pantryItemId || '',
+      name: item.name || '',
+      quantity: item.quantity || 1,
+      unit: item.unit || 'pcs',
+      unitPrice: item.unitPrice || 0,
+      notes: item.notes || ''
+    }));
+    
     setFormData({
       orderType: order.orderType || 'Kitchen to Pantry',
-      selectedItems: order.items || [],
+      selectedItems: mappedItems,
       priority: order.priority || 'medium',
       notes: order.notes || '',
       totalAmount: order.totalAmount || 0,
@@ -1653,10 +1733,12 @@ const Order = () => {
                         <div key={index} className="p-3 border rounded space-y-3">
                           <div className="flex items-center space-x-3">
                             <select
-                              value={item.pantryItemId}
+                              value={item.pantryItemId || ''}
                               onChange={(e) => updateItem(index, 'pantryItemId', e.target.value)}
                               className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                              required
                             >
+                              <option value="">Select Item</option>
                               {pantryItems.map(pantryItem => {
                                 const stock = pantryItem.stockQuantity || 0;
                                 const isOutOfStock = stock <= 0;
