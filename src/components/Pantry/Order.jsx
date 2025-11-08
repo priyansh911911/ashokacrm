@@ -47,7 +47,9 @@ const Order = () => {
     notes: '',
     totalAmount: 0,
     vendor: '',
-    guestName: ''
+    guestName: '',
+    packagingCharge: 0,
+    labourCharge: 0
   });
   
 
@@ -183,6 +185,8 @@ const Order = () => {
         priority: formData.priority,
         notes: formData.notes,
         totalAmount: formData.totalAmount,
+        packagingCharge: Number(formData.packagingCharge) || 0,
+        labourCharge: Number(formData.labourCharge) || 0,
         vendorId: formData.vendor || null
       };
       
@@ -393,7 +397,9 @@ const Order = () => {
       notes: '',
       totalAmount: 0,
       vendor: '',
-      guestName: ''
+      guestName: '',
+      packagingCharge: 0,
+      labourCharge: 0
     });
     setEditingOrder(null);
     setShowOrderForm(false);
@@ -433,6 +439,8 @@ const Order = () => {
       notes: order.notes || '',
       totalAmount: order.totalAmount || 0,
       guestName: order.guestName || '',
+      packagingCharge: order.packagingCharge || 0,
+      labourCharge: order.labourCharge || 0,
       vendor: typeof order.vendorId === 'object' ? order.vendorId._id : (order.vendorId || '')
     });
     setShowOrderForm(true);
@@ -1852,6 +1860,35 @@ const Order = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Packaging and Labour Charges */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Packaging Charge (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.packagingCharge}
+                      onChange={(e) => setFormData(prev => ({ ...prev, packagingCharge: parseFloat(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Labour Charge (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.labourCharge}
+                      onChange={(e) => setFormData(prev => ({ ...prev, labourCharge: parseFloat(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
