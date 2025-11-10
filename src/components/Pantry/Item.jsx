@@ -64,6 +64,7 @@ function Item() {
   const [confirmMessage, setConfirmMessage] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -297,6 +298,16 @@ function Item() {
           </button>
         </div>
 
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="Search items by name, category, or unit..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
         {loading && (
           <div className="flex items-center justify-center py-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -460,7 +471,11 @@ function Item() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {items.length > 0 ? (
-                    items.map((item) => (
+                    items.filter(item => 
+                      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      (item.category?.name || item.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      (item.unit || '').toLowerCase().includes(searchTerm.toLowerCase())
+                    ).map((item) => (
                       <tr key={item._id} className="hover:bg-gray-50">
                         <td className="px-6 py-3 text-sm font-medium text-gray-900">{item.name}</td>
                         <td className="px-6 py-3 text-sm text-gray-500">{item.category?.name || item.category}</td>
@@ -500,7 +515,7 @@ function Item() {
                   ) : (
                     <tr>
                       <td colSpan="7" className="px-6 py-3 text-center text-sm text-gray-500">
-                        No items found.
+                        {searchTerm ? 'No items match your search.' : 'No items found.'}
                       </td>
                     </tr>
                   )}

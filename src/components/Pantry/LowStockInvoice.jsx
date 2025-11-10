@@ -66,7 +66,6 @@ const LowStockInvoice = ({ lowStockItems, onClose }) => {
                     <th className="border border-black p-2 text-left">Current Stock</th>
                     <th className="border border-black p-2 text-left">Unit</th>
                     <th className="border border-black p-2 text-left">Price/Unit</th>
-                    <th className="border border-black p-2 text-left">Total Value</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -82,20 +81,10 @@ const LowStockInvoice = ({ lowStockItems, onClose }) => {
                       </td>
                       <td className="border border-black p-2">{item.unit || 'pcs'}</td>
                       <td className="border border-black p-2 text-right">₹{(item.price || 0).toFixed(2)}</td>
-                      <td className="border border-black p-2 text-right">
-                        ₹{((item.stock || 0) * (item.price || 0)).toFixed(2)}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot>
-                  <tr className="bg-gray-100 font-bold">
-                    <td colSpan="6" className="border border-black p-2 text-right">Total Value:</td>
-                    <td className="border border-black p-2 text-right">
-                      ₹{totalValue.toFixed(2)}
-                    </td>
-                  </tr>
-                </tfoot>
+
               </table>
 
               {/* Summary */}
@@ -104,7 +93,7 @@ const LowStockInvoice = ({ lowStockItems, onClose }) => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p>• Items requiring immediate restocking: {lowStockItems.length}</p>
-                    <p>• Current inventory value: ₹{totalValue.toFixed(2)}</p>
+
                   </div>
                   <div>
                     <p>• Action required: Purchase/Restock</p>
