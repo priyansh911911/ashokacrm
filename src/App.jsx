@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppContextProvider from "./context/AppContext";
@@ -38,11 +37,11 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Menu from "./components/Resturant/Menu.jsx";
 import Table from "./components/Resturant/Table.jsx";
 import RestaurantBooking from "./components/Resturant/RestaurantBooking.jsx";
-import Category from "./components/Resturant/Category.jsx"
+import Category from "./components/Resturant/Category.jsx";
 import BookTable from "./components/Resturant/ResturantOrders.jsx";
 import KOT from "./components/Resturant/KOT.jsx";
 import { ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import "react-toastify/dist/ReactToastify.css";
 import Customer from "./components/Customer.jsx";
 import Resturantreservation from "./components/Resturant/Resturantreservation.jsx";
 import Billing from "./components/Resturant/Billing.jsx";
@@ -103,7 +102,7 @@ const AuthRoute = ({ children }) => {
 const App = () => {
   return (
     <AppContextProvider>
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -129,84 +128,198 @@ const App = () => {
                   <main className="flex-1 overflow-y-auto">
                     <Routes>
                       <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/pantry/dashboard" element={<PantryDashboard />} />
+                      <Route
+                        path="/pantry/dashboard"
+                        element={<PantryDashboard />}
+                      />
                       <Route path="/pantry/item" element={<PantryItems />} />
-                      <Route path="/pantry/category" element={<CategoryPage />} />
+                      <Route
+                        path="/pantry/category"
+                        element={<CategoryPage />}
+                      />
                       <Route path="/pantry/orders" element={<PantryOrders />} />
-                      <Route path="/pantry/vendors" element={<PantryVendors />} />
+                      <Route
+                        path="/pantry/vendors"
+                        element={<PantryVendors />}
+                      />
                       <Route path="/kitchen" element={<Kitchen />} />
                       <Route path="/kitchen-store" element={<KitchenStore />} />
                       <Route path="/tasks" element={<TaskAssign />} />
                       <Route path="/category" element={<CategoryList />} />
                       <Route path="/room" element={<RoomList />} />
                       <Route path="/staff" element={<StaffList />} />
-                      <Route path="/bookingform" element={<BookingFormPage />} />
+                      <Route
+                        path="/bookingform"
+                        element={<BookingFormPage />}
+                      />
                       <Route path="/booking" element={<Booking />} />
-                      <Route path="/room-inspection" element={<RoomInspection />} />
+                      <Route
+                        path="/room-inspection"
+                        element={<RoomInspection />}
+                      />
                       <Route path="/checkout" element={<CheckoutPage />} />
                       <Route path="/reservation" element={<Reservation />} />
-                      <Route path="/reservationform" element={<ReservationForm />} />
-                      <Route path="/laundry/ordermanagement" element={<Order />} />
-                      <Route path="/laundry/inventorymanagement" element={<Inventory />} />
+                      <Route
+                        path="/reservationform"
+                        element={<ReservationForm />}
+                      />
+                      <Route
+                        path="/laundry/ordermanagement"
+                        element={<Order />}
+                      />
+                      <Route
+                        path="/laundry/inventorymanagement"
+                        element={<Inventory />}
+                      />
                       <Route path="/laundry/loss" element={<Loss />} />
                       <Route path="/laundry/vendor" element={<Vendor />} />
                       <Route path="/cab" element={<Cab />} />
-                      <Route path="/cabbookingform" element={<Cabbookingform />} />
+                      <Route
+                        path="/cabbookingform"
+                        element={<Cabbookingform />}
+                      />
                       <Route path="/cab/vehicle" element={<Vehile />} />
                       <Route path="/cab/driver" element={<Driver />} />
                       <Route path="/resturant" element={<Resturant />} />
-                      <Route 
-                        path="/staff-work" 
+                      <Route
+                        path="/staff-work"
                         element={
-                          <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                          <ProtectedRoute allowedRoles={["staff", "admin"]}>
                             <StaffWorkTask />
                           </ProtectedRoute>
-                        } 
+                        }
                       />
 
                       <Route path="/menu" element={<Menu />} />
                       <Route path="/table" element={<Table />} />
-                      <Route path="/restaurant/manage-tables" element={<ManageTables />} />
-                      <Route path="/restaurant/available-tables" element={<AvailableTables />} />
-                      <Route path="/resturant/bookings" element={<RestaurantBooking />} />
-                      <Route path="/resturant/category" element={<Category />} />
+                      <Route
+                        path="/restaurant/manage-tables"
+                        element={<ManageTables />}
+                      />
+                      <Route
+                        path="/restaurant/available-tables"
+                        element={<AvailableTables />}
+                      />
+                      <Route
+                        path="/resturant/bookings"
+                        element={<RestaurantBooking />}
+                      />
+                      <Route
+                        path="/resturant/category"
+                        element={<Category />}
+                      />
                       <Route path="/book-table" element={<BookTable />} />
                       <Route path="/customers" element={<Customer />} />
-                      <Route path="/resturant/order-table" element={<BookTable />} />
-                      <Route path="/resturant/all-orders" element={<Orders />} />
+                      <Route
+                        path="/resturant/order-table"
+                        element={<BookTable />}
+                      />
+                      <Route
+                        path="/resturant/all-orders"
+                        element={<Orders />}
+                      />
                       <Route path="/kot" element={<KOT />} />
-                      <Route path="/resturant/reservation" element={<Resturantreservation />} />
+                      <Route
+                        path="/resturant/reservation"
+                        element={<Resturantreservation />}
+                      />
                       <Route path="/billing" element={<Billing />} />
-                      <Route path="/chef-dashboard" element={<ChefDashboard />} />
+                      <Route
+                        path="/chef-dashboard"
+                        element={<ChefDashboard />}
+                      />
                       <Route path="/payment" element={<Payment />} />
                       <Route path="/invoice" element={<Invoice />} />
                       <Route path="/users" element={<Users />} />
                       <Route path="/add-booking" element={<AddBooking />} />
-                      <Route path="/banquet/add-booking" element={<AddBooking />} />
-                      <Route path="/banquet/list-booking" element={<ListBooking />} />
-                      <Route path="/banquet/update-booking/:id" element={<UpdateBooking />} />
-                      <Route path="/banquet/invoice/:id" element={<BanquetInvoice />} />
-                      <Route path="/shared-invoice/:id" element={<SharedInvoice />} />
-                      <Route path="/banquet/menu-manager" element={<MenuItemManager />} />
-                      <Route path="/banquet/plan-limit" element={<PlanLimitManager />} />
-                      <Route path="/banquet/menu-plan-manager" element={<MenuPlanManager />} />
-                      <Route path="/banquet/menu-selector" element={<MenuSelectorPage />} />
-                      <Route path="/banquet/menu-view/:id" element={<MenuView />} />
-                      <Route path="/banquet/calendar" element={<LaganCalendar />} />
+                      <Route
+                        path="/banquet/add-booking"
+                        element={<AddBooking />}
+                      />
+                      <Route
+                        path="/banquet/list-booking"
+                        element={<ListBooking />}
+                      />
+                      <Route
+                        path="/banquet/update-booking/:id"
+                        element={<UpdateBooking />}
+                      />
+                      <Route
+                        path="/banquet/invoice/:id"
+                        element={<BanquetInvoice />}
+                      />
+                      <Route
+                        path="/shared-invoice/:id"
+                        element={<SharedInvoice />}
+                      />
+                      <Route
+                        path="/banquet/menu-manager"
+                        element={<MenuItemManager />}
+                      />
+                      <Route
+                        path="/banquet/plan-limit"
+                        element={<PlanLimitManager />}
+                      />
+                      <Route
+                        path="/banquet/menu-plan-manager"
+                        element={<MenuPlanManager />}
+                      />
+                      <Route
+                        path="/banquet/menu-selector"
+                        element={<MenuSelectorPage />}
+                      />
+                      <Route
+                        path="/banquet/menu-view/:id"
+                        element={<MenuView />}
+                      />
+                      <Route
+                        path="/banquet/calendar"
+                        element={<LaganCalendar />}
+                      />
                       <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="/settings/general" element={<GeneralSettings />} />
-                      <Route path="/settings/business" element={<BusinessSettings />} />
-                      <Route path="/settings/users" element={<UserSettings />} />
-                      <Route path="/settings/notifications" element={<NotificationSettings />} />
-                      <Route path="/settings/operational" element={<OperationalSettings />} />
-                      <Route path="/settings/security" element={<SecuritySettings />} />
-                      <Route path="/settings/data" element={<DataBackupSettings />} />
-                      <Route path="/settings/integrations" element={<IntegrationSettings />} />
+                      <Route
+                        path="/settings/general"
+                        element={<GeneralSettings />}
+                      />
+                      <Route
+                        path="/settings/business"
+                        element={<BusinessSettings />}
+                      />
+                      <Route
+                        path="/settings/users"
+                        element={<UserSettings />}
+                      />
+                      <Route
+                        path="/settings/notifications"
+                        element={<NotificationSettings />}
+                      />
+                      <Route
+                        path="/settings/operational"
+                        element={<OperationalSettings />}
+                      />
+                      <Route
+                        path="/settings/security"
+                        element={<SecuritySettings />}
+                      />
+                      <Route
+                        path="/settings/data"
+                        element={<DataBackupSettings />}
+                      />
+                      <Route
+                        path="/settings/integrations"
+                        element={<IntegrationSettings />}
+                      />
                       <Route path="/help" element={<HelpSupport />} />
                       <Route path="/wastage" element={<WastageForm />} />
                       <Route path="/inventory" element={<InventoryForm />} />
-                      <Route path="/staff-dashboard" element={<StaffDashboard />} />
-                      <Route path="/staff/attendance" element={<AttendanceForm />} />
+                      <Route
+                        path="/staff-dashboard"
+                        element={<StaffDashboard />}
+                      />
+                      <Route
+                        path="/staff/attendance"
+                        element={<AttendanceForm />}
+                      />
                       <Route path="/staff/payroll" element={<PayrollForm />} />
                       <Route path="/staff/attendance-table" element={<AttendanceTable />} />
                       <Route path="/staff/clock-dashboard" element={<StaffClockDashboard />} />
@@ -217,19 +330,22 @@ const App = () => {
                       <Route 
                         path="/cash-management" 
                         element={
-                          <ProtectedRoute allowedRoles={['admin', 'staff', 'restaurant']}>
+                          <ProtectedRoute
+                            allowedRoles={["admin", "staff", "restaurant"]}
+                          >
                             <CashManagement />
                           </ProtectedRoute>
-                        } 
+                        }
                       />
-                      <Route 
-                        path="/register" 
+                      <Route
+                        path="/register"
                         element={
-                          <ProtectedRoute allowedRoles={['admin']}>
+                          <ProtectedRoute allowedRoles={["admin"]}>
                             <RegisterForm />
                           </ProtectedRoute>
-                        } 
+                        }
                       />
+
 
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>

@@ -153,6 +153,7 @@ const StaffList = () => {
       validId: staffMember.validId || "",
       idNumber: staffMember.idNumber || "",
       phoneNumber: staffMember.phoneNumber || "",
+      dateOfJoining: staffMember.dateOfJoining ? new Date(staffMember.dateOfJoining).toISOString().split('T')[0] : "",
       photo: staffMember.photo || "",
       bankDetails: {
         accountNumber: staffMember.bankDetails?.accountNumber || "",
@@ -220,6 +221,9 @@ const StaffList = () => {
       }
       if (currentStaff.phoneNumber) {
         staffData.phoneNumber = currentStaff.phoneNumber;
+      }
+      if (currentStaff.dateOfJoining) {
+        staffData.dateOfJoining = currentStaff.dateOfJoining;
       }
       if (currentStaff.photo) {
         staffData.photo = currentStaff.photo;
@@ -318,7 +322,7 @@ const StaffList = () => {
     
     if (deptArray.length === 0) return "None";
     
-    const validDepartments = ['kitchen', 'laundry', 'reception', 'maintenance'];
+    const validDepartments = ['kitchen', 'laundry', 'reception', 'maintenance', 'housekeeping', 'accounts', 'pantry'];
     
     return deptArray
       .map((dept) => {
@@ -326,7 +330,9 @@ const StaffList = () => {
         if (validDepartments.includes(deptName)) {
           return deptName.charAt(0).toUpperCase() + deptName.slice(1);
         }
-        return null;
+        // If not in valid list, still show it
+        return typeof dept === 'string' ? dept.charAt(0).toUpperCase() + dept.slice(1) : 
+               dept.name ? dept.name.charAt(0).toUpperCase() + dept.name.slice(1) : null;
       })
       .filter(Boolean)
       .join(", ") || "None";
@@ -413,6 +419,9 @@ const StaffList = () => {
                       Department
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date of Joining
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Salary
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -423,7 +432,7 @@ const StaffList = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedStaff.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
                         {searchQuery ? 'No staff found matching your search.' : 'No staff members found.'}
                       </td>
                     </tr>
@@ -485,6 +494,11 @@ const StaffList = () => {
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
                             {getDepartmentName(staffMember.department)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {staffMember.dateOfJoining ? new Date(staffMember.dateOfJoining).toLocaleDateString() : 'Not set'}
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">

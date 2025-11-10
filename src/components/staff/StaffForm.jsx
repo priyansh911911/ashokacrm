@@ -15,12 +15,10 @@ const StaffForm = ({
   if (!showModal) return null;
 
   const departments = [
-    { id: 1, name: "laundry" },
-    { id: 2, name: "reception" },
-    { id: 3, name: "maintenance" },
-    { id: 4, name: "housekeeping" },
-    { id: 5, name: "other" },
-    { id: 6, name: "pantry" },
+    { id: 1, name: "reception" },
+    { id: 2, name: "housekeeping" },
+    { id: 3, name: "accounts" },
+    { id: 4, name: "pantry" },
   ];
 
   const handleDepartmentChange = (e) => {

@@ -147,6 +147,7 @@ const Sidebar = () => {
     const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
     const hasLaundry = userDepartments.some(dept => dept && dept.name === "laundry");
     const hasPantryAccess = role === "staff" && userDepartments.some(dept => dept && dept.name === "pantry");
+    const hasAccounts = userDepartments.some(dept => dept && dept.name === "accounts");
     
     console.log('=== DEPARTMENT CHECK ===');
     console.log('Role:', role);
@@ -156,9 +157,16 @@ const Sidebar = () => {
     console.log('Has Reception:', hasReception);
     console.log('Has Laundry:', hasLaundry);
     console.log('Has Pantry:', hasPantryAccess);
+    console.log('Has Accounts:', hasAccounts);
     console.log('=======================');
     
     const items = [];
+
+    // If accounts staff, return only cash management (attendance added separately)
+    if (role === "staff" && hasAccounts && userDepartments.length === 1) {
+      items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
+      return items;
+    }
 
     // If chef role, return empty - only kitchen items will be added separately
     if (role === "chef") {
@@ -229,8 +237,8 @@ const Sidebar = () => {
       return items;
     }
     
-    // Cash Management - accessible to admin and non-pantry staff
-    if (role === "admin" || (role === "staff" && !hasPantryAccess)) {
+    // Cash Management - accessible to admin and accounts staff (already handled above for accounts-only staff)
+    if (role === "admin" || (role === "staff" && hasAccounts && userDepartments.length > 1)) {
       items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
     }
 
@@ -305,7 +313,10 @@ const Sidebar = () => {
           { label: "Room", path: "/room", icon: BedDouble },
         ];
         if (role === "admin") {
-          children.push({ label: "Category", path: "/category", icon: ChartBarStacked });
+          children.push(
+            { label: "Category", path: "/category", icon: ChartBarStacked },
+            { label: "Inventory", path: "/inventory", icon: Warehouse }
+          );
         }
         return [{
           icon: BedDouble,
@@ -357,9 +368,17 @@ const Sidebar = () => {
     })(),
     ...(() => {
       const role = localStorage.getItem("role");
+      let userDepartments = [];
+      try {
+        const departmentData = localStorage.getItem("department") || localStorage.getItem("departments");
+        userDepartments = departmentData && departmentData !== 'undefined' ? JSON.parse(departmentData) : [];
+      } catch (e) {
+        userDepartments = [];
+      }
+      const hasAccounts = userDepartments.some(dept => dept && dept.name === "accounts");
       
-      // Give pantry access to all staff members
-      if (role === "staff") {
+      // Give pantry access to staff members except accounts-only staff
+      if (role === "staff" && !(hasAccounts && userDepartments.length === 1)) {
         return [
           { icon: LayoutDashboard, label: "Pantry Dashboard", path: "/pantry/dashboard" },
           { icon: ListChecks, label: "Pantry Items", path: "/pantry/item" },
@@ -560,8 +579,7 @@ const Sidebar = () => {
       { icon: Users, label: "Customers", path: "/customers" }
     ] : []),
     ...(localStorage.getItem("role") === "admin" ? [
-      { icon: Users, label: "All Users", path: "/users" },
-      { icon: Warehouse, label: "Inventory", path: "/inventory" }
+      { icon: Users, label: "All Users", path: "/users" }
     ] : [])
     // { icon: Users, label: "Payment", path: "/payment" },
     // { icon: FileText, label: "Invoice", path: "/invoice" },

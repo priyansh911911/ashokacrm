@@ -7,6 +7,7 @@ const AddOrderForm = ({ onSave, onClose }) => {
   const { axios } = useAppContext();
   
   const [formData, setFormData] = useState({
+    orderType: "room_laundry",
     roomNumber: "",
     vendorId: "",
     items: [{ rateId: "", quantity: 1, status: "pending" }],
@@ -63,10 +64,28 @@ const AddOrderForm = ({ onSave, onClose }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({ 
-      ...formData, 
-      [name]: type === "checkbox" ? checked : value 
-    });
+    const newValue = type === "checkbox" ? checked : value;
+    
+    // Auto-populate items when hotel laundry is selected
+    if (name === 'orderType' && value === 'hotel_laundry') {
+      const allLaundryItems = laundryRates.map(rate => ({
+        rateId: rate._id,
+        itemName: rate.itemName,
+        quantity: 0,
+        status: 'pending'
+      }));
+      
+      setFormData({ 
+        ...formData, 
+        [name]: newValue,
+        items: allLaundryItems.length > 0 ? allLaundryItems : formData.items
+      });
+    } else {
+      setFormData({ 
+        ...formData, 
+        [name]: newValue 
+      });
+    }
   };
 
   const handleItemChange = (index, field, value) => {
@@ -101,8 +120,22 @@ const AddOrderForm = ({ onSave, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.items.some(item => item.rateId && item.quantity)) {
-      toast.error('Please add at least one valid item');
+    if (formData.orderType === 'hotel_laundry') {
+      // For hotel laundry, check if at least one item has quantity > 0
+      if (!formData.items.some(item => item.quantity > 0)) {
+        toast.error('Please set quantity for at least one item');
+        return;
+      }
+    } else {
+      // For room laundry, check if at least one item is selected with quantity
+      if (!formData.items.some(item => item.rateId && item.quantity)) {
+        toast.error('Please add at least one valid item');
+        return;
+      }
+    }
+
+    if (formData.orderType === 'room_laundry' && !formData.roomNumber.trim()) {
+      toast.error('Room number is required for room laundry orders');
       return;
     }
 
@@ -111,7 +144,9 @@ const AddOrderForm = ({ onSave, onClose }) => {
     
     try {
       const token = localStorage.getItem('token');
-      const validItems = formData.items.filter(item => item.rateId && item.quantity);
+      const validItems = formData.orderType === 'hotel_laundry' 
+        ? formData.items.filter(item => item.quantity > 0)
+        : formData.items.filter(item => item.rateId && item.quantity);
       
       const response = await axios.post('/api/laundry/order', 
         { ...formData, items: validItems },
@@ -158,21 +193,38 @@ const AddOrderForm = ({ onSave, onClose }) => {
             </select>
           </div> */}
 
+          {/* Order Type Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Order Type</label>
+            <select
+              name="orderType"
+              value={formData.orderType}
+              onChange={handleChange}
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
+              required
+            >
+              <option value="room_laundry">Room Laundry</option>
+              <option value="hotel_laundry">Hotel Laundry</option>
+            </select>
+          </div>
+
           {/* Room Number and Vendor Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Room Number</label>
-              <input
-                type="text"
-                name="roomNumber"
-                value={formData.roomNumber}
-                onChange={handleChange}
-                placeholder="Enter room number"
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
-                required
-              />
-            </div>
-            <div>
+            {formData.orderType === "room_laundry" && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Room Number</label>
+                <input
+                  type="text"
+                  name="roomNumber"
+                  value={formData.roomNumber}
+                  onChange={handleChange}
+                  placeholder="Enter room number"
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+            )}
+            <div className={formData.orderType === "hotel_laundry" ? "col-span-full" : ""}>
               <label className="block text-sm font-medium mb-1">Laundry Vendor</label>
               <select
                 name="vendorId"
@@ -319,13 +371,15 @@ const AddOrderForm = ({ onSave, onClose }) => {
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium">Items</label>
-              <button
-                type="button"
-                onClick={addItem}
-                className="flex items-center px-2 py-1 text-sm bg-primary text-white rounded hover:bg-hover"
-              >
-                <Plus size={14} className="mr-1" /> Add Item
-              </button>
+              {formData.orderType !== 'hotel_laundry' && (
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="flex items-center px-2 py-1 text-sm bg-primary text-white rounded hover:bg-hover"
+                >
+                  <Plus size={14} className="mr-1" /> Add Item
+                </button>
+              )}
             </div>
             
             <div className="hidden sm:grid sm:grid-cols-10 sm:gap-2 mb-2 text-xs font-medium text-gray-600">
@@ -339,19 +393,28 @@ const AddOrderForm = ({ onSave, onClose }) => {
               <div key={index} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-10 sm:gap-2 mb-4 sm:mb-2 sm:items-end p-3 sm:p-0 border sm:border-0 rounded sm:rounded-none">
                 <div className="sm:col-span-5">
                   <label className="block text-xs font-medium mb-1 sm:hidden">Item</label>
-                  <select
-                    value={item.rateId}
-                    onChange={(e) => handleItemChange(index, 'rateId', e.target.value)}
-                    className="w-full p-2 border rounded"
-                    required
-                  >
-                    <option value="">Select Item</option>
-                    {laundryRates.map(rate => (
-                      <option key={rate._id} value={rate._id}>
-                        {rate.itemName}
-                      </option>
-                    ))}
-                  </select>
+                  {formData.orderType === 'hotel_laundry' ? (
+                    <input
+                      type="text"
+                      value={item.itemName || ''}
+                      className="w-full p-2 border rounded bg-gray-100"
+                      readOnly
+                    />
+                  ) : (
+                    <select
+                      value={item.rateId}
+                      onChange={(e) => handleItemChange(index, 'rateId', e.target.value)}
+                      className="w-full p-2 border rounded"
+                      required
+                    >
+                      <option value="">Select Item</option>
+                      {laundryRates.map(rate => (
+                        <option key={rate._id} value={rate._id}>
+                          {rate.itemName} ({rate.category} - {rate.serviceType.replace('_', ' ')}) - ₹{rate.rate}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium mb-1 sm:hidden">Quantity</label>
@@ -395,7 +458,7 @@ const AddOrderForm = ({ onSave, onClose }) => {
                   </select>
                 </div>
                 <div className="sm:col-span-1 flex justify-center">
-                  {formData.items.length > 1 && (
+                  {formData.orderType !== 'hotel_laundry' && formData.items.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeItem(index)}

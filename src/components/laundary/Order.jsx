@@ -68,6 +68,7 @@ const App = () => {
   });
   const [editingOrder, setEditingOrder] = useState(null);
   const [filterStatus, setFilterStatus] = useState("All");
+  const [filterOrderType, setFilterOrderType] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -84,6 +85,12 @@ const App = () => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
   const [laundryVendors, setLaundryVendors] = useState([]);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnFormData, setReturnFormData] = useState({
+    selectedItems: [],
+    returnNote: '',
+    itemQuantities: {}
+  });
 
   const getAuthToken = () => localStorage.getItem("token");
 
@@ -284,26 +291,47 @@ const App = () => {
     }
   };
 
-  // Mark order as returned
-  const handleReturnOrder = async (id) => {
+  // Open return modal
+  const openReturnModal = (order) => {
+    setSelectedOrder(order);
+    setShowReturnModal(true);
+  };
+
+  // Handle return items
+  const handleReturnItems = async () => {
     const token = getAuthToken();
     if (!token) {
       toast.error('Authentication token not found');
       return;
     }
 
-    if (window.confirm("Are you sure you want to mark this order as returned?")) {
-      const loadingToast = toast.loading('Marking order as returned...');
-      try {
-        await axios.patch(`/api/laundry/return/${id}`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        fetchOrders();
-        toast.success('Order marked as returned successfully!', { id: loadingToast });
-      } catch (error) {
-        console.error("Error marking order as returned:", error);
-        toast.error(`Error marking order as returned: ${error.response?.data?.message || error.message}`, { id: loadingToast });
-      }
+    if (returnFormData.selectedItems.length === 0) {
+      toast.error('Please select at least one item to return');
+      return;
+    }
+
+    const loadingToast = toast.loading('Processing return...');
+    try {
+      const itemsWithQuantities = returnFormData.selectedItems.map(itemId => ({
+        itemId,
+        returnQuantity: returnFormData.itemQuantities[itemId] || 1
+      }));
+
+      await axios.post('/api/laundry/return-items', {
+        orderId: selectedOrder._id,
+        selectedItems: itemsWithQuantities,
+        returnNote: returnFormData.returnNote
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      fetchOrders();
+      toast.success(`${returnFormData.selectedItems.length} item(s) returned successfully!`, { id: loadingToast });
+      setShowReturnModal(false);
+      setReturnFormData({ selectedItems: [], returnNote: '', itemQuantities: {} });
+    } catch (error) {
+      console.error('Error returning items:', error);
+      toast.error(`Error returning items: ${error.response?.data?.message || error.message}`, { id: loadingToast });
     }
   };
 
@@ -507,6 +535,7 @@ const App = () => {
   const filteredOrders = orders
     .filter(order => {
       if (filterStatus !== "All" && order.laundryStatus !== filterStatus) return false;
+      if (filterOrderType !== "All" && order.orderType !== filterOrderType) return false;
       return true;
     })
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -604,26 +633,39 @@ const App = () => {
       <div className="bg-white p-4 rounded-xl shadow-md mb-6 border border-border">
         {/* Filter Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-3 sm:space-y-0">
-          <div className="flex items-center w-full sm:w-auto">
-            <Filter size={20} className="text-text mr-2" />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="block w-full sm:w-auto px-4 py-2 border border-border rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm text-text"
-            >
-              <option value="All">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="picked_up">Picked Up</option>
-              <option value="ready">Ready</option>
-              <option value="partially_delivered">Partial Delivery</option>
-              <option value="delivered">Delivered</option>
-              <option value="completed">Completed</option>
-              <option value="returned">Returned</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="lost">Lost</option>
-              <option value="damaged">Damaged</option>
-            </select>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+            <div className="flex items-center">
+              <Filter size={20} className="text-text mr-2" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="block px-4 py-2 border border-border rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm text-text"
+              >
+                <option value="All">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="picked_up">Picked Up</option>
+                <option value="ready">Ready</option>
+                <option value="partially_delivered">Partial Delivery</option>
+                <option value="delivered">Delivered</option>
+                <option value="completed">Completed</option>
+                <option value="returned">Returned</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="lost">Lost</option>
+                <option value="damaged">Damaged</option>
+              </select>
+            </div>
+            <div className="flex items-center">
+              <select
+                value={filterOrderType}
+                onChange={(e) => setFilterOrderType(e.target.value)}
+                className="block px-4 py-2 border border-border rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm text-text"
+              >
+                <option value="All">All Types</option>
+                <option value="room_laundry">Room Laundry</option>
+                <option value="hotel_laundry">Hotel Laundry</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -718,53 +760,66 @@ const App = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-accent">
                   <tr>
-                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
-                      Order ID
+                    <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                      Sr No
                     </th>
-                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
-                      Guest / Room
+
+                    <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                      Order Info
                     </th>
-                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                    <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
                       Vendor
                     </th>
-                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                    <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
                       Items
                     </th>
-                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                    <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                    <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                    <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
                       Dates
                     </th>
-                    <th className="w-1/7 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
+                    <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-text uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
               <tbody className="bg-white divide-y divide-border">
-                {filteredOrders.map((order) => (
+                {filteredOrders.map((order, index) => (
                   <tr key={order._id} className="hover:bg-accent">
                     <td className="px-3 py-4">
-                      <div className="text-xs text-text">
-                        {order._id?.toString().slice(-6)}
+                      <div className="text-sm font-medium text-text">
+                        {index + 1}
                       </div>
                     </td>
+
                     <td className="px-3 py-4">
-                      {(() => {
+                      <div className="text-xs font-medium text-text mb-1">
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+                          order.orderType === 'hotel_laundry' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {order.orderType === 'hotel_laundry' ? 'Hotel Laundry' : 'Room Laundry'}
+                        </span>
+                      </div>
+                      {order.orderType === 'room_laundry' && (() => {
                         const booking = getBookingDetails(order.bookingId);
                         return (
                           <>
                             <div className="text-sm font-medium text-text">
-                              {booking?.name || order.requestedByName || 'N/A'}
+                              {booking?.name || order.requestedByName || ''}
                             </div>
+                            {(booking?.grcNo || order.grcNo) && (
+                              <div className="text-xs text-text">
+                                GRC: {booking?.grcNo || order.grcNo}
+                              </div>
+                            )}
                             <div className="text-xs text-text">
-                              GRC: {booking?.grcNo || order.grcNo || 'N/A'}
-                            </div>
-                            <div className="text-xs text-text">
-                              Room: {booking?.roomNumber || order.roomNumber || 'N/A'}
+                              Room: {booking?.roomNumber || order.roomNumber || ''}
                             </div>
                           </>
                         );
@@ -880,7 +935,7 @@ const App = () => {
                         </div>
                         <div className="flex gap-1">
                           <button
-                            onClick={() => handleReturnOrder(order._id)}
+                            onClick={() => openReturnModal(order)}
                             className="flex-1 px-1 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200"
                           >
                             Return
@@ -927,14 +982,30 @@ const App = () => {
           
           {/* Mobile Card View */}
           <div className="lg:hidden space-y-4">
-            {filteredOrders.map((order) => (
+            {filteredOrders.map((order, index) => (
               <div key={order._id} className="bg-accent p-4 rounded-lg border border-border">
                 {/* Header */}
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="font-medium text-text">{order.requestedByName}</h3>
-                    <p className="text-sm text-text">Room {order.roomNumber}</p>
-                    {order.grcNo && <p className="text-xs text-text">GRC: {order.grcNo}</p>}
+                    <div className="text-xs font-medium text-text mb-1">
+                      Sr No: {index + 1}
+                    </div>
+                    <div className="mb-2">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${
+                        order.orderType === 'hotel_laundry' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {order.orderType === 'hotel_laundry' ? 'Hotel Laundry' : 'Room Laundry'}
+                      </span>
+                    </div>
+                    {order.orderType === 'room_laundry' && (
+                      <>
+                        {order.requestedByName && <h3 className="font-medium text-text">{order.requestedByName}</h3>}
+                        {order.roomNumber && <p className="text-sm text-text">Room {order.roomNumber}</p>}
+                        {order.grcNo && <p className="text-xs text-text">GRC: {order.grcNo}</p>}
+                      </>
+                    )}
                     {order.vendorId && (
                       <div className="mt-1">
                         <p className="text-xs text-text">Vendor: {order.vendorId.vendorName}</p>
@@ -1038,7 +1109,7 @@ const App = () => {
                   </div>
                   <div className="flex gap-1">
                     <button
-                      onClick={() => handleReturnOrder(order._id)}
+                      onClick={() => openReturnModal(order)}
                       className="flex-1 px-1 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200"
                     >
                       Return
@@ -1118,6 +1189,7 @@ const App = () => {
                 >
                   <option value="gentlemen">Gentlemen</option>
                   <option value="ladies">Ladies</option>
+                  <option value="Hotel Laundry">Hotel Laundry</option>
                 </select>
               </div>
               <div>
@@ -1261,6 +1333,113 @@ const App = () => {
                   onClick={() => {
                     setShowLossModal(false);
                     setLossFormData({ selectedItems: [], lossNote: '' });
+                  }}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Return Modal */}
+      {showReturnModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Return Items</h2>
+              <button
+                onClick={() => {
+                  setShowReturnModal(false);
+                  setReturnFormData({ selectedItems: [], returnNote: '', itemQuantities: {} });
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Items to Return</label>
+                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-md p-2">
+                  {selectedOrder.items?.map((item) => (
+                    <div key={item._id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                      <input
+                        type="checkbox"
+                        checked={returnFormData.selectedItems.includes(item._id)}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          const newSelectedItems = isChecked
+                            ? [...returnFormData.selectedItems, item._id]
+                            : returnFormData.selectedItems.filter(id => id !== item._id);
+                          const newQuantities = {...returnFormData.itemQuantities};
+                          if (isChecked) {
+                            newQuantities[item._id] = item.quantity;
+                          } else {
+                            delete newQuantities[item._id];
+                          }
+                          setReturnFormData({...returnFormData, selectedItems: newSelectedItems, itemQuantities: newQuantities});
+                        }}
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm">
+                          {item.itemName} - ₹{item.calculatedAmount}
+                        </span>
+                        <div className="text-xs text-gray-500">Available: {item.quantity}</div>
+                      </div>
+                      {returnFormData.selectedItems.includes(item._id) && (
+                        <input
+                          type="number"
+                          min="1"
+                          max={item.quantity}
+                          value={returnFormData.itemQuantities[item._id] || item.quantity}
+                          onChange={(e) => {
+                            const quantity = Math.min(Math.max(1, parseInt(e.target.value) || 1), item.quantity);
+                            setReturnFormData({
+                              ...returnFormData,
+                              itemQuantities: {...returnFormData.itemQuantities, [item._id]: quantity}
+                            });
+                          }}
+                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded"
+                          placeholder="Qty"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {returnFormData.selectedItems.length > 0 && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {returnFormData.selectedItems.length} item(s) selected
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Return Note</label>
+                <textarea
+                  value={returnFormData.returnNote}
+                  onChange={(e) => setReturnFormData({...returnFormData, returnNote: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  rows="3"
+                  placeholder="Reason for return (optional)..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleReturnItems}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Return Items
+                </button>
+                <button
+                  onClick={() => {
+                    setShowReturnModal(false);
+                    setReturnFormData({ selectedItems: [], returnNote: '', itemQuantities: {} });
                   }}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
