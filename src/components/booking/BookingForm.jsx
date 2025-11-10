@@ -473,6 +473,36 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     fetchNewGRCNo();
     fetchAllData();
+    
+    // Check for pre-selected room from easy dashboard
+    const selectedRoomData = localStorage.getItem('selectedRoomForBooking');
+    if (selectedRoomData) {
+      try {
+        const roomData = JSON.parse(selectedRoomData);
+        console.log('Pre-selected room data found:', roomData);
+        
+        // Auto-fill form with room data
+        setFormData(prev => ({
+          ...prev,
+          categoryId: roomData.categoryId || '',
+          rate: roomData.rate || 0,
+          roomNumber: roomData.roomNumber || ''
+        }));
+        
+        // Store room ID for later selection once rooms are loaded
+        if (roomData.roomId) {
+          localStorage.setItem('preSelectedRoomId', JSON.stringify(roomData.roomId));
+        }
+        
+        // Clear the localStorage after using it
+        localStorage.removeItem('selectedRoomForBooking');
+        
+        showToast.success(`Room ${roomData.roomNumber} pre-selected for booking!`);
+      } catch (error) {
+        console.error('Error parsing selected room data:', error);
+        localStorage.removeItem('selectedRoomForBooking');
+      }
+    }
   }, []);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -580,6 +610,29 @@ const App = () => {
       }
     }
   }, [selectedRooms, setFormData]);
+
+  // Handle pre-selected room from easy dashboard once rooms are loaded
+  useEffect(() => {
+    const selectedRoomData = localStorage.getItem('preSelectedRoomId');
+    if (selectedRoomData && allRooms.length > 0) {
+      try {
+        const roomId = JSON.parse(selectedRoomData);
+        const preSelectedRoom = allRooms.find(room => room._id === roomId);
+        
+        if (preSelectedRoom) {
+          setSelectedRooms([preSelectedRoom]);
+          setHasCheckedAvailability(true);
+          console.log('Pre-selected room set:', preSelectedRoom);
+        }
+        
+        // Clear the localStorage after using it
+        localStorage.removeItem('preSelectedRoomId');
+      } catch (error) {
+        console.error('Error setting pre-selected room:', error);
+        localStorage.removeItem('preSelectedRoomId');
+      }
+    }
+  }, [allRooms, setSelectedRooms, setHasCheckedAvailability]);
 
   const handleCapturePhoto = async () => {
     const video = videoRef.current;

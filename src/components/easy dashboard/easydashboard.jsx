@@ -79,15 +79,21 @@ const RoomCard = ({ room, currentStatus, booking, getRoomCategory, navigate, set
 
     const handleCardClick = () => {
         if (isBooked && booking) {
-            // Show detailed guest information
+            // Navigate to room service for occupied rooms
             const roomWithBooking = { ...room, booking };
-            setSelectedRoom(roomWithBooking);
-            setShowGuestDetails(true);
+            localStorage.setItem('selectedRoomService', JSON.stringify(roomWithBooking));
+            navigate('/room-service');
         } else if (isAvailable) {
-            const roomData = { roomNumber: room.room_number, category: getRoomCategory(room), roomId: room._id, rate: room.price || 0 };
+            const roomData = { 
+                roomNumber: room.room_number, 
+                category: getRoomCategory(room), 
+                roomId: room._id, 
+                rate: room.price || 0,
+                categoryId: room.category?._id || room.category
+            };
             localStorage.setItem('selectedRoomForBooking', JSON.stringify(roomData));
             console.log("Room selected for booking:", roomData);
-            // navigate('/bookingform');
+            navigate('/bookingform');
         }
     };
 
