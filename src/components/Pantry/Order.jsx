@@ -1821,15 +1821,37 @@ const Order = () => {
                             </div>
                             
                             <div>
-                              <label className="block text-xs text-gray-500 mb-1">Total</label>
-                              <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm font-medium">
-                                ₹{(item.quantity * item.unitPrice).toFixed(2)}
-                              </div>
+                              <label className="block text-xs text-gray-500 mb-1">Unit</label>
+                              <select
+                                value={item.unit || 'piece'}
+                                onChange={(e) => updateItem(index, 'unit', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                              >
+                                <option value="piece">piece</option>
+                                <option value="bag">bag</option>
+                                <option value="plate">plate</option>
+                                <option value="bowl">bowl</option>
+                                <option value="glass">glass</option>
+                                <option value="cup">cup</option>
+                                <option value="bottle">bottle</option>
+                                <option value="ml">ml</option>
+                                <option value="ltr">ltr</option>
+                                <option value="gram">gram</option>
+                                <option value="kg">kg</option>
+                                <option value="packet">packet</option>
+                                <option value="combo">combo</option>
+                                <option value="slice">slice</option>
+                                <option value="tin">tin</option>
+                                <option value="scoop">scoop</option>
+                                <option value="portion">portion</option>
+                              </select>
                             </div>
                           </div>
                           
-                          <div className="text-xs text-gray-500">
-                            Unit: {item.unit}
+                          <div className="mt-2">
+                            <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm font-medium">
+                              Total: ₹{(item.quantity * item.unitPrice).toFixed(2)}
+                            </div>
                           </div>
 
                         </div>
