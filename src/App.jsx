@@ -86,6 +86,7 @@ import RegisterForm from "./components/auth/RegisterForm.jsx";
 import Kitchen from "./components/Kitchen.jsx";
 import KitchenStore from "./components/KitchenStore.jsx";
 import ChefDashboard from "./components/Resturant/ChefDashboard.jsx";
+
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -358,6 +359,7 @@ const App = () => {
                           </ProtectedRoute>
                         }
                       />
+
 
                       {/* <Route path="/banquet/categorymenu" element={<CategoryMenu />} /> */}
                     </Routes>

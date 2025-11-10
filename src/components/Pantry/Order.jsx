@@ -38,6 +38,7 @@ const Order = () => {
   const [showChalanModal, setShowChalanModal] = useState(false);
   const [chalanOrder, setChalanOrder] = useState(null);
   const [chalanFile, setChalanFile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -639,13 +640,37 @@ const Order = () => {
   };
 
   const filteredOrders = orders.filter(order => {
+    // Status filter
     if (filterStatus && order.status !== filterStatus) return false;
+    
+    // Type filter
     if (filterType && order.orderType !== filterType) return false;
+    
+    // Vendor filter
     if (filterVendor) {
       if (!order.vendorId) return false;
       const orderId = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
       if (orderId !== filterVendor) return false;
     }
+    
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const orderNumber = (order.orderNumber || order._id?.slice(-8) || '').toLowerCase();
+      const vendorName = getVendorName(order.vendorId).toLowerCase();
+      const itemNames = (order.items || []).map(item => {
+        let itemName = item.name || item.itemName || '';
+        if (!itemName && (item.itemId || item.pantryItemId)) {
+          const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+          itemName = pantryItem?.name || '';
+        }
+        return itemName.toLowerCase();
+      }).join(' ');
+      
+      const searchableText = `${orderNumber} ${vendorName} ${itemNames} ${order.orderType || ''} ${order.status || ''}`;
+      if (!searchableText.includes(query)) return false;
+    }
+    
     return true;
   });
 
@@ -815,8 +840,25 @@ const Order = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search orders by ID, vendor, items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            />
+          </div>
+          <button
+            onClick={() => setSearchQuery('')}
+            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+          >
+            Clear
+          </button>
+        </div>
         <div className="flex flex-col sm:flex-row gap-4">
           <select
             value={filterStatus}
@@ -1071,6 +1113,7 @@ const Order = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr. No.</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
@@ -1084,7 +1127,7 @@ const Order = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center">
+                  <td colSpan="9" className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mr-2"></div>
                       Loading orders...
@@ -1093,11 +1136,14 @@ const Order = () => {
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-4 text-center text-gray-500">No orders found</td>
+                  <td colSpan="9" className="px-6 py-4 text-center text-gray-500">No orders found</td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => (
+                filteredOrders.map((order, index) => (
                   <tr key={order._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {index + 1}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
                       {order.orderNumber || order._id?.slice(-8)}
                     </td>
@@ -1277,13 +1323,16 @@ const Order = () => {
             No orders found
           </div>
         ) : (
-          filteredOrders.map((order) => (
+          filteredOrders.map((order, index) => (
             <div key={order._id} className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h3 className="font-semibold text-lg text-gray-900">
-                    #{order.orderNumber || order._id?.slice(-8)}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-gray-500">#{index + 1}</span>
+                    <h3 className="font-semibold text-lg text-gray-900">
+                      {order.orderNumber || order._id?.slice(-8)}
+                    </h3>
+                  </div>
                   <p className="text-sm text-gray-600">
                     {order.orderType === 'Kitchen to Pantry' ? 'Kitchen → Pantry' : 
                      order.orderType === 'Pantry to Kitchen' ? 'Pantry → Kitchen' :
