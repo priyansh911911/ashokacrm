@@ -29,6 +29,8 @@ const LaundryEditForm = ({ order, onSave, onClose }) => {
   
   const [formData, setFormData] = useState({
     _id: order._id || null,
+    orderType: order.orderType || "room_laundry",
+    roomNumber: order.roomNumber || "",
     bookingId: order.bookingId || "",
     items: order.items || [{ rateId: "", quantity: 1, status: "pending" }],
     laundryStatus: order.laundryStatus || "pending",
@@ -96,6 +98,8 @@ const LaundryEditForm = ({ order, onSave, onClose }) => {
           // Update form data with fetched order
           setFormData({
             _id: fetchedOrder._id,
+            orderType: fetchedOrder.orderType || "room_laundry",
+            roomNumber: fetchedOrder.roomNumber || "",
             bookingId: fetchedOrder.bookingId || "",
             items: fetchedOrder.items || [],
             laundryStatus: fetchedOrder.laundryStatus || "pending",
@@ -206,6 +210,11 @@ const LaundryEditForm = ({ order, onSave, onClose }) => {
       return;
     }
 
+    if (formData.orderType === 'room_laundry' && !formData.roomNumber.trim()) {
+      toast.error('Room number is required for room laundry orders');
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -286,6 +295,43 @@ const LaundryEditForm = ({ order, onSave, onClose }) => {
           </div>
         ) : (
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Order Type and Room Number */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 20%)'}}>
+                Order Type
+              </label>
+              <select
+                name="orderType"
+                value={formData.orderType}
+                onChange={handleChange}
+                className="w-full p-3 rounded-lg focus:outline-none focus:ring-2"
+                style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
+                required
+              >
+                <option value="room_laundry">Room Laundry</option>
+                <option value="hotel_laundry">Hotel Laundry</option>
+              </select>
+            </div>
+            {formData.orderType === "room_laundry" && (
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 20%)'}}>
+                  Room Number
+                </label>
+                <input
+                  type="text"
+                  name="roomNumber"
+                  value={formData.roomNumber}
+                  onChange={handleChange}
+                  className="w-full p-3 rounded-lg focus:outline-none focus:ring-2"
+                  style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
+                  placeholder="Enter room number"
+                  required
+                />
+              </div>
+            )}
+          </div>
+
           {/* Order Status */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{color: 'hsl(45, 100%, 20%)'}}>
