@@ -357,9 +357,11 @@ function Item() {
                       name="unit"
                       value={formData.unit}
                       onChange={handleChange}
+                      required
                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="piece">Piece</option>
+                      <option value="bag">Bag</option>
                       <option value="plate">Plate</option>
                       <option value="bowl">Bowl</option>
                       <option value="glass">Glass</option>
@@ -372,6 +374,7 @@ function Item() {
                       <option value="packet">Packet</option>
                       <option value="combo">Combo</option>
                       <option value="slice">Slice</option>
+                      <option value="tin">Tin</option>
                       <option value="scoop">Scoop</option>
                       <option value="portion">Portion</option>
                     </select>
