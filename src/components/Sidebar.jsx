@@ -305,7 +305,10 @@ const Sidebar = () => {
           { label: "Room", path: "/room", icon: BedDouble },
         ];
         if (role === "admin") {
-          children.push({ label: "Category", path: "/category", icon: ChartBarStacked });
+          children.push(
+            { label: "Category", path: "/category", icon: ChartBarStacked },
+            { label: "Inventory", path: "/inventory", icon: Warehouse }
+          );
         }
         return [{
           icon: BedDouble,
@@ -560,8 +563,7 @@ const Sidebar = () => {
       { icon: Users, label: "Customers", path: "/customers" }
     ] : []),
     ...(localStorage.getItem("role") === "admin" ? [
-      { icon: Users, label: "All Users", path: "/users" },
-      { icon: Warehouse, label: "Inventory", path: "/inventory" }
+      { icon: Users, label: "All Users", path: "/users" }
     ] : [])
     // { icon: Users, label: "Payment", path: "/payment" },
     // { icon: FileText, label: "Invoice", path: "/invoice" },
