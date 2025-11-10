@@ -81,6 +81,8 @@ const AttendanceForm = () => {
         const recordDate = new Date(record.date);
         const key = `${selectedStaff}-${recordDate.getDate()}`;
         attendanceMap[key] = {
+          checkin_status: record.checkin_status,
+          checkout_status: record.checkout_status,
           status: record.status,
           leaveType: record.leaveType,
           _id: record._id,
@@ -97,7 +99,7 @@ const AttendanceForm = () => {
     }
   };
 
-  const markAttendance = async (staffId, day, status, leaveType = null) => {
+  const markAttendance = async (staffId, day, checkin_status, leaveType = null) => {
     setLoading(true);
     const date = new Date(Date.UTC(selectedYear, selectedMonth - 1, day));
     
@@ -109,7 +111,7 @@ const AttendanceForm = () => {
       if (existingAttendance) {
         await axios.patch('/api/attendance/update', {
           attendanceId: existingAttendance._id,
-          status,
+          checkin_status,
           leaveType
         }, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -117,23 +119,23 @@ const AttendanceForm = () => {
         
         setAttendanceData(prev => ({
           ...prev,
-          [key]: { ...existingAttendance, status, leaveType }
+          [key]: { ...existingAttendance, checkin_status, leaveType }
         }));
         toast.success('Attendance updated');
       } else {
         const { data } = await axios.post('/api/attendance/mark', {
           staffId,
           date: date.toISOString(),
-          status,
+          checkin_status,
           leaveType,
-          time_in: status === 'Present' ? new Date().toISOString() : null
+          time_in: ['Present', 'Late', 'Half Day'].includes(checkin_status) ? new Date().toISOString() : null
         }, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
         setAttendanceData(prev => ({
           ...prev,
-          [key]: { status, leaveType, _id: data._id }
+          [key]: { checkin_status, leaveType, _id: data._id }
         }));
         toast.success('Attendance marked');
       }
@@ -145,12 +147,12 @@ const AttendanceForm = () => {
     }
   };
 
-  const getStatusColor = (status, leaveType) => {
-    if (status === 'Present') return 'bg-green-100 text-green-800';
-    if (status === 'Absent') return 'bg-red-100 text-red-800';
-    if (status === 'Half Day') return 'bg-yellow-100 text-yellow-800';
-    if (status === 'Late') return 'bg-orange-100 text-orange-800';
-    if (status === 'Leave') {
+  const getStatusColor = (checkin_status, leaveType) => {
+    if (checkin_status === 'Present') return 'bg-green-100 text-green-800';
+    if (checkin_status === 'Absent') return 'bg-red-100 text-red-800';
+    if (checkin_status === 'Half Day') return 'bg-yellow-100 text-yellow-800';
+    if (checkin_status === 'Late') return 'bg-orange-100 text-orange-800';
+    if (checkin_status === 'Leave') {
       if (leaveType === 'casual') return 'bg-blue-100 text-blue-800';
       if (leaveType === 'sick') return 'bg-orange-100 text-orange-800';
       if (leaveType === 'paid') return 'bg-purple-100 text-purple-800';
@@ -160,12 +162,12 @@ const AttendanceForm = () => {
     return 'bg-gray-50 text-gray-500';
   };
 
-  const getStatusText = (status, leaveType) => {
-    if (status === 'Present') return 'P';
-    if (status === 'Absent') return 'A';
-    if (status === 'Half Day') return 'H';
-    if (status === 'Late') return 'L';
-    if (status === 'Leave') return leaveType ? leaveType.charAt(0).toUpperCase() : 'L';
+  const getStatusText = (checkin_status, leaveType) => {
+    if (checkin_status === 'Present') return 'P';
+    if (checkin_status === 'Absent') return 'A';
+    if (checkin_status === 'Half Day') return 'H';
+    if (checkin_status === 'Late') return 'L';
+    if (checkin_status === 'Leave') return leaveType ? leaveType.charAt(0).toUpperCase() : 'L';
     return '-';
   };
 
@@ -319,14 +321,14 @@ const AttendanceForm = () => {
                         <td key={day} className="px-1 sm:px-3 py-2 sm:py-3 border text-center">
                           <div
                             className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center cursor-pointer mx-auto border-2 ${
-                              getStatusColor(attendance?.status, attendance?.leaveType)
+                              getStatusColor(attendance?.checkin_status, attendance?.leaveType)
                             }`}
-                            title={attendance ? `${attendance.status}${attendance.leaveType ? ` (${attendance.leaveType})` : ''}` : 'Click to mark attendance'}
+                            title={attendance ? `${attendance.checkin_status}${attendance.leaveType ? ` (${attendance.leaveType})` : ''}` : 'Click to mark attendance'}
                             onClick={() => {
                               setOpenDropdown({ staffId: selectedStaff, day: day });
                             }}
                           >
-                            {getStatusText(attendance?.status, attendance?.leaveType)}
+                            {getStatusText(attendance?.checkin_status, attendance?.leaveType)}
                           </div>
                         </td>
                       );
@@ -343,103 +345,140 @@ const AttendanceForm = () => {
         )}
 
         {/* Attendance Marking Modal */}
-        {openDropdown && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-sm w-full">
-              <h3 className="text-base sm:text-lg font-semibold mb-4 text-center">
-                Mark Attendance - Day {openDropdown.day}
-              </h3>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <button
-                  onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'Present');
-                    setOpenDropdown(null);
-                  }}
-                  className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors text-xs sm:text-sm"
-                  disabled={loading}
-                >
-                  ✅ Present
-                </button>
-                <button
-                  onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'Absent');
-                    setOpenDropdown(null);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors"
-                  disabled={loading}
-                >
-                  ❌ Absent
-                </button>
-                <button
-                  onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'Half Day');
-                    setOpenDropdown(null);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors"
-                  disabled={loading}
-                >
-                  ⏰ Half Day
-                </button>
-                <button
-                  onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'Late');
-                    setOpenDropdown(null);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition-colors"
-                  disabled={loading}
-                >
-                  ⏰ Late
-                </button>
-                <button
-                  onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'casual');
-                    setOpenDropdown(null);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors"
-                  disabled={loading}
-                >
-                  🏖️ Casual
-                </button>
-                <button
-                  onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'sick');
-                    setOpenDropdown(null);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition-colors"
-                  disabled={loading}
-                >
-                  🤒 Sick
-                </button>
-                <button
-                  onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'paid');
-                    setOpenDropdown(null);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200 transition-colors"
-                  disabled={loading}
-                >
-                  💰 Paid
-                </button>
-                <button
-                  onClick={() => {
-                    markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'unpaid');
-                    setOpenDropdown(null);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
-                  disabled={loading}
-                >
-                  🚫 Unpaid
-                </button>
+        {openDropdown && (() => {
+          const key = `${openDropdown.staffId}-${openDropdown.day}`;
+          const currentAttendance = attendanceData[key];
+          const formatTime = (dateString) => {
+            if (!dateString) return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            return new Date(dateString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          };
+          
+          // If attendance is already marked, show relevant status buttons
+          if (currentAttendance) {
+            const buttons = [];
+            
+            // Check-in status button
+            if (currentAttendance.time_in && ['Present', 'Late', 'Half Day'].includes(currentAttendance.checkin_status)) {
+              const statusConfig = {
+                'Present': { icon: '✅', color: 'bg-green-100 text-green-800' },
+                'Late': { icon: '⏰', color: 'bg-orange-100 text-orange-800' },
+                'Half Day': { icon: '⏰', color: 'bg-yellow-100 text-yellow-800' }
+              };
+              const config = statusConfig[currentAttendance.checkin_status];
+              buttons.push(
+                <div key="checkin" className={`flex flex-col items-center justify-center gap-1 px-4 py-3 ${config.color} rounded-lg text-sm`}>
+                  <span>{config.icon} {currentAttendance.checkin_status}</span>
+                  <span className="text-xs opacity-75">{formatTime(currentAttendance.time_in)}</span>
+                </div>
+              );
+            }
+            
+            // Check-out status button
+            if (currentAttendance.time_out) {
+              const checkoutStatus = currentAttendance.checkout_status || 'Present';
+              const checkoutConfig = {
+                'Present': { icon: '✅', color: 'bg-green-100 text-green-800' },
+                'Late': { icon: '⏰', color: 'bg-orange-100 text-orange-800' },
+                'Half Day': { icon: '⏰', color: 'bg-yellow-100 text-yellow-800' },
+                'Early': { icon: '⏰', color: 'bg-red-100 text-red-800' }
+              };
+              const config = checkoutConfig[checkoutStatus] || { icon: '✓', color: 'bg-blue-100 text-blue-800' };
+              buttons.push(
+                <div key="checkout" className={`flex flex-col items-center justify-center gap-1 px-4 py-3 ${config.color} rounded-lg text-sm`}>
+                  <span>{config.icon} {checkoutStatus}</span>
+                  <span className="text-xs opacity-75">{formatTime(currentAttendance.time_out)}</span>
+                </div>
+              );
+            }
+            
+            // For leave/absent status
+            if (currentAttendance.checkin_status === 'Absent') {
+              buttons.push(
+                <div key="absent" className="flex flex-col items-center justify-center gap-1 px-4 py-3 bg-red-100 text-red-800 rounded-lg text-sm">
+                  <span>❌ Absent</span>
+                  <span className="text-xs opacity-75">{formatTime()}</span>
+                </div>
+              );
+            } else if (currentAttendance.checkin_status === 'Leave') {
+              const leaveConfig = {
+                casual: { icon: '🏖️', text: 'Casual', color: 'bg-blue-100 text-blue-800' },
+                sick: { icon: '🤒', text: 'Sick', color: 'bg-orange-100 text-orange-800' },
+                paid: { icon: '💰', text: 'Paid', color: 'bg-purple-100 text-purple-800' },
+                unpaid: { icon: '🚫', text: 'Unpaid', color: 'bg-gray-100 text-gray-800' }
+              };
+              const leave = leaveConfig[currentAttendance.leaveType];
+              if (leave) {
+                buttons.push(
+                  <div key="leave" className={`flex flex-col items-center justify-center gap-1 px-4 py-3 ${leave.color} rounded-lg text-sm`}>
+                    <span>{leave.icon} {leave.text}</span>
+                    <span className="text-xs opacity-75">{formatTime()}</span>
+                  </div>
+                );
+              }
+            }
+            
+            const buttonContent = (
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-wrap justify-center gap-3">
+                  {buttons}
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  {currentAttendance.status && (
+                    <div className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium">
+                      Overall Status: {currentAttendance.status}
+                    </div>
+                  )}
+                  {currentAttendance.total_hours && (
+                    <div className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
+                      Total Hours: {currentAttendance.total_hours.toFixed(2)} hrs
+                    </div>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={() => setOpenDropdown(null)}
-                className="w-full mt-3 sm:mt-4 px-3 sm:px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm"
-              >
-                Cancel
-              </button>
+            );
+            
+            return (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-sm w-full">
+                  <h3 className="text-base sm:text-lg font-semibold mb-4 text-center">
+                    Mark Attendance - Day {openDropdown.day}
+                  </h3>
+                  <div className="flex justify-center">
+                    {buttonContent}
+                  </div>
+                  <button
+                    onClick={() => setOpenDropdown(null)}
+                    className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          
+          // If no attendance is marked, show all buttons
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-sm w-full">
+                <h3 className="text-base sm:text-lg font-semibold mb-4 text-center">
+                  Mark Attendance - Day {openDropdown.day}
+                </h3>
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <button onClick={() => { markAttendance(openDropdown.staffId, openDropdown.day, 'Present'); setOpenDropdown(null); }} className="flex items-center justify-center gap-2 px-4 py-3 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors" disabled={loading}>✅ Present</button>
+                  <button onClick={() => { markAttendance(openDropdown.staffId, openDropdown.day, 'Absent'); setOpenDropdown(null); }} className="flex items-center justify-center gap-2 px-4 py-3 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors" disabled={loading}>❌ Absent</button>
+                  <button onClick={() => { markAttendance(openDropdown.staffId, openDropdown.day, 'Half Day'); setOpenDropdown(null); }} className="flex items-center justify-center gap-2 px-4 py-3 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors" disabled={loading}>⏰ Half Day</button>
+                  <button onClick={() => { markAttendance(openDropdown.staffId, openDropdown.day, 'Late'); setOpenDropdown(null); }} className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition-colors" disabled={loading}>⏰ Late</button>
+                  <button onClick={() => { markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'casual'); setOpenDropdown(null); }} className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors" disabled={loading}>🏖️ Casual</button>
+                  <button onClick={() => { markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'sick'); setOpenDropdown(null); }} className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition-colors" disabled={loading}>🤒 Sick</button>
+                  <button onClick={() => { markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'paid'); setOpenDropdown(null); }} className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200 transition-colors" disabled={loading}>💰 Paid</button>
+                  <button onClick={() => { markAttendance(openDropdown.staffId, openDropdown.day, 'Leave', 'unpaid'); setOpenDropdown(null); }} className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors" disabled={loading}>🚫 Unpaid</button>
+                </div>
+                <button onClick={() => setOpenDropdown(null)} className="w-full mt-3 sm:mt-4 px-3 sm:px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm">Cancel</button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Legend */}
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mt-4 sm:mt-6">
