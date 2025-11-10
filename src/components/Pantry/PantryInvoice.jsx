@@ -2,7 +2,7 @@ import React from 'react';
 import jsPDF from 'jspdf';
 import logoImg from '../../assets/logo.png';
 
-const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
+const PantryInvoice = ({ invoiceData, onClose, vendors, pantryItems = [] }) => {
   const downloadPDF = () => {
     const printContent = document.getElementById('invoice-content');
     const originalContent = document.body.innerHTML;
@@ -79,7 +79,7 @@ const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
     
     let yPos = 110;
     const tableWidth = 170;
-    const colWidths = [15, 65, 15, 15, 20, 15, 25];
+    const colWidths = [15, 80, 15, 15, 20, 15, 25];
     
     const colPositions = [20];
     for (let i = 0; i < colWidths.length - 1; i++) {
@@ -104,7 +104,7 @@ const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
     doc.text('Item Name', colPositions[1] + colWidths[1]/2, yPos + 5, { align: 'center' });
     doc.text('Qty', colPositions[2] + colWidths[2]/2, yPos + 5, { align: 'center' });
     doc.text('UOM', colPositions[3] + colWidths[3]/2, yPos + 5, { align: 'center' });
-    doc.text('Selling', colPositions[4] + colWidths[4]/2, yPos + 5, { align: 'center' });
+    doc.text('Purchase', colPositions[4] + colWidths[4]/2, yPos + 5, { align: 'center' });
     doc.text('Disc%', colPositions[5] + colWidths[5]/2, yPos + 5, { align: 'center' });
     doc.text('Total', colPositions[6] + colWidths[6]/2, yPos + 5, { align: 'center' });
     
@@ -117,14 +117,24 @@ const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
     order.items?.forEach((item, index) => {
       doc.line(20, yPos + 6, 20 + tableWidth, yPos + 6);
       
-      const itemName = (item.name || 'Item').length > 30 ? 
-        (item.name || 'Item').substring(0, 27) + '...' : 
-        (item.name || 'Item');
+      // Get item name and unit from multiple sources
+      let itemName = item.name || item.itemName;
+      let itemUnit = item.unit;
+      if (!itemName && (item.itemId || item.pantryItemId)) {
+        const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+        itemName = pantryItem?.name;
+        if (!itemUnit) itemUnit = pantryItem?.unit;
+      }
+      itemName = itemName || 'Unknown Item';
+      
+      const displayName = itemName.length > 30 ? 
+        itemName.substring(0, 27) + '...' : 
+        itemName;
       
       doc.text((index + 1).toString(), colPositions[0] + colWidths[0]/2, yPos + 4, { align: 'center' });
-      doc.text(itemName, colPositions[1] + 2, yPos + 4);
+      doc.text(displayName, colPositions[1] + 2, yPos + 4);
       doc.text((Number(item.quantity) || 0).toFixed(1), colPositions[2] + colWidths[2]/2, yPos + 4, { align: 'center' });
-      doc.text(item.unit || 'UNIT', colPositions[3] + colWidths[3]/2, yPos + 4, { align: 'center' });
+      doc.text(itemUnit || 'UNIT', colPositions[3] + colWidths[3]/2, yPos + 4, { align: 'center' });
       doc.text((item.unitPrice || 0).toFixed(0), colPositions[4] + colWidths[4]/2, yPos + 4, { align: 'center' });
       doc.text('0.00', colPositions[5] + colWidths[5]/2, yPos + 4, { align: 'center' });
       doc.text(((Number(item.quantity) || 0) * (item.unitPrice || 0)).toFixed(0), colPositions[6] + colWidths[6]/2, yPos + 4, { align: 'center' });
@@ -243,35 +253,43 @@ const PantryInvoice = ({ invoiceData, onClose, vendors }) => {
               <thead>
                 <tr className="bg-gray-50">
                   <th className="border border-black p-2 w-12">S.No</th>
-                  <th className="border border-black p-2 w-16">Code</th>
                   <th className="border border-black p-2">Item Name</th>
                   <th className="border border-black p-2 w-16">Qty</th>
                   <th className="border border-black p-2 w-16">UOM</th>
-                  <th className="border border-black p-2 w-20">Selling</th>
+                  <th className="border border-black p-2 w-20">Purchase</th>
                   <th className="border border-black p-2 w-16">Disc%</th>
                   <th className="border border-black p-2 w-20">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {invoiceData.order?.items?.length > 0 ? invoiceData.order.items.map((item, index) => (
+                {invoiceData.order?.items?.length > 0 ? invoiceData.order.items.map((item, index) => {
+                  // Get item name and unit from multiple sources
+                  let itemName = item.name || item.itemName;
+                  let itemUnit = item.unit;
+                  if (!itemName && (item.itemId || item.pantryItemId)) {
+                    const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                    itemName = pantryItem?.name;
+                    if (!itemUnit) itemUnit = pantryItem?.unit;
+                  }
+                  
+                  return (
                   <tr key={index}>
                     <td className="border border-black p-2 text-center">{index + 1}</td>
-                    <td className="border border-black p-2 text-center">{item.itemId || (194 + index)}</td>
-                    <td className="border border-black p-2 pl-3">{item.name || 'Item'}</td>
+                    <td className="border border-black p-2 pl-3">{itemName || 'Unknown Item'}</td>
                     <td className="border border-black p-2 text-center">{(Number(item.quantity) || 0).toFixed(2)}</td>
-                    <td className="border border-black p-2 text-center">{item.unit || 'UNIT'}</td>
+                    <td className="border border-black p-2 text-center">{itemUnit || 'UNIT'}</td>
                     <td className="border border-black p-2 text-center">{(item.unitPrice || 0).toFixed(2)}</td>
                     <td className="border border-black p-2 text-center">0.00</td>
                     <td className="border border-black p-2 text-center">{((Number(item.quantity) || 0) * (item.unitPrice || 0)).toFixed(2)}</td>
                   </tr>
-                )) : (
+                  );
+                }) : (
                   <tr>
-                    <td colSpan="8" className="border border-black p-4 text-center text-gray-500">No items found</td>
+                    <td colSpan="7" className="border border-black p-4 text-center text-gray-500">No items found</td>
                   </tr>
                 )}
                 {Array.from({ length: Math.max(0, 10 - (invoiceData.order?.items?.length || 0)) }).map((_, index) => (
                   <tr key={`empty-${index}`}>
-                    <td className="border border-black p-2">&nbsp;</td>
                     <td className="border border-black p-2">&nbsp;</td>
                     <td className="border border-black p-2">&nbsp;</td>
                     <td className="border border-black p-2">&nbsp;</td>

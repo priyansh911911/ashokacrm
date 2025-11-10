@@ -133,27 +133,43 @@ const StaffForm = ({
                 )}
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-1">Role *</label>
-                <select
-                  value={currentStaff.role || ''}
-                  onChange={(e) =>
-                    setCurrentStaff({
-                      ...currentStaff,
-                      role: e.target.value,
-                      department: e.target.value === "admin" ? [] : currentStaff.department,
-                    })
-                  }
-                  className={`w-full px-3 py-2 border rounded-md text-sm ${
-                    !currentStaff.role ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
-                  }`}
-                  required
-                >
-                  <option value="">Select Role</option>
-                  <option value="staff">Staff</option>
-                  <option value="admin">Admin</option>
-                  <option value="restaurant">Restaurant</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Role *</label>
+                  <select
+                    value={currentStaff.role || ''}
+                    onChange={(e) =>
+                      setCurrentStaff({
+                        ...currentStaff,
+                        role: e.target.value,
+                        department: e.target.value === "admin" ? [] : currentStaff.department,
+                      })
+                    }
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      !currentStaff.role ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                    }`}
+                    required
+                  >
+                    <option value="">Select Role</option>
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                    <option value="restaurant">Restaurant</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date of Joining *</label>
+                  <input
+                    type="date"
+                    value={currentStaff.dateOfJoining || ''}
+                    onChange={(e) =>
+                      setCurrentStaff({ ...currentStaff, dateOfJoining: e.target.value })
+                    }
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      !currentStaff.dateOfJoining ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                    }`}
+                    required
+                  />
+                </div>
               </div>
               
               {currentStaff.role === "staff" && (
@@ -244,7 +260,7 @@ const StaffForm = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Phone Number (Optional)</label>
+                  <label className="block text-sm font-medium mb-1">Phone Number *</label>
                   <input
                     type="tel"
                     value={currentStaff.phoneNumber || ''}
@@ -252,9 +268,12 @@ const StaffForm = ({
                       const value = e.target.value.replace(/[^0-9+\-\s]/g, '');
                       setCurrentStaff({ ...currentStaff, phoneNumber: value });
                     }}
-                    className="w-full px-3 py-2 border rounded-md text-sm"
-                    placeholder="Enter phone number (optional)"
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      !currentStaff.phoneNumber ? 'border-red-300 focus:border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Enter phone number"
                     maxLength="15"
+                    required
                   />
                 </div>
               </div>
