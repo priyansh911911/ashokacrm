@@ -387,13 +387,18 @@ const Order = () => {
 
   const updatePaymentStatus = async (orderId, paymentData) => {
     try {
+      console.log(`🔍 Fetching current order ${orderId}...`);
+      
       // Get the current order first
       const orderResponse = await axios.get(`/api/pantry/orders`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const currentOrder = orderResponse.data.orders.find(o => o._id === orderId);
       
+      console.log('📄 Current order before update:', { id: currentOrder?._id, paymentStatus: currentOrder?.paymentStatus, amount: currentOrder?.totalAmount });
+      
       if (!currentOrder) {
+        console.error('❌ Order not found:', orderId);
         showToast.error('Order not found');
         return;
       }
@@ -410,15 +415,22 @@ const Order = () => {
           notes: paymentData.notes || ''
         }
       };
+      
+      console.log('📝 Sending updated order to backend:', { id: updatedOrder._id, paymentStatus: updatedOrder.paymentStatus, paymentMethod: updatedOrder.paymentDetails.paymentMethod });
 
-      await axios.put(`/api/pantry/orders/${orderId}`, updatedOrder, {
+      const response = await axios.put(`/api/pantry/orders/${orderId}`, updatedOrder, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      showToast.success('Payment status updated successfully');
-      fetchOrders();
+      
+      console.log('✅ Backend response:', response.data);
+      
+      // Refresh orders after payment update
+      console.log('🔄 Refreshing orders...');
+      await fetchOrders();
+      console.log('✅ Orders refreshed');
     } catch (error) {
-      console.error('Payment status update error:', error);
-      showToast.error('Failed to update payment status');
+      console.error('❌ Payment status update error:', error.response?.data || error.message);
+      throw error;
     }
   };
 
@@ -767,19 +779,32 @@ const Order = () => {
                 {vendors.find(v => v._id === filterVendor)?.UpiID ? (
                   <span className="ml-2">
                     <span className="text-blue-600">{vendors.find(v => v._id === filterVendor)?.UpiID}</span>
-                    <button
-                      onClick={() => {
-                        const vendor = vendors.find(v => v._id === filterVendor);
-                        setPaymentVendor({
-                          ...vendor,
-                          totalAmount: 6000.00
-                        });
-                        setShowPaymentModal(true);
-                      }}
-                      className="ml-3 px-3 py-1 bg-orange-500 text-white text-xs rounded-md hover:bg-orange-600 transition-colors"
-                    >
-                      Pay Now
-                    </button>
+                    {(() => {
+                      const unpaidOrders = orders.filter(order => {
+                        if (!order.vendorId) return false;
+                        const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                        return id === filterVendor && order.paymentStatus !== 'paid';
+                      });
+                      return unpaidOrders.length > 0 ? (
+                        <button
+                          onClick={() => {
+                            const vendor = vendors.find(v => v._id === filterVendor);
+                            setPaymentVendor({
+                              ...vendor,
+                              totalAmount: unpaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
+                            });
+                            setShowPaymentModal(true);
+                          }}
+                          className="ml-3 px-3 py-1 bg-orange-500 text-white text-xs rounded-md hover:bg-orange-600 transition-colors"
+                        >
+                          Pay Now (₹{unpaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0).toFixed(2)})
+                        </button>
+                      ) : (
+                        <span className="ml-3 px-3 py-1 bg-green-100 text-green-700 text-xs rounded-md">
+                          All Paid ✓
+                        </span>
+                      );
+                    })()}
                   </span>
                 ) : 'Not provided'}
               </div>
@@ -797,12 +822,19 @@ const Order = () => {
                   alt="Payment QR Code" 
                   className="w-24 h-24 object-cover rounded border cursor-pointer hover:scale-105 transition-transform shadow-md"
                   onClick={() => {
-                    const vendor = vendors.find(v => v._id === filterVendor);
-                    setPaymentVendor({
-                      ...vendor,
-                      totalAmount: vendorAnalytics?.total?.amount || 0
+                    const unpaidOrders = orders.filter(order => {
+                      if (!order.vendorId) return false;
+                      const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                      return id === filterVendor && order.paymentStatus !== 'paid';
                     });
-                    setShowPaymentModal(true);
+                    if (unpaidOrders.length > 0) {
+                      const vendor = vendors.find(v => v._id === filterVendor);
+                      setPaymentVendor({
+                        ...vendor,
+                        totalAmount: unpaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
+                      });
+                      setShowPaymentModal(true);
+                    }
                   }}
                 />
               </div>
@@ -1115,7 +1147,7 @@ const Order = () => {
                             >
                               Chalan
                             </button>
-                            {order.orderType === 'Pantry to vendor' && (() => {
+                            {order.orderType === 'Pantry to vendor' && order.paymentStatus !== 'paid' && (() => {
                               const vendor = vendors.find(v => v._id === (typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId));
                               return vendor?.UpiID ? (
                                 <button
@@ -1295,7 +1327,7 @@ const Order = () => {
                     >
                       Chalan
                     </button>
-                    {order.orderType === 'Pantry to vendor' && (() => {
+                    {order.orderType === 'Pantry to vendor' && order.paymentStatus !== 'paid' && (() => {
                       const vendorId = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
                       const vendor = vendors.find(v => v._id === vendorId);
                       return vendor?.UpiID ? (
@@ -1380,7 +1412,55 @@ const Order = () => {
                   }}
                   className="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 transition-colors font-semibold shadow-md"
                 >
-                  Pay Now
+                  Pay via UPI
+                </button>
+                
+                <button
+                  onClick={async () => {
+                    if (window.confirm(`Mark payment as completed via Cash?\n\nVendor: ${paymentVendor.name}\nAmount: ₹${paymentVendor.totalAmount.toFixed(2)}`)) {
+                      try {
+                        console.log('🔄 Starting cash payment process...');
+                        console.log('Payment Vendor:', paymentVendor);
+                        
+                        // Find orders for this vendor and mark them as paid
+                        const vendorId = filterVendor || paymentVendor._id;
+                        console.log('🎯 Using vendor ID:', vendorId, 'filterVendor:', filterVendor);
+                        
+                        const vendorOrders = orders.filter(order => {
+                          if (!order.vendorId) return false;
+                          const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
+                          const matches = id === vendorId && order.paymentStatus !== 'paid';
+                          console.log('🔍 Order check:', { orderId: order._id, orderVendorId: id, targetVendorId: vendorId, paymentStatus: order.paymentStatus, matches });
+                          return matches;
+                        });
+                        
+                        console.log(`📋 Found ${vendorOrders.length} unpaid orders for vendor:`, vendorOrders.map(o => ({ id: o._id, status: o.paymentStatus, amount: o.totalAmount })));
+                        
+                        // Update payment status for all unpaid orders
+                        for (const order of vendorOrders) {
+                          console.log(`💰 Updating payment for order ${order._id}...`);
+                          await updatePaymentStatus(order._id, {
+                            paymentStatus: 'paid',
+                            paidAmount: order.totalAmount || 0,
+                            paymentMethod: 'Cash',
+                            notes: 'Payment completed via cash'
+                          });
+                          console.log(`✅ Payment updated for order ${order._id}`);
+                        }
+                        
+                        console.log('🎉 All payments updated successfully');
+                        showToast.success('Payment marked as completed via Cash');
+                        setShowPaymentModal(false);
+                        setPaymentVendor(null);
+                      } catch (error) {
+                        console.error('❌ Cash payment failed:', error);
+                        showToast.error('Failed to update payment status');
+                      }
+                    }
+                  }}
+                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-md"
+                >
+                  Pay via Cash
                 </button>
                 
                 <button
@@ -1810,6 +1890,7 @@ const Order = () => {
           invoiceData={invoiceData}
           onClose={() => setShowInvoice(false)}
           vendors={vendors}
+          pantryItems={pantryItems}
         />
       )}
 
