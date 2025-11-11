@@ -220,11 +220,31 @@ const Order = () => {
     
     try {
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        showToast.error('Authentication token missing. Please login again.');
+        return;
+      }
+      
       const orderItems = cartItems.map(item => ({
         itemId: item._id,
         quantity: item.quantity,
         note: item.note || ''
       }));
+      
+      // Validate cart items
+      const invalidItems = cartItems.filter(item => 
+        !item._id || 
+        !item.quantity || 
+        item.quantity <= 0 || 
+        isNaN(item.Price || item.price)
+      );
+      
+      if (invalidItems.length > 0) {
+        console.error('Invalid items found:', invalidItems);
+        showToast.error('Some items have invalid data. Please refresh and try again.');
+        return;
+      }
       
       const finalOrderData = {
         staffName: orderData.staffName,
@@ -253,9 +273,21 @@ const Order = () => {
       };
       
       console.log('Sending order data:', finalOrderData);
+      console.log('Token exists:', !!token);
+      console.log('Items validation:', finalOrderData.items.map(item => ({
+        itemId: item.itemId,
+        quantity: item.quantity,
+        price: item.price,
+        hasValidId: !!item.itemId,
+        hasValidQuantity: typeof item.quantity === 'number' && item.quantity > 0,
+        hasValidPrice: typeof item.price === 'number' && item.price >= 0
+      })));
       
       const orderResponse = await axios.post('/api/restaurant-orders/create', finalOrderData, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       
       // WebSocket notification is handled by backend
@@ -269,8 +301,12 @@ const Order = () => {
       setIsCartOpen(false);
       
     } catch (error) {
+      console.error('=== ORDER PLACEMENT ERROR ===');
       console.error('Error placing order:', error);
       console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error headers:', error.response?.headers);
+      console.error('Request data that failed:', finalOrderData);
       
       // Check if it's a status validation error and try without status field
       if (error.response?.data?.error?.includes('status') && error.response?.data?.error?.includes('enum')) {

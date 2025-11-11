@@ -215,8 +215,8 @@ const ChefDashboard = () => {
                 {order.tableNo || 'T'}
               </div>
               <div className="flex-1">
-                <div className="text-xs text-gray-500">Table Number</div>
-                <div className="text-sm font-medium truncate">Table {order.tableNo || 'N/A'}</div>
+                <div className="text-xs text-gray-500">Table/Room</div>
+                <div className="text-sm font-medium truncate">{order.tableNo || 'N/A'}</div>
               </div>
             </div>
 

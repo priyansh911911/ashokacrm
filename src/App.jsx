@@ -87,6 +87,9 @@ import Kitchen from "./components/Kitchen.jsx";
 import KitchenStore from "./components/KitchenStore.jsx";
 import ChefDashboard from "./components/Resturant/ChefDashboard.jsx";
 import RoomService from "./components/room/RoomService.jsx";
+import RoomServiceBilling from "./components/room/RoomServiceBilling.jsx";
+import SaleBill from "./components/room/SaleBill.jsx";
+import BillLookup from "./components/room/BillLookup.jsx";
 // import CategoryMenu from"./components/Banquet/Students/CategoryMenu.jsx"
 const BookingFormPage = () => {
   const navigate = useNavigate();
@@ -327,6 +330,9 @@ const App = () => {
                       <Route path="/resturant/dashboard" element={<RestaurantDashboard />} />
                       <Route path="/easy-dashboard" element={<EasyDashboard />} />
                       <Route path="/room-service" element={<RoomService />} />
+                      <Route path="/room-service-billing" element={<RoomServiceBilling />} />
+                      <Route path="/sale-bill" element={<SaleBill />} />
+                      <Route path="/bill-lookup" element={<BillLookup />} />
                       <Route 
                         path="/cash-management" 
                         element={
