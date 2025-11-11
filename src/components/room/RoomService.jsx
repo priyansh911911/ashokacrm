@@ -6,43 +6,11 @@ const RoomService = () => {
   const navigate = useNavigate();
   const [roomData, setRoomData] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
-  const [newItem, setNewItem] = useState({
-    itemName: '',
-    quantity: 1,
-    unitPrice: 0,
-    category: '',
-    specialInstructions: ''
-  });
+  const [availableItems, setAvailableItems] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('Restaurant');
   const [showOrderForm, setShowOrderForm] = useState(false);
 
-  const hardcodedItems = [
-    // Restaurant/Food Services
-    { name: 'Tea', price: 25, category: 'Restaurant' },
-    { name: 'Coffee', price: 30, category: 'Restaurant' },
-    { name: 'Sandwich', price: 80, category: 'Restaurant' },
-    { name: 'Biryani', price: 180, category: 'Restaurant' },
-    { name: 'Dal Rice', price: 100, category: 'Restaurant' },
-    { name: 'Mineral Water', price: 20, category: 'Restaurant' },
-    // Laundry Services
-    { name: 'Shirt Washing', price: 50, category: 'Laundry' },
-    { name: 'Trouser Washing', price: 60, category: 'Laundry' },
-    { name: 'Dry Cleaning', price: 150, category: 'Laundry' },
-    { name: 'Bed Sheet Washing', price: 80, category: 'Laundry' },
-    // Cab/Transport Services
-    { name: 'Local Cab Booking', price: 200, category: 'Transport' },
-    { name: 'Airport Transfer', price: 500, category: 'Transport' },
-    { name: 'Outstation Cab', price: 1000, category: 'Transport' },
-    // Housekeeping/Staff Services
-    { name: 'Room Cleaning', price: 100, category: 'Housekeeping' },
-    { name: 'Extra Towels', price: 30, category: 'Housekeeping' },
-    { name: 'Maintenance Request', price: 0, category: 'Housekeeping' },
-    // Pantry Services
-    { name: 'Pantry Snacks', price: 40, category: 'Pantry' },
-    { name: 'Pantry Beverages', price: 25, category: 'Pantry' },
-    // General Services
-    { name: 'Wake-up Call', price: 0, category: 'General' },
-    { name: 'Extra Amenities', price: 50, category: 'General' }
-  ];
+
 
   useEffect(() => {
     const storedRoomData = localStorage.getItem('selectedRoomService');
@@ -52,14 +20,71 @@ const RoomService = () => {
     } else {
       navigate('/easy-dashboard');
     }
+    fetchItems();
   }, [navigate]);
 
-  const addItem = () => {
-    if (newItem.itemName && newItem.unitPrice > 0) {
-      const totalPrice = newItem.quantity * newItem.unitPrice;
-      setOrderItems([...orderItems, { ...newItem, totalPrice }]);
-      setNewItem({ itemName: '', quantity: 1, unitPrice: 0, category: '', specialInstructions: '' });
+  const fetchItems = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Fetch restaurant items
+      let restaurantItems = [];
+      try {
+        const res = await fetch('https://ashoka-backend.vercel.app/api/items/all', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          restaurantItems = await res.json();
+        }
+      } catch (err) {
+        console.log('Restaurant API failed:', err);
+      }
+      
+      // Fetch laundry items
+      let laundryItems = [];
+      try {
+        const laundryRes = await fetch('https://ashoka-backend.vercel.app/api/laundry-rates/all', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (laundryRes.ok) {
+          laundryItems = await laundryRes.json();
+        }
+      } catch (err) {
+        console.log('Laundry API failed:', err);
+      }
+      
+      const formattedItems = [
+        ...(Array.isArray(restaurantItems) ? restaurantItems : []).map(item => ({
+          ...item,
+          category: 'Restaurant',
+          name: item.name,
+          price: item.Price || item.price || 0
+        })),
+        ...(Array.isArray(laundryItems) ? laundryItems : []).map(item => ({
+          ...item,
+          category: 'Laundry',
+          name: item.itemName,
+          price: item.rate || 0
+        }))
+      ];
+      
+      setAvailableItems(formattedItems);
+    } catch (error) {
+      console.error('Error fetching items:', error);
     }
+  };
+
+  const addItemToOrder = (item, quantity = 1) => {
+    const totalPrice = quantity * item.price;
+    setOrderItems([...orderItems, {
+      itemName: item.name,
+      quantity,
+      unitPrice: item.price,
+      totalPrice,
+      category: item.category,
+      specialInstructions: '',
+      itemId: item._id
+    }]);
   };
 
   const removeItem = (index) => {
@@ -81,83 +106,69 @@ const RoomService = () => {
     }
     
     try {
-      const { subtotal, tax, serviceCharge, totalAmount } = calculateTotals();
-      const orderData = {
-        roomNumber: roomData.room_number,
-        guestName: roomData.booking?.name,
-        grcNo: roomData.booking?.grcNo,
-        bookingId: roomData.booking?._id,
-        items: orderItems,
-        subtotal,
-        tax,
-        serviceCharge,
-        totalAmount
-      };
+      const token = localStorage.getItem('token');
+      const restaurantItems = orderItems.filter(item => item.category === 'Restaurant');
       
-      const response = await fetch('https://ashoka-backend.vercel.app/api/room-service/order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(orderData)
-      });
-      
-      if (response.ok) {
-        const order = await response.json();
-        await fetch(`https://ashoka-backend.vercel.app/api/room-service/order/${order._id}/kot`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        alert('KOT generated successfully!');
-        setOrderItems([]);
-        setShowOrderForm(false);
-      }
-    } catch (error) {
-      console.error('Error creating KOT:', error);
-    }
-  };
-
-  const handleSaleBill = async () => {
-    try {
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/room-service/orders?roomNumber=${roomData.room_number}&kotGenerated=true`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const orders = await response.json();
-        localStorage.setItem('roomServiceOrders', JSON.stringify(orders));
-        navigate('/billing');
-      }
-    } catch (error) {
-      console.error('Error fetching orders for bill:', error);
-    }
-  };
-
-  const handleBillLookup = async () => {
-    try {
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/room-service/orders?roomNumber=${roomData.room_number}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const orders = await response.json();
-        localStorage.setItem('billLookupData', JSON.stringify({
+      // Create restaurant order for restaurant items (goes to chef dashboard)
+      if (restaurantItems.length > 0) {
+        const restaurantOrderData = {
+          staffName: 'Room Service',
+          phoneNumber: roomData.booking?.mobileNo || '',
+          tableNo: `R${roomData.room_number.toString().replace(/\D/g, '').padStart(3, '0')}`,
+          items: restaurantItems.map(item => ({
+            itemId: item.itemId,
+            quantity: item.quantity,
+            price: item.unitPrice
+          })),
+          notes: `Room Service - ${roomData.booking?.name || 'Guest'}`,
+          amount: restaurantItems.reduce((sum, item) => sum + item.totalPrice, 0),
+          discount: 0,
+          isMembership: false,
+          isLoyalty: false,
+          bookingId: roomData.booking?._id,
+          grcNo: roomData.booking?.grcNo,
           roomNumber: roomData.room_number,
           guestName: roomData.booking?.name,
-          orders: orders
-        }));
-        navigate('/invoice');
+          guestPhone: roomData.booking?.mobileNo
+        };
+        
+        await fetch('https://ashoka-backend.vercel.app/api/restaurant-orders/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(restaurantOrderData)
+        });
       }
+      
+      alert('Order created successfully!');
+      setOrderItems([]);
+      setShowOrderForm(false);
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('Error creating order:', error);
+      alert('Error creating order');
     }
+  };
+
+  const handleSaleBill = () => {
+    navigate('/room-service-billing', { 
+      state: { 
+        grcNo: roomData.booking?.grcNo,
+        roomNumber: roomData.room_number,
+        guestName: roomData.booking?.name 
+      }
+    });
+  };
+
+  const handleBillLookup = () => {
+    navigate('/bill-lookup', { 
+      state: { 
+        grcNo: roomData.booking?.grcNo,
+        roomNumber: roomData.room_number,
+        guestName: roomData.booking?.name 
+      }
+    });
   };
 
   if (!roomData) {
@@ -279,51 +290,76 @@ const RoomService = () => {
             </button>
           </div>
 
+          <div className="mb-4">
+            <p className="text-sm text-gray-600">Available items: {availableItems.length} | Restaurant: {availableItems.filter(i => i.category === 'Restaurant').length} | Laundry: {availableItems.filter(i => i.category === 'Laundry').length}</p>
+          </div>
+          
           {showOrderForm && (
-            <div className="space-y-6">
-              {['Restaurant', 'Laundry', 'Transport', 'Housekeeping', 'Pantry', 'General'].map(category => {
-                const categoryItems = hardcodedItems.filter(item => item.category === category);
-                return (
-                  <div key={category} className="border rounded-lg p-4">
-                    <h4 className="text-lg font-semibold mb-3" style={{color: 'var(--color-text)'}}>{category} Services</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {categoryItems.map((item, index) => (
-                        <div key={`${category}-${index}`} className="border rounded-lg p-3 hover:bg-gray-50">
-                          <h5 className="font-medium" style={{color: 'var(--color-text)'}}>{item.name}</h5>
-                          <p className="font-bold" style={{color: 'var(--color-primary)'}}>₹{item.price}</p>
-                          <div className="flex items-center mt-2 space-x-2">
-                            <input
-                              type="number"
-                              min="1"
-                              defaultValue="1"
-                              className="border rounded px-2 py-1 w-16 text-sm"
-                              id={`qty-${category}-${index}`}
-                            />
-                            <button
-                              onClick={() => {
-                                const qty = parseInt(document.getElementById(`qty-${category}-${index}`).value) || 1;
-                                const totalPrice = qty * item.price;
-                                setOrderItems([...orderItems, {
-                                  itemName: item.name,
-                                  quantity: qty,
-                                  unitPrice: item.price,
-                                  totalPrice,
-                                  category: item.category,
-                                  specialInstructions: ''
-                                }]);
-                              }}
-                              className="px-3 py-1 rounded text-sm font-medium transition-colors"
-                              style={{backgroundColor: 'var(--color-primary)', color: 'white'}}
-                            >
-                              Add
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+            <div className="space-y-4">
+              <div className="flex space-x-4 mb-4">
+                <button
+                  onClick={() => setSelectedCategory('Restaurant')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    selectedCategory === 'Restaurant' ? 'text-white' : 'border'
+                  }`}
+                  style={selectedCategory === 'Restaurant' ? 
+                    {backgroundColor: 'var(--color-primary)'} : 
+                    {borderColor: 'var(--color-border)', color: 'var(--color-text)'}}
+                >
+                  Restaurant
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('Laundry')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    selectedCategory === 'Laundry' ? 'text-white' : 'border'
+                  }`}
+                  style={selectedCategory === 'Laundry' ? 
+                    {backgroundColor: 'var(--color-primary)'} : 
+                    {borderColor: 'var(--color-border)', color: 'var(--color-text)'}}
+                >
+                  Laundry
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availableItems.length === 0 ? (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    Loading items...
                   </div>
-                );
-              })}
+                ) : availableItems
+                  .filter(item => item.category === selectedCategory)
+                  .map((item, index) => (
+                    <div key={index} className="border rounded-lg p-3 hover:bg-gray-50">
+                      <h5 className="font-medium" style={{color: 'var(--color-text)'}}>{item.name}</h5>
+                      <p className="font-bold" style={{color: 'var(--color-primary)'}}>₹{item.price}</p>
+                      <div className="flex items-center mt-2 space-x-2">
+                        <input
+                          type="number"
+                          min="1"
+                          defaultValue="1"
+                          className="border rounded px-2 py-1 w-16 text-sm"
+                          id={`qty-${index}`}
+                        />
+                        <button
+                          onClick={() => {
+                            const qty = parseInt(document.getElementById(`qty-${index}`).value) || 1;
+                            addItemToOrder(item, qty);
+                          }}
+                          className="px-3 py-1 rounded text-sm font-medium transition-colors"
+                          style={{backgroundColor: 'var(--color-primary)', color: 'white'}}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                }
+                {availableItems.length > 0 && availableItems.filter(item => item.category === selectedCategory).length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    No {selectedCategory.toLowerCase()} items available
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

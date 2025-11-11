@@ -637,7 +637,7 @@ const KOT = () => {
                       <tr>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Order ID</th>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>KOTs</th>
-                        <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Table</th>
+                        <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Table/Room</th>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Items</th>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Priority</th>
                         <th className="px-2 sm:px-4 py-3 text-left font-semibold text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>Status</th>
