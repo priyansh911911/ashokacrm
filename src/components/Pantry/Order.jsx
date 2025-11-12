@@ -4,6 +4,7 @@ import { showToast } from '../../utils/toaster';
 import { Plus, Edit, Trash2, Package, Clock, User, MapPin } from 'lucide-react';
 import PantryInvoice from './PantryInvoice';
 import DashboardLoader from '../DashboardLoader';
+import AutoVendorNotification from './AutoVendorNotification';
 
 const Order = () => {
   const { axios } = useAppContext();
@@ -39,6 +40,8 @@ const Order = () => {
   const [chalanOrder, setChalanOrder] = useState(null);
   const [chalanFile, setChalanFile] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAutoVendorNotification, setShowAutoVendorNotification] = useState(false);
+  const [autoVendorData, setAutoVendorData] = useState({ outOfStockItems: [], autoVendorOrder: null });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -199,14 +202,33 @@ const Order = () => {
         });
         showToast.success('Order updated successfully');
       } else {
-        await axios.post('/api/pantry/orders', orderData, {
+        const response = await axios.post('/api/pantry/orders', orderData, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        showToast.success('Order created successfully');
+        
+        // Handle auto vendor ordering response
+        if (response.data.outOfStockItems && response.data.outOfStockItems.length > 0) {
+          const outOfStockCount = response.data.outOfStockItems.length;
+          const outOfStockNames = response.data.outOfStockItems.map(item => item.name).join(', ');
+          
+          // Show notification component
+          setAutoVendorData({
+            outOfStockItems: response.data.outOfStockItems,
+            autoVendorOrder: response.data.autoVendorOrder
+          });
+          setShowAutoVendorNotification(true);
+          
+          showToast.success(
+            `Order created! ${outOfStockCount} out-of-stock items detected - Vendor order auto-created.`,
+            { duration: 6000 }
+          );
+        } else {
+          showToast.success('Order created successfully');
+        }
       }
 
       resetForm();
-      fetchOrders();
+      await Promise.all([fetchOrders(), fetchPantryItems()]); // Refresh both orders and pantry items
     } catch (error) {
       console.error('Order submission error:', error.response?.data);
       showToast.error(error.response?.data?.message || 'Failed to save order');
@@ -297,10 +319,10 @@ const Order = () => {
       return;
     }
     
-    // For Pantry to vendor orders, allow any item (even out of stock)
+    // For Pantry to vendor and Kitchen to Pantry orders, allow any item (even out of stock)
     // For other orders, find first item with stock > 0
     let availableItem;
-    if (formData.orderType === 'Pantry to vendor') {
+    if (formData.orderType === 'Pantry to vendor' || formData.orderType === 'Kitchen to Pantry') {
       availableItem = pantryItems[0]; // Use first item regardless of stock
     } else {
       availableItem = pantryItems.find(item => (item.stockQuantity || 0) > 0);
@@ -1167,29 +1189,52 @@ const Order = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="max-w-xs">
-                        {order.items?.length > 0 ? (
+                        {(() => {
+                          // For Kitchen to Pantry orders, show original request if items array is empty
+                          const displayItems = order.items?.length > 0 ? order.items : 
+                            (order.orderType === 'Kitchen to Pantry' && order.originalRequest?.items ? 
+                              order.originalRequest.items.map(item => ({
+                                ...item,
+                                name: item.name || 'Unknown Item',
+                                quantity: item.quantity || 0
+                              })) : []);
+                          return displayItems.length > 0 ? (
                           <div className="space-y-1">
-                            {order.items.slice(0, 2).map((item, idx) => {
+                            {displayItems.slice(0, 2).map((item, idx) => {
                               let itemName = item.name || item.itemName;
                               if (!itemName && (item.itemId || item.pantryItemId)) {
-                                const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                                const itemRef = item.itemId || item.pantryItemId;
+                                const pantryItem = pantryItems.find(p => 
+                                  p._id === itemRef || 
+                                  p._id === (typeof itemRef === 'object' ? itemRef._id : itemRef)
+                                );
                                 itemName = pantryItem?.name;
                               }
+                              // If still no name, try to get from populated itemId
+                              if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
+                                itemName = item.itemId.name;
+                              }
+                              // For Kitchen to Pantry orders, show original requested quantity if current is 0
+                              const displayQuantity = order.orderType === 'Kitchen to Pantry' && (item.quantity === 0 || item.quantity === '0') ?
+                                `${order.originalRequest?.items?.find(oi => (oi.itemId || oi.pantryItemId) === (item.itemId?._id || item.itemId))?.quantity || item.quantity} (Out of Stock)` :
+                                item.quantity || 1;
+                              
                               return (
                                 <div key={idx} className="text-xs text-gray-700">
-                                  {itemName || 'Unknown Item'} ({item.quantity || 1})
+                                  {itemName || 'Unknown Item'} ({displayQuantity})
                                 </div>
                               );
                             })}
-                            {order.items.length > 2 && (
+                            {displayItems.length > 2 && (
                               <div className="text-xs text-gray-500">
-                                +{order.items.length - 2} more items
+                                +{displayItems.length - 2} more items
                               </div>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-gray-400">No items</span>
-                        )}
+                          ) : (
+                            <span className="text-gray-400">No items</span>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1879,14 +1924,14 @@ const Order = () => {
                               {pantryItems.map(pantryItem => {
                                 const stock = pantryItem.stockQuantity || 0;
                                 const isOutOfStock = stock <= 0;
-                                const isPantryToVendor = formData.orderType === 'Pantry to vendor';
+                                const canOrder = formData.orderType === 'Pantry to vendor' || formData.orderType === 'Kitchen to Pantry';
                                 return (
                                   <option 
                                     key={pantryItem._id} 
                                     value={pantryItem._id}
-                                    disabled={!isPantryToVendor && isOutOfStock}
+                                    disabled={!canOrder && isOutOfStock}
                                   >
-                                    {pantryItem.name} {isOutOfStock ? (isPantryToVendor ? '(Out of Stock - Can Order)' : '(Out of Stock)') : `(Stock: ${stock})`}
+                                    {pantryItem.name} {isOutOfStock ? (canOrder ? '(Out of Stock - Auto Order)' : '(Out of Stock)') : `(Stock: ${stock})`}
                                   </option>
                                 );
                               })}
@@ -1910,15 +1955,15 @@ const Order = () => {
                                 step="0.1"
                                 value={item.quantity}
                                 max={(() => {
-                                  if (formData.orderType === 'Pantry to vendor') {
-                                    return undefined; // No max limit for vendor orders
+                                  if (formData.orderType === 'Pantry to vendor' || formData.orderType === 'Kitchen to Pantry') {
+                                    return undefined; // No max limit for vendor orders and kitchen to pantry
                                   }
                                   const pantryItem = pantryItems.find(p => p._id === item.pantryItemId);
                                   return pantryItem?.stockQuantity || 0;
                                 })()}
                                 onChange={(e) => {
-                                  if (formData.orderType === 'Pantry to vendor') {
-                                    // No stock validation for vendor orders
+                                  if (formData.orderType === 'Pantry to vendor' || formData.orderType === 'Kitchen to Pantry') {
+                                    // No stock validation for vendor orders and kitchen to pantry (auto vendor ordering)
                                     updateItem(index, 'quantity', e.target.value);
                                     return;
                                   }
@@ -2398,6 +2443,22 @@ const Order = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Auto Vendor Notification */}
+      {showAutoVendorNotification && (
+        <AutoVendorNotification
+          outOfStockItems={autoVendorData.outOfStockItems}
+          autoVendorOrder={autoVendorData.autoVendorOrder}
+          onClose={() => setShowAutoVendorNotification(false)}
+          onViewVendorOrder={(vendorOrder) => {
+            // Filter to show the auto-created vendor order
+            setFilterType('Pantry to vendor');
+            setFilterVendor(vendorOrder.vendorId?._id || vendorOrder.vendorId);
+            setShowAutoVendorNotification(false);
+            showToast.info('Filtered to show auto-created vendor order');
+          }}
+        />
       )}
 
       {/* Chalan Upload Modal */}
