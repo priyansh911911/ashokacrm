@@ -265,6 +265,25 @@ const Kitchen = () => {
             {loading ? 'Loading...' : 'Refresh'}
           </button>
           <button
+            onClick={async () => {
+              try {
+                const response = await axios.post('/api/kitchen-orders/sync', {}, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+                showToast.success(`Synced ${response.data.createdOrders?.length || 0} kitchen orders`);
+                fetchData();
+              } catch (error) {
+                console.error('Sync error:', error);
+                showToast.error('Failed to sync orders: ' + (error.response?.data?.message || error.message));
+              }
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2 shadow-lg transition-all duration-200"
+            disabled={loading}
+          >
+            <CheckCircle size={20} />
+            Sync Orders
+          </button>
+          <button
             onClick={() => setShowForm(true)}
             className="bg-primary text-text px-4 py-2 rounded-lg hover:bg-hover flex items-center gap-2 shadow-lg transition-all duration-200"
           >
