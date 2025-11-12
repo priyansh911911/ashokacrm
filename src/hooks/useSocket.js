@@ -8,20 +8,41 @@ const useSocket = () => {
   useEffect(() => {
     // Initialize socket connection
     const socketUrl = import.meta.env.VITE_API_URL || 'https://ashoka-api.shineinfosolutions.in';
+    console.log('🔗 Connecting to Socket.IO server:', socketUrl);
+    
     socketRef.current = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-      autoConnect: true
+      transports: ['polling', 'websocket'],
+      autoConnect: true,
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000
     });
 
     // Connection event handlers
     socketRef.current.on('connect', () => {
       setIsConnected(true);
-      console.log('🔗 WebSocket connected');
+      console.log('🔗 WebSocket connected to:', socketUrl);
+      console.log('🆔 Socket ID:', socketRef.current.id);
     });
 
-    socketRef.current.on('disconnect', () => {
+    socketRef.current.on('disconnect', (reason) => {
       setIsConnected(false);
-      console.log('❌ WebSocket disconnected');
+      console.log('❌ WebSocket disconnected:', reason);
+    });
+    
+    socketRef.current.on('connect_error', (error) => {
+      console.error('🚫 WebSocket connection error:', error);
+      setIsConnected(false);
+    });
+    
+    socketRef.current.on('reconnect', (attemptNumber) => {
+      console.log('🔄 WebSocket reconnected after', attemptNumber, 'attempts');
+    });
+    
+    socketRef.current.on('reconnect_error', (error) => {
+      console.error('🚫 WebSocket reconnection error:', error);
     });
 
     // Join rooms
