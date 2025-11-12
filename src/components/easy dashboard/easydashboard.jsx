@@ -5,7 +5,7 @@ import { Home, Bed, AlertTriangle, Clock, CalendarCheck, DoorOpen, DollarSign, U
 import DashboardLoader from '../DashboardLoader';
 
 // --- Configuration ---
-const BACKEND_URL = 'https://ashoka-backend.vercel.app';
+const BACKEND_URL = 'https://ashoka-api.shineinfosolutions.in';
 const TODAY = new Date().toDateString();
 
 // --- Utility: Fetch with Exponential Backoff ---

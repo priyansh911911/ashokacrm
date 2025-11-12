@@ -16,7 +16,7 @@ const InventorySeeder = ({ onSeedComplete }) => {
         return;
       }
 
-      const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/seed', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/inventory/seed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

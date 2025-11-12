@@ -51,7 +51,7 @@ const ListBooking = () => {
     try {
       axios
         .get(
-          `https://ashoka-backend.vercel.app/api/banquet-bookings/pg?page=${currentPage}`
+          `https://ashoka-api.shineinfosolutions.in/api/banquet-bookings/pg?page=${currentPage}`
         )
         .then((res) => {
           if (res.data) {
@@ -88,7 +88,7 @@ const ListBooking = () => {
   const fetchAllData = () => {
     try {
       axios
-        .get(`https://ashoka-backend.vercel.app/api/banquet-bookings`)
+        .get(`https://ashoka-api.shineinfosolutions.in/api/banquet-bookings`)
         .then((res) => {
           if (res.data) {
             console.log("All Data:", res.data);
@@ -153,7 +153,7 @@ const ListBooking = () => {
     setLoading(true);
     try {
       axios
-        .delete(`https://ashoka-backend.vercel.app/api/banquet-bookings/delete/${id}`)
+        .delete(`https://ashoka-api.shineinfosolutions.in/api/banquet-bookings/delete/${id}`)
         .then((res) => {
           console.log(res);
           if (res.data) {
@@ -220,7 +220,7 @@ const ListBooking = () => {
     // Send API request to update status in backend
     axios
       .put(
-        `https://ashoka-backend.vercel.app/little/achiver/update-status/${id}`,
+        `https://ashoka-api.shineinfosolutions.in/little/achiver/update-status/${id}`,
         {
           status: updatedStatus, // Boolean status value
         }
@@ -326,7 +326,7 @@ const ListBooking = () => {
       try {
         axios
           .get(
-            `https://ashoka-backend.vercel.app//api/bookings/search?q=${searchQuery}`
+            `https://ashoka-api.shineinfosolutions.in//api/bookings/search?q=${searchQuery}`
           )
           .then((res) => {
             console.log(res);

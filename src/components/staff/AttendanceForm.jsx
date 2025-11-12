@@ -260,7 +260,7 @@ const AttendanceForm = () => {
                     if (newSalary !== selectedStaffMember?.salary) {
                       try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`https://ashoka-backend.vercel.app/api/staff/update/${selectedStaff}`, {
+                        const response = await fetch(`https://ashoka-api.shineinfosolutions.in/api/staff/update/${selectedStaff}`, {
                           method: 'PUT',
                           headers: {
                             'Content-Type': 'application/json',

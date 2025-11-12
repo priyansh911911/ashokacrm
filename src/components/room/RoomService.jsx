@@ -30,7 +30,7 @@ const RoomService = () => {
       // Fetch restaurant items
       let restaurantItems = [];
       try {
-        const res = await fetch('https://ashoka-backend.vercel.app/api/items/all', {
+        const res = await fetch('https://ashoka-api.shineinfosolutions.in/api/items/all', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -43,7 +43,7 @@ const RoomService = () => {
       // Fetch laundry items
       let laundryItems = [];
       try {
-        const laundryRes = await fetch('https://ashoka-backend.vercel.app/api/laundry-rates/all', {
+        const laundryRes = await fetch('https://ashoka-api.shineinfosolutions.in/api/laundry-rates/all', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (laundryRes.ok) {
@@ -132,7 +132,7 @@ const RoomService = () => {
           guestPhone: roomData.booking?.mobileNo
         };
         
-        await fetch('https://ashoka-backend.vercel.app/api/restaurant-orders/create', {
+        await fetch('https://ashoka-api.shineinfosolutions.in/api/restaurant-orders/create', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

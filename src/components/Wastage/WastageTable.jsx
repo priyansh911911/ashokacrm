@@ -14,7 +14,7 @@ const WastageTable = ({ onEdit }) => {
 
   const fetchWastageData = async () => {
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/wastage');
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/wastage');
       console.log('Get all wastage API response:', response);
       if (response.ok) {
         const data = await response.json();
@@ -37,7 +37,7 @@ const WastageTable = ({ onEdit }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/wastage/stats');
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/wastage/stats');
       console.log('Stats API response:', response);
       if (response.ok) {
         const data = await response.json();
@@ -54,7 +54,7 @@ const WastageTable = ({ onEdit }) => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this wastage record?')) {
       try {
-        const response = await fetch(`https://ashoka-backend.vercel.app/api/wastage/${id}`, {
+        const response = await fetch(`https://ashoka-api.shineinfosolutions.in/api/wastage/${id}`, {
           method: 'DELETE'
         });
         

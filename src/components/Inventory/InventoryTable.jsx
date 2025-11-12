@@ -33,7 +33,7 @@ const InventoryTable = ({ onEdit, refreshTable }) => {
         return;
       }
 
-      const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/items', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/inventory/items', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -76,7 +76,7 @@ const InventoryTable = ({ onEdit, refreshTable }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/debug/count', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/inventory/debug/count', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -104,7 +104,7 @@ const InventoryTable = ({ onEdit, refreshTable }) => {
           return;
         }
 
-        const response = await fetch(`https://ashoka-backend.vercel.app/api/inventory/${id}`, {
+        const response = await fetch(`https://ashoka-api.shineinfosolutions.in/api/inventory/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`

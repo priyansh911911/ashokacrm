@@ -341,7 +341,7 @@
 //       Object.assign(payload, statusBooleans);
 
 //       const response = await axios.post(
-//         "https://ashoka-backend.vercel.app/api/bookings/create",
+//         "https://ashoka-api.shineinfosolutions.in/api/bookings/create",
 //         payload
 //       );
 
@@ -1749,7 +1749,7 @@ const AddBooking = () => {
       Object.assign(payload, statusBooleans);
 
       const response = await axios.post(
-        "https://ashoka-backend.vercel.app/api/banquet-bookings/create",
+        "https://ashoka-api.shineinfosolutions.in/api/banquet-bookings/create",
         payload
       );
 

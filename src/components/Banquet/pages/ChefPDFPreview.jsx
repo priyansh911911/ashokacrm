@@ -14,7 +14,7 @@ const ChefPDFPreview = ({ booking, className }) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `https://ashoka-backend.vercel.app/api/banquet-menus/${booking._id}`,
+        `https://ashoka-api.shineinfosolutions.in/api/banquet-menus/${booking._id}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }

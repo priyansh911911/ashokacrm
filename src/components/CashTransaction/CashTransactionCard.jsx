@@ -25,7 +25,7 @@ const CashTransactionCard = ({ onTransactionAdded }) => {
 
   const fetchCashData = async () => {
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/cash-transactions/cash-at-reception');
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/cash-transactions/cash-at-reception');
       console.log('Cash transactions API response:', response);
       if (response.ok) {
         const data = await response.json();
@@ -44,7 +44,7 @@ const CashTransactionCard = ({ onTransactionAdded }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/cash-transactions/add-transaction', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/cash-transactions/add-transaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ const CashTransactionCard = ({ onTransactionAdded }) => {
           
           // Add KEEP transaction for the amount kept at reception
           if (keepAmount > 0) {
-            await fetch('https://ashoka-backend.vercel.app/api/cash-transactions/add-transaction', {
+            await fetch('https://ashoka-api.shineinfosolutions.in/api/cash-transactions/add-transaction', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -75,7 +75,7 @@ const CashTransactionCard = ({ onTransactionAdded }) => {
           
           // Add SENT transaction for the amount sent to office
           if (sendAmount > 0) {
-            await fetch('https://ashoka-backend.vercel.app/api/cash-transactions/add-transaction', {
+            await fetch('https://ashoka-api.shineinfosolutions.in/api/cash-transactions/add-transaction', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

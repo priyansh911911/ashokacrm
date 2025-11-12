@@ -451,7 +451,7 @@ const DashboardContent = () => {
             
             // Fetch wastage data - try official public API first, then fall back to local relative endpoint
             try {
-                const wastageUrl = 'https://ashoka-backend.vercel.app/api/wastage';
+                const wastageUrl = 'https://ashoka-api.shineinfosolutions.in/api/wastage';
                 let wastageRes;
                 try {
                     // Try external (absolute) URL first

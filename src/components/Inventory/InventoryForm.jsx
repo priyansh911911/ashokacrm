@@ -66,8 +66,8 @@ const InventoryForm = () => {
       console.log('Submit data:', submitData);
       
       const url = editingId 
-        ? `https://ashoka-backend.vercel.app/api/inventory/${editingId}`
-        : 'https://ashoka-backend.vercel.app/api/inventory/items';
+        ? `https://ashoka-api.shineinfosolutions.in/api/inventory/${editingId}`
+        : 'https://ashoka-api.shineinfosolutions.in/api/inventory/items';
       
       const method = editingId ? 'PUT' : 'POST';
 

@@ -39,8 +39,8 @@ const WastageForm = () => {
       };
       
       const url = editingId 
-        ? `https://ashoka-backend.vercel.app/api/wastage/${editingId}`
-        : 'https://ashoka-backend.vercel.app/api/wastage';
+        ? `https://ashoka-api.shineinfosolutions.in/api/wastage/${editingId}`
+        : 'https://ashoka-api.shineinfosolutions.in/api/wastage';
       
       const method = editingId ? 'PUT' : 'POST';
 

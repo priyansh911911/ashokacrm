@@ -25,7 +25,7 @@ const InventoryTransactions = () => {
   const fetchTransactions = async () => {
     try {
       console.log('Fetching transactions...');
-      const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/transactions', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/inventory/transactions', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -50,7 +50,7 @@ const InventoryTransactions = () => {
 
   const fetchInventoryItems = async () => {
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/items', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/inventory/items', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -98,7 +98,7 @@ const InventoryTransactions = () => {
       console.log('Transaction payload:', payload);
       console.log('newStock value:', newStockValue, 'type:', typeof newStockValue);
       
-      const response = await fetch('https://ashoka-backend.vercel.app/api/inventory/transactions', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/inventory/transactions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

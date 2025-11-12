@@ -34,7 +34,7 @@ const MenuView = () => {
         // Try to fetch menu first
         try {
           const res = await axios.get(
-            `https://ashoka-backend.vercel.app/api/banquet-menus/${id}`,
+            `https://ashoka-api.shineinfosolutions.in/api/banquet-menus/${id}`,
             {
               headers: { Authorization: `Bearer ${token}` }
             }
@@ -48,7 +48,7 @@ const MenuView = () => {
         
         // Fallback: try to get menu from booking data
         const bookingRes = await axios.get(
-          `https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`,
+          `https://ashoka-api.shineinfosolutions.in/api/banquet-bookings/get/${id}`,
           {
             headers: { Authorization: `Bearer ${token}` }
           }

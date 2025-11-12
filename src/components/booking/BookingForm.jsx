@@ -249,7 +249,7 @@ const CarIcon = () => (
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  const BASE_URL = 'https://ashoka-backend.vercel.app';
+  const BASE_URL = 'https://ashoka-api.shineinfosolutions.in';
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState('info');

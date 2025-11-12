@@ -6,7 +6,7 @@ const useSocket = () => {
 
   useEffect(() => {
     // Initialize socket connection
-    socketRef.current = io(import.meta.env.VITE_API_URL || 'https://ashoka-backend.vercel.app', {
+    socketRef.current = io(import.meta.env.VITE_API_URL || 'https://ashoka-api.shineinfosolutions.in', {
       transports: ['websocket'],
       autoConnect: true
     });

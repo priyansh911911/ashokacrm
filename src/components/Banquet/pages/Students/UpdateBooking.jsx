@@ -228,12 +228,12 @@ const UpdateBooking = () => {
   const fetchBookingDetail = async () => {
     try {
       // Fetch booking data
-      const bookingResponse = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`);
+      const bookingResponse = await axios.get(`https://ashoka-api.shineinfosolutions.in/api/banquet-bookings/get/${id}`);
       
       // Fetch associated menu data
       let categorizedMenu = null;
       try {
-        const menuResponse = await axios.get(`https://ashoka-backend.vercel.app/api/banquet-menus/${id}`);
+        const menuResponse = await axios.get(`https://ashoka-api.shineinfosolutions.in/api/banquet-menus/${id}`);
         const rawMenuData = menuResponse.data?.data || menuResponse.data || null;
         categorizedMenu = rawMenuData?.categories || rawMenuData || null;
       } catch (menuErr) {
@@ -532,7 +532,7 @@ const UpdateBooking = () => {
     if (role !== "Admin") {
       // Get original menu from server to compare
       axios
-        .get(`https://ashoka-backend.vercel.app/api/banquet-bookings/get/${id}`)
+        .get(`https://ashoka-api.shineinfosolutions.in/api/banquet-bookings/get/${id}`)
         .then((res) => {
           const originalMenu = res.data.categorizedMenu;
           const isMenuChanged =
@@ -615,7 +615,7 @@ const UpdateBooking = () => {
 
 
     axios
-      .put(`https://ashoka-backend.vercel.app/api/banquet-bookings/update/${id}`, payload)
+      .put(`https://ashoka-api.shineinfosolutions.in/api/banquet-bookings/update/${id}`, payload)
       .then((res) => {
         if (res.data) {
           // Send WebSocket notification for real-time update

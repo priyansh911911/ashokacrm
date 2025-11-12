@@ -23,7 +23,7 @@ const AttendanceTable = () => {
   const fetchStaff = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://ashoka-backend.vercel.app/api/staff/all', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/staff/all', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -39,7 +39,7 @@ const AttendanceTable = () => {
   const fetchAttendance = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://ashoka-backend.vercel.app/api/attendance/get', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/attendance/get', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -68,7 +68,7 @@ const AttendanceTable = () => {
       const token = localStorage.getItem('token');
       const date = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
       
-      const response = await fetch('https://ashoka-backend.vercel.app/api/attendance/mark', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/attendance/mark', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

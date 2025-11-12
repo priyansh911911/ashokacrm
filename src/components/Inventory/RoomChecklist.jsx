@@ -16,7 +16,7 @@ const RoomChecklist = () => {
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/rooms/all', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/rooms/all', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -32,7 +32,7 @@ const RoomChecklist = () => {
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch('https://ashoka-backend.vercel.app/api/bookings/all', {
+      const response = await fetch('https://ashoka-api.shineinfosolutions.in/api/bookings/all', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -50,7 +50,7 @@ const RoomChecklist = () => {
     if (!roomId) return;
     setLoading(true);
     try {
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/housekeeping/checklist/${roomId}`, {
+      const response = await fetch(`https://ashoka-api.shineinfosolutions.in/api/housekeeping/checklist/${roomId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -143,7 +143,7 @@ const RoomChecklist = () => {
         completedAt: new Date().toISOString()
       };
 
-      const response = await fetch(`https://ashoka-backend.vercel.app/api/housekeeping/roominspection`, {
+      const response = await fetch(`https://ashoka-api.shineinfosolutions.in/api/housekeeping/roominspection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
