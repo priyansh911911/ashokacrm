@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { showToast } from '../utils/toaster';
-import { useSocket } from '../context/SocketContext';
-import { Plus, Edit, Trash2, Package, Clock, CheckCircle } from 'lucide-react';
+import useSocket from '../hooks/useSocket';
+import { Plus, Edit, Trash2, Package, Clock, CheckCircle, Wifi, WifiOff } from 'lucide-react';
 
 const Kitchen = () => {
   const { axios } = useAppContext();
-  const { socket } = useSocket();
+  const { socket, isConnected } = useSocket();
   const [orders, setOrders] = useState([]);
   const [items, setItems] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -19,6 +19,29 @@ const Kitchen = () => {
     orderType: 'kitchen_to_pantry',
     specialInstructions: ''
   });
+
+  // WebSocket real-time updates
+  const handleKitchenOrderUpdate = useCallback((data) => {
+    console.log('🍳 Real-time kitchen order update:', data);
+    if (data.type === 'created') {
+      setOrders(prev => [data.order, ...prev]);
+      showToast.success('New kitchen order received from pantry!');
+    } else if (data.type === 'updated') {
+      setOrders(prev => prev.map(o => o._id === data.order._id ? data.order : o));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (socket && isConnected) {
+      socket.on('kitchen-order-created', handleKitchenOrderUpdate);
+      socket.on('kitchen-order-updated', handleKitchenOrderUpdate);
+      
+      return () => {
+        socket.off('kitchen-order-created');
+        socket.off('kitchen-order-updated');
+      };
+    }
+  }, [socket, isConnected, handleKitchenOrderUpdate]);
 
   useEffect(() => {
     fetchData();
@@ -51,7 +74,16 @@ const Kitchen = () => {
         setVendors([]);
       }
 
-      // Fetch only kitchen orders (pantry orders create linked kitchen orders)
+      // Auto-sync missing kitchen orders first
+      try {
+        await axios.post('/api/kitchen-orders/sync', {}, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+      } catch (error) {
+        console.log('Auto-sync failed:', error);
+      }
+
+      // Fetch kitchen orders after sync
       try {
         const kitchenOrdersRes = await axios.get('/api/kitchen-orders', { 
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
@@ -200,14 +232,46 @@ const Kitchen = () => {
   return (
     <div className="p-6 bg-background min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-text">Kitchen Orders</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-primary text-text px-4 py-2 rounded-lg hover:bg-hover flex items-center gap-2 shadow-lg transition-all duration-200"
-        >
-          <Plus size={20} />
-          New Order
-        </button>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-text">Kitchen Orders</h1>
+            <div className="flex items-center gap-1">
+              {isConnected ? (
+                <Wifi className="w-4 h-4 text-green-500" title="Real-time connected" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-500" title="Real-time disconnected" />
+              )}
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              }`}>
+                {isConnected ? 'Live' : 'Offline'}
+              </span>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mt-1">
+            Total Orders: {orders.length} | 
+            Pending: {orders.filter(o => o.status === 'pending').length} | 
+            Delivered: {orders.filter(o => o.status === 'delivered').length}
+            {isConnected && <span className="text-green-600 ml-2">• Real-time updates active</span>}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchData}
+            className="bg-secondary text-text px-4 py-2 rounded-lg hover:bg-hover flex items-center gap-2 shadow-lg transition-all duration-200"
+            disabled={loading}
+          >
+            <Package size={20} />
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-primary text-text px-4 py-2 rounded-lg hover:bg-hover flex items-center gap-2 shadow-lg transition-all duration-200"
+          >
+            <Plus size={20} />
+            New Order
+          </button>
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -245,13 +309,23 @@ const Kitchen = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text">
                         <div className="flex items-center gap-2">
-                          <span>{order.orderType.replace('_', ' ')}</span>
+                          <span className="capitalize">{order.orderType.replace('_', ' ')}</span>
                           {order.pantryOrderId && (
                             <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
                               From Pantry
                             </span>
                           )}
+                          {order.orderType === 'kitchen_to_pantry' && (
+                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                              To Pantry
+                            </span>
+                          )}
                         </div>
+                        {order.specialInstructions && (
+                          <div className="text-xs text-gray-500 mt-1 max-w-xs truncate">
+                            {order.specialInstructions}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text">
                         <div className="flex items-center gap-1">
@@ -287,7 +361,7 @@ const Kitchen = () => {
                               Approve
                             </button>
                           )}
-                          {order.status === 'approved' && (
+                          {order.status === 'approved' && !order.pantryOrderId && (
                             <button
                               onClick={() => handleStatusUpdate(order, 'delivered')}
                               className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"

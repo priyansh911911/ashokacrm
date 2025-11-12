@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
-import { Plus, Edit, Trash2, Package, Clock, User, MapPin } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Clock, User, MapPin, Wifi, WifiOff } from 'lucide-react';
 import PantryInvoice from './PantryInvoice';
 import DashboardLoader from '../DashboardLoader';
 import AutoVendorNotification from './AutoVendorNotification';
+import { usePantrySocket } from '../../hooks/useSocket';
 
 const Order = () => {
   const { axios } = useAppContext();
@@ -42,6 +43,7 @@ const Order = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAutoVendorNotification, setShowAutoVendorNotification] = useState(false);
   const [autoVendorData, setAutoVendorData] = useState({ outOfStockItems: [], autoVendorOrder: null });
+  const [wsConnected, setWsConnected] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -57,6 +59,39 @@ const Order = () => {
   });
   
 
+
+  // WebSocket real-time updates
+  const handleOrderUpdate = useCallback((data) => {
+    console.log('📦 Real-time order update:', data);
+    if (data.type === 'created') {
+      setOrders(prev => [data.order, ...prev]);
+      showToast.success('New order received!');
+    } else if (data.type === 'updated') {
+      setOrders(prev => prev.map(o => o._id === data.order._id ? data.order : o));
+    } else if (data.type === 'deleted') {
+      setOrders(prev => prev.filter(o => o._id !== data.orderId));
+    }
+  }, []);
+
+  const handleItemUpdate = useCallback((data) => {
+    console.log('🍽️ Real-time item update:', data);
+    if (data.type === 'updated') {
+      setPantryItems(prev => prev.map(i => i._id === data.item._id ? data.item : i));
+    }
+  }, []);
+
+  const handleVendorUpdate = useCallback((data) => {
+    console.log('🏢 Real-time vendor update:', data);
+    if (data.type === 'updated') {
+      setVendors(prev => prev.map(v => v._id === data.vendor._id ? data.vendor : v));
+    }
+  }, []);
+
+  const { socket, isConnected } = usePantrySocket(handleOrderUpdate, handleItemUpdate, handleVendorUpdate);
+
+  useEffect(() => {
+    setWsConnected(isConnected);
+  }, [isConnected]);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -78,7 +113,6 @@ const Order = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const vendorsData = Array.isArray(response.data) ? response.data : (response.data.vendors || []);
-      console.log('Fetched vendors:', vendorsData);
       setVendors(vendorsData);
     } catch (err) {
       console.error('Error fetching vendors:', err);
@@ -93,8 +127,6 @@ const Order = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const ordersData = data.orders || data.data || data || [];
-      console.log('Fetched orders:', ordersData);
-      console.log('Sample order structure:', ordersData[0]);
       setOrders(ordersData);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -109,9 +141,7 @@ const Order = () => {
       const { data } = await axios.get('/api/pantry/items', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      console.log('Pantry Items API Response:', data);
       
-      // Handle different response formats
       let items = [];
       if (Array.isArray(data)) {
         items = data;
@@ -121,9 +151,6 @@ const Order = () => {
         items = data.data;
       }
       
-      console.log('All Pantry Items:', items);
-      
-      // Don't filter by category, use all items
       setPantryItems(items);
       
       if (items.length === 0) {
@@ -228,7 +255,7 @@ const Order = () => {
       }
 
       resetForm();
-      await Promise.all([fetchOrders(), fetchPantryItems()]); // Refresh both orders and pantry items
+      // WebSocket handles real-time updates automatically
     } catch (error) {
       console.error('Order submission error:', error.response?.data);
       showToast.error(error.response?.data?.message || 'Failed to save order');
@@ -264,6 +291,18 @@ const Order = () => {
     }
     
     try {
+      // Update local state immediately for better UX (WebSocket will sync)
+      setOrders(prevOrders => 
+        prevOrders.map(o => 
+          o._id === orderId ? { ...o, status: newStatus } : o
+        )
+      );
+      
+      // Emit WebSocket event for real-time sync
+      if (socket && wsConnected) {
+        socket.emit('pantry-order-status-update', { orderId, status: newStatus });
+      }
+      
       // Try the status-only endpoint first
       await axios.put(`/api/pantry/orders/${orderId}`, 
         { status: newStatus },
@@ -271,10 +310,16 @@ const Order = () => {
       );
       showToast.success(`Order status updated to ${newStatus}`);
       
-      // Refresh both orders and pantry items to reflect inventory changes
-      await Promise.all([fetchOrders(), fetchPantryItems()]);
+      // WebSocket handles real-time inventory updates
     } catch (error) {
       console.error('Status update error:', error.response?.data);
+      
+      // Revert local state on error
+      setOrders(prevOrders => 
+        prevOrders.map(o => 
+          o._id === orderId ? { ...o, status: order.status } : o
+        )
+      );
       
       // If that fails, try to get the full order and update it properly
       try {
@@ -300,8 +345,16 @@ const Order = () => {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
           });
           
+          // Update local state again
+          setOrders(prevOrders => 
+            prevOrders.map(o => 
+              o._id === orderId ? { ...o, status: newStatus } : o
+            )
+          );
+          
           showToast.success(`Order status updated to ${newStatus}`);
-          await Promise.all([fetchOrders(), fetchPantryItems()]);
+          
+          // WebSocket handles real-time inventory updates
         } else {
           showToast.error('Order not found');
         }
@@ -498,15 +551,10 @@ const Order = () => {
 
   const updatePaymentStatus = async (orderId, paymentData) => {
     try {
-      console.log(`🔍 Fetching current order ${orderId}...`);
+      console.log(`🔍 Updating payment status for order ${orderId}...`);
       
-      // Get the current order first
-      const orderResponse = await axios.get(`/api/pantry/orders`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      const currentOrder = orderResponse.data.orders.find(o => o._id === orderId);
-      
-      console.log('📄 Current order before update:', { id: currentOrder?._id, paymentStatus: currentOrder?.paymentStatus, amount: currentOrder?.totalAmount });
+      // Find the current order in local state
+      const currentOrder = orders.find(o => o._id === orderId);
       
       if (!currentOrder) {
         console.error('❌ Order not found:', orderId);
@@ -514,17 +562,30 @@ const Order = () => {
         return;
       }
 
+      // Update local state immediately for better UX
+      const updatedPaymentDetails = {
+        paidAmount: paymentData.paidAmount || 0,
+        paidAt: paymentData.paymentStatus === 'paid' ? new Date() : null,
+        paymentMethod: paymentData.paymentMethod || 'UPI',
+        transactionId: paymentData.transactionId || '',
+        notes: paymentData.notes || ''
+      };
+      
+      setOrders(prevOrders => 
+        prevOrders.map(o => 
+          o._id === orderId ? {
+            ...o, 
+            paymentStatus: paymentData.paymentStatus,
+            paymentDetails: updatedPaymentDetails
+          } : o
+        )
+      );
+
       // Update the order with payment status
       const updatedOrder = {
         ...currentOrder,
         paymentStatus: paymentData.paymentStatus,
-        paymentDetails: {
-          paidAmount: paymentData.paidAmount || 0,
-          paidAt: paymentData.paymentStatus === 'paid' ? new Date() : null,
-          paymentMethod: paymentData.paymentMethod || 'UPI',
-          transactionId: paymentData.transactionId || '',
-          notes: paymentData.notes || ''
-        }
+        paymentDetails: updatedPaymentDetails
       };
       
       console.log('📝 Sending updated order to backend:', { id: updatedOrder._id, paymentStatus: updatedOrder.paymentStatus, paymentMethod: updatedOrder.paymentDetails.paymentMethod });
@@ -534,13 +595,17 @@ const Order = () => {
       });
       
       console.log('✅ Backend response:', response.data);
-      
-      // Refresh orders after payment update
-      console.log('🔄 Refreshing orders...');
-      await fetchOrders();
-      console.log('✅ Orders refreshed');
+      console.log('✅ Payment status updated without refresh');
     } catch (error) {
       console.error('❌ Payment status update error:', error.response?.data || error.message);
+      
+      // Revert local state on error
+      setOrders(prevOrders => 
+        prevOrders.map(o => 
+          o._id === orderId ? currentOrder : o
+        )
+      );
+      
       throw error;
     }
   };
@@ -560,17 +625,10 @@ const Order = () => {
   };
 
   const getVendorAnalytics = (vendorId) => {
-    // Ensure we have all orders loaded
     const allVendorOrders = orders.filter(order => {
       if (!order.vendorId) return false;
       const id = typeof order.vendorId === 'object' ? order.vendorId._id : order.vendorId;
       return id === vendorId;
-    });
-    
-    console.log(`Vendor Analytics for ${vendorId}:`, {
-      totalOrdersInSystem: orders.length,
-      vendorOrders: allVendorOrders.length,
-      vendorOrderIds: allVendorOrders.map(o => o._id)
     });
     
     return {
@@ -586,27 +644,19 @@ const Order = () => {
         fulfilled: allVendorOrders.filter(o => o.status === 'fulfilled').length,
         cancelled: allVendorOrders.filter(o => o.status === 'cancelled').length
       },
-      allOrders: allVendorOrders // Include all orders for debugging
+      allOrders: allVendorOrders
     };
   };
 
   const fetchVendorAnalyticsFromAPI = async (vendorId) => {
-    try {
-      const { data } = await axios.get(`/api/pantry/vendor-analytics/${vendorId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      return data.analytics;
-    } catch (error) {
-      console.error('Error fetching vendor analytics:', error);
-      // Fallback to local calculation
-      return getVendorAnalytics(vendorId);
-    }
+    // Use local calculation for faster response
+    return getVendorAnalytics(vendorId);
   };
 
-  const handleVendorSelect = async (vendorId) => {
+  const handleVendorSelect = (vendorId) => {
     setFilterVendor(vendorId);
     if (vendorId) {
-      const analytics = await fetchVendorAnalyticsFromAPI(vendorId);
+      const analytics = getVendorAnalytics(vendorId);
       setVendorAnalytics(analytics);
       setShowAnalytics(true);
     } else {
@@ -835,8 +885,36 @@ const Order = () => {
   return (
     <div className="p-4 sm:p-6 overflow-auto h-full bg-background">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Pantry Orders</h1>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Pantry Orders</h1>
+            <div className="flex items-center gap-1">
+              {wsConnected ? (
+                <Wifi className="w-4 h-4 text-green-500" title="Real-time connected" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-500" title="Real-time disconnected" />
+              )}
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                wsConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              }`}>
+                {wsConnected ? 'Live' : 'Offline'}
+              </span>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mt-1">
+            Total: {orders.length} | Pending: {orders.filter(o => o.status === 'pending').length} | 
+            Fulfilled: {orders.filter(o => o.status === 'fulfilled').length}
+            {wsConnected && <span className="text-green-600 ml-2">• Real-time updates active</span>}
+          </p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => Promise.all([fetchOrders(), fetchPantryItems(), fetchVendors()])}
+            disabled={loading}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium disabled:opacity-50"
+          >
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
           <button
             onClick={exportToExcel}
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
