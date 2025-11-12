@@ -9,7 +9,7 @@ const useSocket = () => {
     // Initialize socket connection
     const socketUrl = import.meta.env.VITE_API_URL || 'https://ashoka-api.shineinfosolutions.in';
     socketRef.current = io(socketUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'],
       autoConnect: true
     });
 
