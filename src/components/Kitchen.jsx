@@ -74,15 +74,6 @@ const Kitchen = () => {
         setVendors([]);
       }
 
-      // Auto-sync missing kitchen orders first
-      try {
-        await axios.post('/api/kitchen-orders/sync', {}, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-      } catch (error) {
-        console.log('Auto-sync failed:', error);
-      }
-
       // Fetch kitchen orders after sync
       try {
         const kitchenOrdersRes = await axios.get('/api/kitchen-orders', { 
