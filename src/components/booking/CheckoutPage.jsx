@@ -120,6 +120,17 @@ const CheckoutPage = () => {
         console.log('No laundry charges found');
       }
       
+      // Get room service charges
+      let roomServiceCharges = 0;
+      try {
+        const roomServiceResponse = await axios.get(`https://ashoka-backend.vercel.app/api/room-service/room-charges?bookingId=${bookingId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        roomServiceCharges = roomServiceResponse.data.totalCharges || 0;
+      } catch (error) {
+        console.log('No room service charges found');
+      }
+      
       const checkoutResponse = await axios.post('https://ashoka-backend.vercel.app/api/checkout/create', {
         bookingId: bookingId,
         roomId: roomId
@@ -213,6 +224,17 @@ const CheckoutPage = () => {
     
     try {
       const token = localStorage.getItem('token');
+      
+      // Mark room service orders as paid
+      try {
+        await axios.post('https://ashoka-backend.vercel.app/api/room-service/mark-paid', {
+          bookingId: selectedBooking
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (error) {
+        console.log('No room service orders to mark as paid');
+      }
       
       // Process payment
       await axios.put(`https://ashoka-backend.vercel.app/api/checkout/${checkoutData._id}/payment`, {
@@ -441,6 +463,10 @@ const CheckoutPage = () => {
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="text-gray-600">Restaurant Charges:</span>
                   <span className="font-semibold">₹{Math.round(checkoutData.restaurantCharges || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Room Service Charges:</span>
+                  <span className="font-semibold">₹{Math.round(checkoutData.roomServiceCharges || 0)}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                   <span className="text-gray-600">Laundry Charges:</span>
