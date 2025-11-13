@@ -60,16 +60,16 @@ export default function Invoice() {
             };
           }) || [],
           taxes: [{
-            taxableAmount: orderData.amount || orderData.advancePayment || 0,
-            cgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
-            sgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
-            amount: orderData.amount || orderData.advancePayment || 0
+            taxableAmount: orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0,
+            cgst: (orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0) * 0.06,
+            sgst: (orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0) * 0.06,
+            amount: orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0
           }],
           payment: {
-            taxableAmount: orderData.amount || orderData.advancePayment || 0,
-            cgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
-            sgst: (orderData.amount || orderData.advancePayment || 0) * 0.06,
-            total: (orderData.amount || orderData.advancePayment || 0) * 1.12
+            taxableAmount: orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0,
+            cgst: (orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0) * 0.06,
+            sgst: (orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0) * 0.06,
+            total: orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0
           },
           otherCharges: [
             {
@@ -125,10 +125,12 @@ export default function Invoice() {
 
   const calculateNetTotal = () => {
     if (!invoiceData) return '0.00';
-    const itemsTotal = invoiceData.items?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+    const baseAmount = invoiceData.payment?.taxableAmount || 0;
+    const sgst = invoiceData.payment?.sgst || 0;
+    const cgst = invoiceData.payment?.cgst || 0;
     const otherChargesTotal = invoiceData.otherCharges?.reduce((sum, charge) => sum + (charge.amount || 0), 0) || 0;
     const roundOff = -0.01;
-    return (itemsTotal + otherChargesTotal + roundOff).toFixed(2);
+    return (baseAmount + sgst + cgst + otherChargesTotal + roundOff).toFixed(2);
   };
 
   if (loading) {
@@ -225,9 +227,8 @@ export default function Invoice() {
                 <th className="p-1 border border-black text-center whitespace-nowrap">PAX</th>
                 <th className="p-1 border border-black text-right whitespace-nowrap">Declared Rate</th>
                 <th className="p-1 border border-black text-center whitespace-nowrap">HSN/SAC Code</th>
-                <th className="p-1 border border-black text-right whitespace-nowrap">Rate</th>
-                <th className="p-1 border border-black text-right whitespace-nowrap">CGST Rate</th>
-                <th className="p-1 border border-black text-right whitespace-nowrap">SGST Rate</th>
+
+
                 <th className="p-1 border border-black text-right whitespace-nowrap">Amount</th>
               </tr>
             </thead>
@@ -239,9 +240,8 @@ export default function Invoice() {
                   <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.pax || 1) : 1}</td>
                   <td className="p-1 border border-black text-right">₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</td>
                   <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.hsn || 'N/A') : 'N/A'}</td>
-                  <td className="p-1 border border-black text-right">{typeof item === 'object' ? (item.rate || 0) : 0}%</td>
-                  <td className="p-1 border border-black text-right">₹{typeof item === 'object' ? (item.cgstRate?.toFixed(2) || '0.00') : '0.00'}</td>
-                  <td className="p-1 border border-black text-right">₹{typeof item === 'object' ? (item.sgstRate?.toFixed(2) || '0.00') : '0.00'}</td>
+
+
                   <td className="p-1 border border-black text-right font-bold">₹{typeof item === 'object' ? (item.amount?.toFixed(2) || '0.00') : '0.00'}</td>
                 </tr>
               ))}
@@ -249,9 +249,8 @@ export default function Invoice() {
                 <td colSpan="3" className="p-1 text-right font-bold">SUB TOTAL :</td>
                 <td className="p-1 text-right border-l border-black font-bold">{invoiceData.taxes?.[0]?.taxableAmount?.toFixed(2)}</td>
                 <td className="p-1 border-l border-black font-bold"></td>
-                <td className="p-1 text-right border-l border-black font-bold"></td>
-                <td className="p-1 text-right border-l border-black font-bold">{invoiceData.taxes?.[0]?.cgst?.toFixed(2)}</td>
-                <td className="p-1 text-right border-l border-black font-bold">{invoiceData.taxes?.[0]?.sgst?.toFixed(2)}</td>
+
+
                 <td className="p-1 text-right border-l border-black font-bold">{calculateTotal()}</td>
               </tr>
             </tbody>
@@ -263,13 +262,11 @@ export default function Invoice() {
             <div className="w-full lg:w-3/5 lg:pr-2">
               <p className="font-bold mb-1">Tax Before</p>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[600px] text-xs border-collapse border border-black">
+                <table className="w-full min-w-[400px] text-xs border-collapse border border-black">
                   <thead>
                     <tr className="bg-gray-200">
                       <th className="p-0.5 border border-black text-xs whitespace-nowrap">Tax%</th>
                       <th className="p-0.5 border border-black text-xs whitespace-nowrap">Txb.Amt</th>
-                      <th className="p-0.5 border border-black text-xs whitespace-nowrap">CGST</th>
-                      <th className="p-0.5 border border-black text-xs whitespace-nowrap">SGST</th>
                       <th className="p-0.5 border border-black text-xs whitespace-nowrap">Rec.No.</th>
                       <th className="p-0.5 border border-black text-xs whitespace-nowrap">PayType</th>
                       <th className="p-0.5 border border-black text-xs whitespace-nowrap">Rec.DL</th>
@@ -280,15 +277,13 @@ export default function Invoice() {
                   <tr>
                     <td className="p-0.5 border border-black text-center text-xs">12.00</td>
                     <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.taxableAmount?.toFixed(2)}</td>
-                    <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.cgst?.toFixed(2)}</td>
-                    <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.sgst?.toFixed(2)}</td>
                     <td className="p-0.5 border border-black text-center text-xs">1706</td>
                     <td className="p-0.5 border border-black text-center text-xs">CREDIT C</td>
                     <td className="p-0.5 border border-black text-center text-xs">11/08/25</td>
                     <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.total?.toFixed(2)}</td>
                   </tr>
                   <tr>
-                    <td colSpan="7" className="p-0.5 border border-black font-bold text-right text-xs">Total</td>
+                    <td colSpan="5" className="p-0.5 border border-black font-bold text-right text-xs">Total</td>
                     <td className="p-0.5 border border-black text-right font-bold text-xs">{invoiceData.payment?.total?.toFixed(2)}</td>
                   </tr>
                 </tbody>
@@ -303,15 +298,15 @@ export default function Invoice() {
                   <tbody>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">Amount:</td>
-                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.taxes?.[0]?.amount?.toFixed(2)}</td>
+                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.taxableAmount?.toFixed(2) || '0.00'}</td>
                     </tr>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">SGST:</td>
-                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.taxes?.[0]?.sgst?.toFixed(2)}</td>
+                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.sgst?.toFixed(2) || '0.00'}</td>
                     </tr>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">CGST:</td>
-                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.taxes?.[0]?.cgst?.toFixed(2)}</td>
+                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.cgst?.toFixed(2) || '0.00'}</td>
                     </tr>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">Round Off:</td>

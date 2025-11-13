@@ -281,7 +281,7 @@ const AllBookings = ({ setActiveTab }) => {
     }
   };
 
-  const generateInvoice = async (orderId) => {
+  const generateInvoice = async (orderId, invoiceType = 'tax') => {
     try {
       setLoadingInvoice(orderId);
       const token = localStorage.getItem('token');
@@ -293,6 +293,14 @@ const AllBookings = ({ setActiveTab }) => {
         return;
       }
       
+      // Calculate total from items
+      const items = currentOrder.allKotItems || currentOrder.items || [];
+      const calculatedTotal = items.reduce((sum, item) => {
+        const price = typeof item === 'object' ? (item.price || item.Price || 0) : 0;
+        const quantity = typeof item === 'object' ? (item.quantity || 1) : 1;
+        return sum + (price * quantity);
+      }, 0);
+      
       // Create invoice data with current items
       const invoiceData = {
         orderId: orderId,
@@ -300,8 +308,9 @@ const AllBookings = ({ setActiveTab }) => {
           _id: currentOrder._id,
           customerName: currentOrder.customerName || 'Guest',
           tableNo: currentOrder.tableNo,
-          items: currentOrder.allKotItems || currentOrder.items || [],
-          totalAmount: currentOrder.amount || currentOrder.advancePayment || 0,
+          items: items,
+          amount: calculatedTotal,
+          totalAmount: calculatedTotal,
           status: currentOrder.status,
           createdAt: currentOrder.createdAt,
           kotCount: currentOrder.kotCount || 1
@@ -344,10 +353,11 @@ const AllBookings = ({ setActiveTab }) => {
       } else if (response.data.url) {
         invoiceWindow = window.open(response.data.url, `invoice_${orderId}`);
       } else {
-        // Navigate to invoice page with data
-        navigate('/invoice', {
+        // Navigate to appropriate invoice page with data
+        const invoicePath = invoiceType === 'pos' ? '/pos-invoice' : '/invoice';
+        navigate(invoicePath, {
           state: {
-            bookingData: response.data,
+            bookingData: invoiceData.orderDetails,
             checkoutId: orderId
           }
         });
@@ -705,13 +715,22 @@ const AllBookings = ({ setActiveTab }) => {
                         </button>
                         {booking.status !== 'cancelled' && (
                           <>
-                            <button
-                              onClick={() => generateInvoice(booking._id)}
-                              disabled={loadingInvoice === booking._id}
-                              className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap disabled:opacity-50"
-                            >
-                              {loadingInvoice === booking._id ? 'Loading...' : 'Invoice'}
-                            </button>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => generateInvoice(booking._id, 'tax')}
+                                disabled={loadingInvoice === booking._id}
+                                className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap disabled:opacity-50"
+                              >
+                                Tax Invoice
+                              </button>
+                              <button
+                                onClick={() => generateInvoice(booking._id, 'pos')}
+                                disabled={loadingInvoice === booking._id}
+                                className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 whitespace-nowrap disabled:opacity-50"
+                              >
+                                POS
+                              </button>
+                            </div>
                             {booking.status === 'served' ? (
                               // Only show Invoice button for served orders
                               null
@@ -762,12 +781,20 @@ const AllBookings = ({ setActiveTab }) => {
                                 </button>
                               </>
                             ) : booking.status === 'paid' ? (
-                              <button
-                                onClick={() => generateInvoice(booking._id)}
-                                className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap"
-                              >
-                                Invoice
-                              </button>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => generateInvoice(booking._id, 'tax')}
+                                  className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap"
+                                >
+                                  Tax Invoice
+                                </button>
+                                <button
+                                  onClick={() => generateInvoice(booking._id, 'pos')}
+                                  className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 whitespace-nowrap"
+                                >
+                                  POS
+                                </button>
+                              </div>
                             ) : (
                               <>
                                 <button
