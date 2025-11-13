@@ -254,8 +254,7 @@ const Order = () => {
           const cartItem = cartItems.find(ci => ci._id === item.itemId);
           return {
             itemId: item.itemId,
-            quantity: item.quantity,
-            price: cartItem?.Price || cartItem?.price || 0
+            quantity: item.quantity
           };
         }),
         notes: cartItems.map(item => item.note).filter(note => note).join(', ') || '',

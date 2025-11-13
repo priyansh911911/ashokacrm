@@ -9,9 +9,25 @@ const AvailableTables = () => {
   const navigate = useNavigate();
   const [tables, setTables] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddItemsModal, setShowAddItemsModal] = useState(false);
+  const [selectedOrderForItems, setSelectedOrderForItems] = useState(null);
+  const [addItemsForm, setAddItemsForm] = useState({ orderId: '', itemId: '' });
+  const [items, setItems] = useState([]);
+  const [tableAmounts, setTableAmounts] = useState({});
+  const [tableStartTimes, setTableStartTimes] = useState({});
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     fetchTables();
+    fetchItems();
+    fetchTableAmounts();
+    
+    // Update timer every second
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    return () => clearInterval(timer);
   }, []);
 
   const fetchTables = async () => {
@@ -39,31 +55,120 @@ const AvailableTables = () => {
     }
   };
 
-  const updateTableStatus = async (tableId, newStatus) => {
+  const fetchItems = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        showToast.error('Please login again');
+      const response = await axios.get('/api/items/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setItems(response.data);
+    } catch (error) {
+      console.error('Error fetching items:', error);
+    }
+  };
+
+  const fetchTableAmounts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/restaurant-orders/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const amounts = {};
+      const startTimes = {};
+      
+      response.data.forEach(order => {
+        if (order.tableNo && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'paid') {
+          if (!amounts[order.tableNo]) {
+            amounts[order.tableNo] = 0;
+            // Use the earliest order time as start time for the table
+            startTimes[order.tableNo] = new Date(order.createdAt);
+          } else {
+            // Keep the earliest start time
+            const orderTime = new Date(order.createdAt);
+            if (orderTime < startTimes[order.tableNo]) {
+              startTimes[order.tableNo] = orderTime;
+            }
+          }
+          
+          // Calculate amount from items
+          let orderAmount = 0;
+          if (order.allKotItems) {
+            orderAmount = order.allKotItems.reduce((sum, item) => {
+              const itemPrice = item.price || item.Price || 0;
+              const itemQuantity = item.quantity || 1;
+              return sum + (itemPrice * itemQuantity);
+            }, 0);
+          } else if (order.items) {
+            orderAmount = order.items.reduce((sum, item) => {
+              const itemPrice = item.price || item.Price || 0;
+              const itemQuantity = item.quantity || 1;
+              return sum + (itemPrice * itemQuantity);
+            }, 0);
+          }
+          
+          amounts[order.tableNo] += orderAmount;
+        }
+      });
+      
+      setTableAmounts(amounts);
+      setTableStartTimes(startTimes);
+    } catch (error) {
+      console.error('Error fetching table amounts:', error);
+    }
+  };
+
+  const addItems = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const selectedItem = items.find(item => item._id === addItemsForm.itemId);
+      if (!selectedItem) {
+        showToast.error('Please select a valid item');
         return;
       }
-      await axios.patch(`/api/restaurant/tables/${tableId}/status`, {
-        status: newStatus
+      
+      await axios.post('/api/items/add', {
+        orderId: addItemsForm.orderId,
+        name: selectedItem.name,
+        category: selectedItem.category,
+        Price: selectedItem.Price
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchTables();
-      showToast.success('✅ Table status updated successfully!');
-    } catch (error) {
-      console.error('Error updating table status:', error);
-      if (error.response?.status === 401 || error.response?.data?.message === 'Invalid token') {
-        localStorage.removeItem('token');
-        showToast.error('Session expired. Please login again.');
-        window.location.href = '/login';
-      } else {
-        showToast.error('Failed to update table status');
+      
+      // Create/Update KOT for the new item
+      try {
+        await axios.post('/api/kot/create', {
+          orderId: addItemsForm.orderId,
+          tableNo: selectedOrderForItems?.tableNo,
+          items: [{
+            itemId: selectedItem._id,
+            itemName: selectedItem.name,
+            quantity: 1,
+            price: selectedItem.Price
+          }]
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('KOT updated for new item');
+      } catch (kotError) {
+        console.error('KOT update failed:', kotError);
       }
+      
+      showToast.success('Item added successfully!');
+      setAddItemsForm({ orderId: '', itemId: '' });
+      setShowAddItemsModal(false);
+      setSelectedOrderForItems(null);
+      fetchTables(); // Refresh tables to update any status changes
+      fetchTableAmounts(); // Refresh table amounts
+    } catch (error) {
+      console.error('Error adding items:', error);
+      showToast.error('Failed to add items');
     }
   };
+
+
 
   const getTableStyle = (status) => {
     switch (status) {
@@ -100,7 +205,7 @@ const AvailableTables = () => {
     }
   };
 
-  const handleTableClick = (table) => {
+  const handleTableClick = async (table) => {
     if (table.status === 'available') {
       navigate('/resturant/order-table', { 
         state: { 
@@ -109,13 +214,97 @@ const AvailableTables = () => {
           capacity: table.capacity || 4
         }
       });
+    } else if (table.status === 'occupied') {
+      // Find existing order for this table and open add items modal
+      await handleAddItemsForTable(table.tableNumber);
     }
+  };
+
+  const handleAddItemsForTable = async (tableNumber) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/restaurant-orders/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Find all active orders for this table
+      const activeOrders = response.data.filter(order => 
+        order.tableNo === tableNumber && 
+        order.status !== 'completed' && 
+        order.status !== 'cancelled' &&
+        order.status !== 'paid'
+      );
+      
+      if (activeOrders.length > 0) {
+        // Use the first order as the primary order
+        const primaryOrder = activeOrders[0];
+        
+        // Combine all items from all orders
+        const allItems = [];
+        activeOrders.forEach(order => {
+          if (order.allKotItems) {
+            allItems.push(...order.allKotItems);
+          } else if (order.items) {
+            allItems.push(...order.items);
+          }
+        });
+        
+        // Count unique KOTs from item KOT numbers
+        const uniqueKots = new Set();
+        allItems.forEach(item => {
+          if (item.kotNumber) {
+            uniqueKots.add(item.kotNumber);
+          }
+        });
+        
+        // Calculate total amount by summing item prices
+        const totalAmount = allItems.reduce((sum, item) => {
+          const itemPrice = item.price || item.Price || 0;
+          const itemQuantity = item.quantity || 1;
+          return sum + (itemPrice * itemQuantity);
+        }, 0);
+        
+        // Create enhanced order object with combined data
+        const enhancedOrder = {
+          ...primaryOrder,
+          totalAmount: totalAmount,
+          amount: totalAmount,
+          allKotItems: allItems,
+          items: allItems,
+          kotCount: uniqueKots.size || 1
+        };
+        
+        setSelectedOrderForItems(enhancedOrder);
+        setAddItemsForm({orderId: primaryOrder._id, itemId: ''});
+        setShowAddItemsModal(true);
+      } else {
+        showToast.error('No active order found for this table');
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      showToast.error('Failed to load table orders');
+    }
+  };
+
+  const formatElapsedTime = (startTime) => {
+    if (!startTime) return '00:00:00';
+    
+    const elapsed = Math.floor((currentTime - startTime) / 1000);
+    const hours = Math.floor(elapsed / 3600);
+    const minutes = Math.floor((elapsed % 3600) / 60);
+    const seconds = elapsed % 60;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const TableComponent = ({ table }) => {
     const style = getTableStyle(table.status);
     const isAvailable = table.status === 'available';
+    const isOccupied = table.status === 'occupied';
+    const isClickable = isAvailable || isOccupied;
     const capacity = table.capacity || 4;
+    const startTime = tableStartTimes[table.tableNumber];
+    const elapsedTime = formatElapsedTime(startTime);
     
     const renderChairs = () => {
       const chairs = [];
@@ -163,8 +352,10 @@ const AvailableTables = () => {
           className={`
             ${style.bg} ${style.border} ${style.text}
             border-2 rounded-lg p-4 min-h-[120px] flex flex-col items-center justify-center
-            transition-all duration-200 cursor-pointer hover:shadow-lg
+            transition-all duration-200 hover:shadow-lg
+            ${isClickable ? 'cursor-pointer' : 'cursor-default'}
             ${isAvailable ? 'hover:bg-green-50 hover:border-green-300' : ''}
+            ${isOccupied ? 'hover:bg-gray-700 hover:border-gray-600' : ''}
           `}
           onClick={() => handleTableClick(table)}
         >
@@ -173,17 +364,23 @@ const AvailableTables = () => {
             {table.tableNumber}
           </div>
           
-          {/* Capacity */}
-          <div className="flex items-center text-sm mb-2">
-            <Users size={14} className="mr-1" />
-            {capacity}
-          </div>
+
           
-          {/* Status indicator */}
-          {table.status === 'occupied' && (
-            <div className="text-xs bg-white text-gray-800 px-2 py-1 rounded">
-              17:00 PM
-            </div>
+
+          
+          {/* Add items indicator, amount and timer for occupied tables */}
+          {isOccupied && (
+            <>
+              <div className="text-sm font-semibold text-white mb-1">
+                ₹{tableAmounts[table.tableNumber] || 0}
+              </div>
+              <div className="text-xs text-gray-300 mb-1 font-mono">
+                {elapsedTime}
+              </div>
+              <div className="text-xs text-gray-300 text-center">
+                Click to add items
+              </div>
+            </>
           )}
           
           {table.status === 'reserved' && (
@@ -195,32 +392,6 @@ const AvailableTables = () => {
         
         {/* Dynamic chair representations based on capacity */}
         {renderChairs()}
-        
-        {/* Action buttons for available tables */}
-        {isAvailable && (
-          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-            <div className="flex gap-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateTableStatus(table._id, 'reserved');
-                }}
-                className="bg-orange-500 text-white px-2 py-1 rounded text-xs hover:bg-orange-600"
-              >
-                Reserve
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateTableStatus(table._id, 'occupied');
-                }}
-                className="bg-gray-800 text-white px-2 py-1 rounded text-xs hover:bg-gray-900"
-              >
-                Occupy
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -279,6 +450,140 @@ const AvailableTables = () => {
           </div>
         )}
       </div>
+
+      {/* Add Items Modal */}
+      {showAddItemsModal && selectedOrderForItems && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-[#c3ad6b]/30">
+            {/* Header */}
+            <div className="p-6 border-b border-[#c3ad6b]/20">
+              <div className="flex justify-between items-center">
+                <h3 className="text-2xl font-bold text-[#b39b5a]">Add Items to Order</h3>
+                <button
+                  onClick={() => {
+                    setShowAddItemsModal(false);
+                    setSelectedOrderForItems(null);
+                    setAddItemsForm({orderId: '', itemId: ''});
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-3xl transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            {/* Current Order Info */}
+            <div className="p-6 bg-gradient-to-r from-[#f7f5ef] to-[#c3ad6b]/10 border-b border-[#c3ad6b]/20">
+              <h4 className="text-lg font-bold text-[#b39b5a] mb-4">Current Order Details</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-[#b39b5a]">Order ID:</span>
+                  <span className="text-gray-700 font-mono">{selectedOrderForItems._id?.slice(-6)}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-[#b39b5a]">Table:</span>
+                  <span className="text-gray-700">{selectedOrderForItems.tableNo}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-[#b39b5a]">Items:</span>
+                  <span className="text-gray-700">{selectedOrderForItems.allKotItems?.length || selectedOrderForItems.items?.length || 0}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-[#b39b5a]">Total Amount:</span>
+                  <span className="text-gray-700 font-bold">₹{selectedOrderForItems.totalAmount || selectedOrderForItems.amount || selectedOrderForItems.advancePayment || 0}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-[#b39b5a]">KOTs:</span>
+                  <span className="text-gray-700">{selectedOrderForItems.kotCount || 1}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-[#b39b5a]">Status:</span>
+                  <span className="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">{selectedOrderForItems.status || 'pending'}</span>
+                </div>
+              </div>
+              
+              {/* Current Items List */}
+              {(selectedOrderForItems.allKotItems || selectedOrderForItems.items) && (selectedOrderForItems.allKotItems || selectedOrderForItems.items).length > 0 && (
+                <div className="mt-4">
+                  <div className="font-semibold text-[#b39b5a] mb-2">Current Items:</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                    {(selectedOrderForItems.allKotItems || selectedOrderForItems.items).map((item, index) => {
+                      let itemName = 'Unknown Item';
+                      if (typeof item === 'string') {
+                        itemName = item;
+                      } else if (item.itemId) {
+                        const foundItem = items.find(i => i._id === item.itemId);
+                        itemName = foundItem ? foundItem.name : (item.name || item.itemName || 'Unknown Item');
+                      } else {
+                        itemName = item.name || item.itemName || 'Unknown Item';
+                      }
+                      return (
+                        <div key={index} className="flex items-center gap-2 text-xs bg-white/50 rounded-lg p-2">
+                          <span className="bg-[#c3ad6b] text-white px-2 py-1 rounded text-xs font-bold">K{item.kotNumber || 1}</span>
+                          <span className="text-gray-700">{itemName}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Menu Items Grid */}
+            <div className="p-6">
+              <h4 className="text-lg font-bold text-[#b39b5a] mb-4">Select Items to Add</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+                {items.map(item => (
+                  <div key={item._id} className="bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-lg border-2 border-[#c3ad6b]/20 hover:border-[#c3ad6b] hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <h5 className="text-lg font-bold text-[#b39b5a] mb-1 truncate">{item.name}</h5>
+                    <p className="text-sm text-[#c3ad6b] font-medium mb-2">{item.category}</p>
+                    <p className="text-lg font-bold text-gray-800 mb-3">₹{(item.Price || item.price || 0).toFixed(2)}</p>
+                    <button
+                      onClick={() => {
+                        setAddItemsForm({...addItemsForm, itemId: item._id});
+                        // Auto-submit when item is selected
+                        const form = document.getElementById('add-items-form');
+                        if (form) {
+                          setTimeout(() => form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })), 100);
+                        }
+                      }}
+                      className="w-full bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] text-white py-2 rounded-lg font-bold hover:from-[#b39b5a] hover:to-[#c3ad6b] transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg text-sm"
+                    >
+                      Add to Order
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Hidden Form for Submission */}
+            <form 
+              id="add-items-form"
+              onSubmit={addItems} 
+              className="hidden"
+            >
+              <input type="hidden" value={addItemsForm.itemId} />
+            </form>
+            
+            {/* Footer */}
+            <div className="p-6 border-t border-[#c3ad6b]/20 bg-gradient-to-r from-[#f7f5ef] to-[#c3ad6b]/10">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddItemsModal(false);
+                    setSelectedOrderForItems(null);
+                    setAddItemsForm({orderId: '', itemId: ''});
+                  }}
+                  className="px-6 py-3 bg-gray-500 text-white rounded-xl font-bold hover:bg-gray-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
