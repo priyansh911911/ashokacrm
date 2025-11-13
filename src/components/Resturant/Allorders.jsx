@@ -37,6 +37,9 @@ const AllBookings = ({ setActiveTab }) => {
   const [paymentBillData, setPaymentBillData] = useState(null);
   const [showRestaurantBill, setShowRestaurantBill] = useState(false);
   const [restaurantBillData, setRestaurantBillData] = useState(null);
+  const [openInvoices, setOpenInvoices] = useState(new Map()); // Track open invoice windows
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchUserRole();
@@ -93,13 +96,34 @@ const AllBookings = ({ setActiveTab }) => {
 
   const fetchBookings = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found');
+        setLoading(false);
+        return;
+      }
+      
       const response = await axios.get('/api/restaurant-orders/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setBookings(response.data);
+      console.log('Fetched bookings:', response.data);
+      console.log('Bookings count:', response.data?.length || 0);
+      
+      if (Array.isArray(response.data)) {
+        setBookings(response.data);
+      } else if (response.data && response.data.orders) {
+        setBookings(response.data.orders);
+      } else {
+        setBookings([]);
+      }
     } catch (error) {
       console.error('Error fetching bookings:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to fetch bookings');
+      setBookings([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -261,17 +285,64 @@ const AllBookings = ({ setActiveTab }) => {
     try {
       setLoadingInvoice(orderId);
       const token = localStorage.getItem('token');
+      
+      // Get current order data
+      const currentOrder = bookings.find(b => b._id === orderId);
+      if (!currentOrder) {
+        showToast.error('Order not found');
+        return;
+      }
+      
+      // Create invoice data with current items
+      const invoiceData = {
+        orderId: orderId,
+        orderDetails: {
+          _id: currentOrder._id,
+          customerName: currentOrder.customerName || 'Guest',
+          tableNo: currentOrder.tableNo,
+          items: currentOrder.allKotItems || currentOrder.items || [],
+          totalAmount: currentOrder.amount || currentOrder.advancePayment || 0,
+          status: currentOrder.status,
+          createdAt: currentOrder.createdAt,
+          kotCount: currentOrder.kotCount || 1
+        }
+      };
+      
+      // Check if invoice is already open for this order
+      if (openInvoices.has(orderId)) {
+        const existingWindow = openInvoices.get(orderId);
+        if (existingWindow && !existingWindow.closed) {
+          // Update existing invoice with new data
+          existingWindow.postMessage({
+            type: 'UPDATE_INVOICE',
+            data: invoiceData
+          }, '*');
+          existingWindow.focus();
+          showToast.success('Invoice updated with new items!');
+          return;
+        } else {
+          // Remove closed window from tracking
+          setOpenInvoices(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(orderId);
+            return newMap;
+          });
+        }
+      }
+      
+      // Generate new invoice
       const response = await axios.get(`/api/restaurant-orders/invoice/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       console.log('Invoice response:', response.data);
       
+      let invoiceWindow;
       // Handle different response formats
       if (response.data.invoiceUrl) {
-        window.open(response.data.invoiceUrl, '_blank');
+        invoiceWindow = window.open(response.data.invoiceUrl, `invoice_${orderId}`);
       } else if (response.data.url) {
-        window.open(response.data.url, '_blank');
+        invoiceWindow = window.open(response.data.url, `invoice_${orderId}`);
       } else {
         // Navigate to invoice page with data
         navigate('/invoice', {
@@ -280,6 +351,24 @@ const AllBookings = ({ setActiveTab }) => {
             checkoutId: orderId
           }
         });
+        return;
+      }
+      
+      // Track the opened invoice window
+      if (invoiceWindow) {
+        setOpenInvoices(prev => new Map(prev).set(orderId, invoiceWindow));
+        
+        // Clean up when window is closed
+        const checkClosed = setInterval(() => {
+          if (invoiceWindow.closed) {
+            setOpenInvoices(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(orderId);
+              return newMap;
+            });
+            clearInterval(checkClosed);
+          }
+        }, 1000);
       }
       
       showToast.success('Invoice generated successfully!');
@@ -369,6 +458,36 @@ const AllBookings = ({ setActiveTab }) => {
             ...restaurantBillData,
             items: [...(updatedBooking.allKotItems || updatedBooking.items || []), selectedItem]
           });
+        }
+      }
+      
+      // Update open invoice if it exists for this order
+      if (openInvoices.has(addItemsForm.orderId)) {
+        const invoiceWindow = openInvoices.get(addItemsForm.orderId);
+        if (invoiceWindow && !invoiceWindow.closed) {
+          const updatedBooking = bookings.find(b => b._id === addItemsForm.orderId);
+          if (updatedBooking) {
+            const invoiceData = {
+              orderId: addItemsForm.orderId,
+              orderDetails: {
+                _id: updatedBooking._id,
+                customerName: updatedBooking.customerName || 'Guest',
+                tableNo: updatedBooking.tableNo,
+                items: [...(updatedBooking.allKotItems || updatedBooking.items || []), selectedItem],
+                totalAmount: updatedBooking.amount || updatedBooking.advancePayment || 0,
+                status: updatedBooking.status,
+                createdAt: updatedBooking.createdAt,
+                kotCount: updatedBooking.kotCount || 1
+              }
+            };
+            
+            invoiceWindow.postMessage({
+              type: 'UPDATE_INVOICE',
+              data: invoiceData
+            }, '*');
+            
+            showToast.success('Invoice updated with new item!');
+          }
         }
       }
       
@@ -683,9 +802,30 @@ const AllBookings = ({ setActiveTab }) => {
             </table>
           </div>
           
-          {paginatedBookings.length === 0 && (
+          {loading && (
+            <div className="text-center py-8 text-gray-500">
+              Loading bookings...
+            </div>
+          )}
+          
+          {error && (
+            <div className="text-center py-8 text-red-500">
+              Error: {error}
+              <button 
+                onClick={fetchBookings}
+                className="ml-2 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          
+          {!loading && !error && paginatedBookings.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               No bookings found.
+              <div className="mt-2 text-sm">
+                Total bookings: {bookings.length}
+              </div>
             </div>
           )}
         </div>
