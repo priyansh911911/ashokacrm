@@ -85,6 +85,7 @@ import CashManagement from "./components/CashManagement/CashManagement.jsx";
 import RegisterForm from "./components/auth/RegisterForm.jsx";
 import Kitchen from "./components/Kitchen.jsx";
 import KitchenStore from "./components/KitchenStore.jsx";
+import KitchenConsumption from "./components/KitchenConsumption.jsx";
 import ChefDashboard from "./components/Resturant/ChefDashboard.jsx";
 import RoomService from "./components/room/RoomService.jsx";
 import RoomServiceBilling from "./components/room/RoomServiceBilling.jsx";
@@ -147,6 +148,7 @@ const App = () => {
                       />
                       <Route path="/kitchen" element={<Kitchen />} />
                       <Route path="/kitchen-store" element={<KitchenStore />} />
+                      <Route path="/kitchen-consumption" element={<KitchenConsumption />} />
                       <Route path="/tasks" element={<TaskAssign />} />
                       <Route path="/category" element={<CategoryList />} />
                       <Route path="/room" element={<RoomList />} />

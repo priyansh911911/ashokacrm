@@ -1477,29 +1477,52 @@ const Order = () => {
                 <div>
                   <span className="text-gray-500">Items:</span>
                   <div className="font-medium">
-                    {order.items?.length > 0 ? (
-                      <div className="space-y-1">
-                        {order.items.slice(0, 2).map((item, idx) => {
-                          let itemName = item.name || item.itemName;
-                          if (!itemName && (item.itemId || item.pantryItemId)) {
-                            const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
-                            itemName = pantryItem?.name;
-                          }
-                          return (
-                            <div key={idx} className="text-sm">
-                              {itemName || 'Unknown Item'} ({item.quantity || 1})
+                    {(() => {
+                      // For Kitchen to Pantry orders, show original request if items array is empty
+                      const displayItems = order.items?.length > 0 ? order.items : 
+                        (order.orderType === 'Kitchen to Pantry' && order.originalRequest?.items ? 
+                          order.originalRequest.items.map(item => ({
+                            ...item,
+                            name: item.name || 'Unknown Item',
+                            quantity: item.quantity || 0
+                          })) : []);
+                      return displayItems.length > 0 ? (
+                        <div className="space-y-1">
+                          {displayItems.slice(0, 2).map((item, idx) => {
+                            let itemName = item.name || item.itemName;
+                            if (!itemName && (item.itemId || item.pantryItemId)) {
+                              const itemRef = item.itemId || item.pantryItemId;
+                              const pantryItem = pantryItems.find(p => 
+                                p._id === itemRef || 
+                                p._id === (typeof itemRef === 'object' ? itemRef._id : itemRef)
+                              );
+                              itemName = pantryItem?.name;
+                            }
+                            // If still no name, try to get from populated itemId
+                            if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
+                              itemName = item.itemId.name;
+                            }
+                            // For Kitchen to Pantry orders, show original requested quantity if current is 0
+                            const displayQuantity = order.orderType === 'Kitchen to Pantry' && (item.quantity === 0 || item.quantity === '0') ?
+                              `${order.originalRequest?.items?.find(oi => (oi.itemId || oi.pantryItemId) === (item.itemId?._id || item.itemId))?.quantity || item.quantity} (Out of Stock)` :
+                              item.quantity || 1;
+                            
+                            return (
+                              <div key={idx} className="text-sm">
+                                {itemName || 'Unknown Item'} ({displayQuantity})
+                              </div>
+                            );
+                          })}
+                          {displayItems.length > 2 && (
+                            <div className="text-sm text-gray-500">
+                              +{displayItems.length - 2} more
                             </div>
-                          );
-                        })}
-                        {order.items.length > 2 && (
-                          <div className="text-sm text-gray-500">
-                            +{order.items.length - 2} more
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">No items</span>
-                    )}
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">No items</span>
+                      );
+                    })()}
                   </div>
                 </div>
                 {order.orderType === 'Pantry to vendor' && (
@@ -1751,7 +1774,7 @@ const Order = () => {
       {/* Order Form Modal */}
       {showOrderForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-6">
                 {editingOrder ? 'Edit Order' : 'Create New Order'}
@@ -1760,7 +1783,7 @@ const Order = () => {
               <form onSubmit={handleSubmitOrder} className="space-y-4">
 
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
                     <select
@@ -2024,7 +2047,7 @@ const Order = () => {
                             </button>
                           </div>
                           
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                               <label className="block text-xs text-gray-500 mb-1">Quantity</label>
                               <input
@@ -2114,7 +2137,7 @@ const Order = () => {
                 )}
 
                 {/* Packaging and Labour Charges */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Packaging Charge (₹)</label>
                     <input
@@ -2153,7 +2176,7 @@ const Order = () => {
                   />
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                   <button
                     type="button"
                     onClick={resetForm}

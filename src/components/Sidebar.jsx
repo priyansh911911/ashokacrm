@@ -393,6 +393,7 @@ const Sidebar = () => {
           { icon: ListChecks, label: "KOT", path: "/kot" },
           { icon: ListChecks, label: "Kitchen Orders", path: "/kitchen" },
           { icon: Package, label: "Kitchen Store", path: "/kitchen-store" },
+          { icon: BarChart2, label: "Kitchen Consumption", path: "/kitchen-consumption" },
         ];
       }
       
@@ -424,6 +425,7 @@ const Sidebar = () => {
         return [
           { icon: ListChecks, label: "Kitchen Orders", path: "/kitchen" },
           { icon: Package, label: "Kitchen Store", path: "/kitchen-store" },
+          { icon: BarChart2, label: "Kitchen Consumption", path: "/kitchen-consumption" },
         ];
       }
       
@@ -445,6 +447,7 @@ const Sidebar = () => {
           children: [
             { label: "Kitchen Orders", path: "/kitchen", icon: ListChecks },
             { label: "Kitchen Store", path: "/kitchen-store", icon: Package },
+            { label: "Kitchen Consumption", path: "/kitchen-consumption", icon: BarChart2 },
           ],
         }];
       }

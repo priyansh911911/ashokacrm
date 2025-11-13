@@ -47,51 +47,56 @@ const Kitchen = () => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (refreshOnly = false) => {
     setLoading(true);
     try {
-      // Fetch items
-      try {
-        const itemsRes = await axios.get('/api/pantry/items', { 
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
-        });
-        const itemsData = itemsRes.data;
-        setItems(Array.isArray(itemsData) ? itemsData : (itemsData?.items || itemsData?.data || []));
-      } catch (error) {
-        console.log('Items fetch failed:', error);
-        setItems([]);
+      // Only fetch items and vendors on initial load, not on refresh
+      if (!refreshOnly) {
+        // Fetch items
+        try {
+          const itemsRes = await axios.get('/api/pantry/items', { 
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
+          });
+          const itemsData = itemsRes.data;
+          setItems(Array.isArray(itemsData) ? itemsData : (itemsData?.items || itemsData?.data || []));
+        } catch (error) {
+          console.log('Items fetch failed:', error);
+          setItems([]);
+        }
+
+        // Fetch vendors
+        try {
+          const vendorsRes = await axios.get('/api/vendor/all', { 
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
+          });
+          const vendorsData = vendorsRes.data;
+          setVendors(Array.isArray(vendorsData) ? vendorsData : (vendorsData?.vendors || vendorsData?.data || []));
+        } catch (error) {
+          console.log('Vendors fetch failed:', error);
+          setVendors([]);
+        }
+
+
+
+        // Auto-sync missing kitchen orders first (only on initial load)
+        try {
+          await axios.post('/api/kitchen-orders/sync', {}, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          console.log('✅ Auto-sync completed');
+        } catch (error) {
+          console.log('Auto-sync failed (may not be available on server):', error.response?.status);
+        }
       }
 
-      // Fetch vendors
+      // Always fetch kitchen orders (fast query with pagination)
       try {
-        const vendorsRes = await axios.get('/api/vendor/all', { 
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
-        });
-        const vendorsData = vendorsRes.data;
-        setVendors(Array.isArray(vendorsData) ? vendorsData : (vendorsData?.vendors || vendorsData?.data || []));
-      } catch (error) {
-        console.log('Vendors fetch failed:', error);
-        setVendors([]);
-      }
-
-      // Auto-sync missing kitchen orders first
-      try {
-        await axios.post('/api/kitchen-orders/sync', {}, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        console.log('✅ Auto-sync completed');
-      } catch (error) {
-        console.log('Auto-sync failed (may not be available on server):', error.response?.status);
-      }
-
-      // Fetch kitchen orders after sync
-      try {
-        const kitchenOrdersRes = await axios.get('/api/kitchen-orders', { 
+        const kitchenOrdersRes = await axios.get('/api/kitchen-orders?legacy=true&limit=20', { 
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
         });
         
         const kitchenOrders = kitchenOrdersRes.data || [];
-        setOrders(kitchenOrders);
+        setOrders(Array.isArray(kitchenOrders) ? kitchenOrders : []);
       } catch (error) {
         console.log('Orders fetch failed:', error);
         setOrders([]);
@@ -230,6 +235,8 @@ const Kitchen = () => {
     setFormData({ ...formData, items: updatedItems, totalAmount: total });
   };
 
+
+
   return (
     <div className="p-6 bg-background min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -258,7 +265,7 @@ const Kitchen = () => {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={fetchData}
+            onClick={() => fetchData(true)}
             className="bg-secondary text-text px-4 py-2 rounded-lg hover:bg-hover flex items-center gap-2 shadow-lg transition-all duration-200"
             disabled={loading}
           >
@@ -363,7 +370,7 @@ const Kitchen = () => {
                               Approve
                             </button>
                           )}
-                          {order.status === 'approved' && !order.pantryOrderId && (
+                          {(order.status === 'approved' || (order.status === 'pending' && order.orderType === 'kitchen_to_pantry')) && (
                             <button
                               onClick={() => handleStatusUpdate(order, 'delivered')}
                               className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"

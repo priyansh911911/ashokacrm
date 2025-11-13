@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { showToast } from '../utils/toaster';
-import { Plus, Package, Edit, Trash2 } from 'lucide-react';
+import { Plus, Package, Edit, Trash2, Minus, ShoppingCart } from 'lucide-react';
 
 const KitchenStore = () => {
   const { axios } = useAppContext();
@@ -15,6 +15,13 @@ const KitchenStore = () => {
     unit: '',
     category: ''
   });
+  const [showTakeOut, setShowTakeOut] = useState(false);
+  const [takeOutData, setTakeOutData] = useState({
+    items: [{ itemName: '', quantity: 1, unit: '', purpose: 'cooking' }],
+    notes: ''
+  });
+  const [searchTerms, setSearchTerms] = useState(['']);
+  const [showDropdowns, setShowDropdowns] = useState([false]);
 
   useEffect(() => {
     fetchItems();
@@ -102,6 +109,88 @@ const KitchenStore = () => {
     setShowForm(false);
   };
 
+  const handleTakeOut = async (e) => {
+    e.preventDefault();
+    const validItems = takeOutData.items.filter(item => item.itemName && item.quantity > 0);
+    if (validItems.length === 0) {
+      showToast.error('Please add at least one valid item');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axios.post('/api/kitchen-store/take-out', {
+        items: validItems,
+        notes: takeOutData.notes
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      showToast.success('Items taken out successfully');
+      resetTakeOutForm();
+      fetchItems();
+    } catch (error) {
+      showToast.error(error.response?.data?.error || 'Failed to take out items');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetTakeOutForm = () => {
+    setTakeOutData({
+      items: [{ itemName: '', quantity: 1, unit: '', purpose: 'cooking' }],
+      notes: ''
+    });
+    setSearchTerms(['']);
+    setShowDropdowns([false]);
+    setShowTakeOut(false);
+  };
+
+  const createOrder = async (itemId) => {
+    try {
+      await axios.post(`/api/kitchen-store/order/${itemId}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      showToast.success('Order created successfully');
+    } catch (error) {
+      showToast.error(error.response?.data?.error || 'Failed to create order');
+    }
+  };
+
+  const addTakeOutItem = () => {
+    setTakeOutData(prev => ({
+      ...prev,
+      items: [...prev.items, { itemName: '', quantity: 1, unit: '', purpose: 'cooking' }]
+    }));
+    setSearchTerms(prev => [...prev, '']);
+    setShowDropdowns(prev => [...prev, false]);
+  };
+
+  const removeTakeOutItem = (index) => {
+    setTakeOutData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
+    setSearchTerms(prev => prev.filter((_, i) => i !== index));
+    setShowDropdowns(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateTakeOutItem = (index, field, value) => {
+    setTakeOutData(prev => {
+      const updatedItems = [...prev.items];
+      updatedItems[index] = { ...updatedItems[index], [field]: value };
+      
+      if (field === 'itemName') {
+        const item = items.find(i => i.name === value);
+        if (item) {
+          updatedItems[index].unit = item.unit || '';
+        }
+      }
+      
+      return { ...prev, items: updatedItems };
+    });
+  };
+
   return (
     <div className="p-6 bg-background min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -114,6 +203,13 @@ const KitchenStore = () => {
             <Package size={20} />
             Refresh
           </button> */}
+          <button
+            onClick={() => setShowTakeOut(true)}
+            className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 flex items-center gap-2 shadow-lg transition-all duration-200"
+          >
+            <Minus size={20} />
+            Take Out
+          </button>
           <button
             onClick={() => setShowForm(true)}
             className="bg-primary text-text px-4 py-2 rounded-lg hover:bg-hover flex items-center gap-2 shadow-lg transition-all duration-200"
@@ -157,7 +253,13 @@ const KitchenStore = () => {
                         {item.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text">
-                        {item.quantity || 0}
+                        <span className={`font-medium ${
+                          (item.quantity || 0) <= 0 ? 'text-red-600' : 
+                          (item.quantity || 0) <= 5 ? 'text-yellow-600' : 
+                          'text-green-600'
+                        }`}>
+                          {item.quantity || 0}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text">
                         {item.unit}
@@ -167,6 +269,15 @@ const KitchenStore = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
+                          {(item.quantity || 0) <= 0 && (
+                            <button
+                              onClick={() => createOrder(item._id)}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Create order for this item"
+                            >
+                              <ShoppingCart size={16} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEdit(item)}
                             className="text-primary hover:text-hover"
@@ -261,6 +372,157 @@ const KitchenStore = () => {
                     className="px-4 py-2 bg-primary text-text rounded-md hover:bg-hover disabled:opacity-50 transition-all duration-200"
                   >
                     {loading ? 'Saving...' : editingItem ? 'Update' : 'Add Item'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Take Out Modal */}
+      {showTakeOut && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-xl font-bold mb-4">Take Out Items</h2>
+              
+              <form onSubmit={handleTakeOut} className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-gray-700">Items</label>
+                    <button
+                      type="button"
+                      onClick={addTakeOutItem}
+                      className="text-primary hover:text-primary/80 text-sm font-medium"
+                    >
+                      + Add Item
+                    </button>
+                  </div>
+                  
+                  {takeOutData.items.map((item, index) => (
+                    <div key={index} className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2 p-3 border rounded">
+                      <div className="relative sm:col-span-2">
+                        <input
+                          type="text"
+                          value={searchTerms[index] || item.itemName || ''}
+                          onChange={(e) => {
+                            const newSearchTerms = [...searchTerms];
+                            newSearchTerms[index] = e.target.value;
+                            setSearchTerms(newSearchTerms);
+                            const newShowDropdowns = [...showDropdowns];
+                            newShowDropdowns[index] = true;
+                            setShowDropdowns(newShowDropdowns);
+                          }}
+                          onFocus={() => {
+                            const newShowDropdowns = [...showDropdowns];
+                            newShowDropdowns[index] = true;
+                            setShowDropdowns(newShowDropdowns);
+                          }}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              const newShowDropdowns = [...showDropdowns];
+                              newShowDropdowns[index] = false;
+                              setShowDropdowns(newShowDropdowns);
+                            }, 200);
+                          }}
+                          placeholder="Search items..."
+                          className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                          required
+                        />
+                        {showDropdowns[index] && (
+                          <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto mt-1">
+                            {items
+                              .filter(storeItem => 
+                                storeItem.name.toLowerCase().includes((searchTerms[index] || '').toLowerCase())
+                              )
+                              .map(storeItem => (
+                                <div
+                                  key={storeItem._id}
+                                  onClick={() => {
+                                    updateTakeOutItem(index, 'itemName', storeItem.name);
+                                    const newSearchTerms = [...searchTerms];
+                                    newSearchTerms[index] = storeItem.name;
+                                    setSearchTerms(newSearchTerms);
+                                    const newShowDropdowns = [...showDropdowns];
+                                    newShowDropdowns[index] = false;
+                                    setShowDropdowns(newShowDropdowns);
+                                  }}
+                                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
+                                >
+                                  {storeItem.name} (Available: {storeItem.quantity})
+                                </div>
+                              ))
+                            }
+                            {items.filter(storeItem => 
+                              storeItem.name.toLowerCase().includes((searchTerms[index] || '').toLowerCase())
+                            ).length === 0 && (
+                              <div className="px-3 py-2 text-gray-500 text-sm">
+                                No items found
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={item.quantity}
+                        onChange={(e) => updateTakeOutItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                        placeholder="Quantity"
+                        className="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                      
+                      <select
+                        value={item.purpose}
+                        onChange={(e) => updateTakeOutItem(index, 'purpose', e.target.value)}
+                        className="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="cooking">Cooking</option>
+                        <option value="preparation">Preparation</option>
+                        <option value="cleaning">Cleaning</option>
+                        <option value="other">Other</option>
+                      </select>
+                      
+                      <button
+                        type="button"
+                        onClick={() => removeTakeOutItem(index)}
+                        className="text-red-600 hover:text-red-800 px-2"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea
+                    value={takeOutData.notes}
+                    onChange={(e) => setTakeOutData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                    rows="3"
+                    placeholder="Additional notes..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={resetTakeOutForm}
+                    className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
+                  >
+                    {loading ? 'Taking Out...' : 'Take Out Items'}
                   </button>
                 </div>
               </form>
