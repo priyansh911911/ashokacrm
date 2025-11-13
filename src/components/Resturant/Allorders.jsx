@@ -4,6 +4,8 @@ import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import Pagination from '../common/Pagination';
 import { useSocket } from '../../context/SocketContext';
+import PaymentBill from '../Pantry/PaymentBill';
+import RestaurantBill from '../Pantry/RestaurantBill';
 
 const AllBookings = ({ setActiveTab }) => {
   const { axios } = useAppContext();
@@ -31,6 +33,10 @@ const AllBookings = ({ setActiveTab }) => {
   const [selectedOrderForTransfer, setSelectedOrderForTransfer] = useState(null);
   const [showAddItemsModal, setShowAddItemsModal] = useState(false);
   const [selectedOrderForItems, setSelectedOrderForItems] = useState(null);
+  const [showPaymentBill, setShowPaymentBill] = useState(false);
+  const [paymentBillData, setPaymentBillData] = useState(null);
+  const [showRestaurantBill, setShowRestaurantBill] = useState(false);
+  const [restaurantBillData, setRestaurantBillData] = useState(null);
 
   useEffect(() => {
     fetchUserRole();
@@ -350,10 +356,21 @@ const AllBookings = ({ setActiveTab }) => {
       setBookings(prevBookings => 
         prevBookings.map(booking => 
           booking._id === addItemsForm.orderId 
-            ? { ...booking, items: [...(booking.items || []), selectedItem] }
+            ? { ...booking, items: [...(booking.items || []), selectedItem], allKotItems: [...(booking.allKotItems || []), selectedItem] }
             : booking
         )
       );
+      
+      // Update restaurant bill if it's open for this order
+      if (showRestaurantBill && restaurantBillData && restaurantBillData._id === addItemsForm.orderId) {
+        const updatedBooking = bookings.find(b => b._id === addItemsForm.orderId);
+        if (updatedBooking) {
+          setRestaurantBillData({
+            ...restaurantBillData,
+            items: [...(updatedBooking.allKotItems || updatedBooking.items || []), selectedItem]
+          });
+        }
+      }
       
       showToast.success('Item added successfully!');
       setAddItemsForm({ orderId: '', itemId: '' });
@@ -580,12 +597,51 @@ const AllBookings = ({ setActiveTab }) => {
                               // Only show Invoice button for served orders
                               null
                             ) : booking.status === 'completed' ? (
-                              <button
-                                onClick={() => setPaymentForm({...paymentForm, orderId: booking._id, amount: (booking.amount || booking.advancePayment || 0).toString()})}
-                                className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 whitespace-nowrap"
-                              >
-                                Pay Now
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setPaymentBillData({
+                                      order: {
+                                        _id: booking._id,
+                                        orderType: 'Restaurant Order',
+                                        priority: 'medium',
+                                        status: booking.status,
+                                        items: booking.allKotItems || booking.items || [],
+                                        totalAmount: booking.amount || booking.advancePayment || 0,
+                                        notes: booking.specialRequests || '',
+                                        packagingCharge: 0,
+                                        labourCharge: 0
+                                      },
+                                      vendor: {
+                                        name: 'Ashoka Hotel',
+                                        UpiID: '9876543210@paytm',
+                                        scannerImg: null
+                                      }
+                                    });
+                                    setShowPaymentBill(true);
+                                  }}
+                                  className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 whitespace-nowrap"
+                                >
+                                  Pay Now
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setRestaurantBillData({
+                                      _id: booking._id,
+                                      orderType: 'Restaurant Order',
+                                      roomNumber: booking.tableNo,
+                                      guestName: booking.customerName || 'Guest',
+                                      items: booking.allKotItems || booking.items || [],
+                                      totalAmount: booking.amount || booking.advancePayment || 0,
+                                      notes: booking.specialRequests || ''
+                                    });
+                                    setShowRestaurantBill(true);
+                                  }}
+                                  className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 whitespace-nowrap"
+                                >
+                                  Bill
+                                </button>
+                              </>
                             ) : booking.status === 'paid' ? (
                               <button
                                 onClick={() => generateInvoice(booking._id)}
@@ -895,6 +951,32 @@ const AllBookings = ({ setActiveTab }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Payment Bill Modal */}
+      {showPaymentBill && paymentBillData && (
+        <PaymentBill 
+          order={paymentBillData.order}
+          vendor={paymentBillData.vendor}
+          onClose={() => {
+            setShowPaymentBill(false);
+            setPaymentBillData(null);
+          }}
+        />
+      )}
+
+      {/* Restaurant Bill Modal */}
+      {showRestaurantBill && restaurantBillData && (
+        <RestaurantBill 
+          order={restaurantBillData}
+          onClose={() => {
+            setShowRestaurantBill(false);
+            setRestaurantBillData(null);
+          }}
+          onBillUpdate={(billData) => {
+            console.log('Restaurant bill updated:', billData);
+          }}
+        />
       )}
     </div>
   );
