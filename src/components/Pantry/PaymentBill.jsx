@@ -92,10 +92,30 @@ const PaymentBill = ({ order, orders, vendor, onClose, onBillUpdate }) => {
         @media print {
           * { visibility: hidden; }
           .print-content, .print-content * { visibility: visible !important; }
-          .print-content { position: absolute; left: 0; top: 0; width: 100%; }
+          .print-content { 
+            position: static !important; 
+            left: auto !important; 
+            top: auto !important; 
+            width: 100% !important;
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+            page-break-inside: auto !important;
+          }
           .no-print { display: none !important; }
-          @page { margin: 0.5in; size: A4; }
-          body { margin: 0; padding: 0; background: white !important; }
+          .overflow-x-auto { overflow: visible !important; }
+          table { page-break-inside: auto !important; }
+          tr { page-break-inside: avoid !important; }
+          @page { 
+            margin: 0.5in; 
+            size: A4; 
+          }
+          body { 
+            margin: 0; 
+            padding: 0; 
+            background: white !important;
+            overflow: visible !important;
+          }
         }
       `}</style>
       
