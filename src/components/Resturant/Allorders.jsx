@@ -19,7 +19,7 @@ const AllBookings = ({ setActiveTab }) => {
   const [items, setItems] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [couponForm, setCouponForm] = useState({ orderId: '', couponCode: '', isLoyalty: false, membership: '' });
-  const [refreshInterval, setRefreshInterval] = useState(null);
+
   const [paymentForm, setPaymentForm] = useState({ orderId: '', amount: '', method: 'cash' });
   const [bills, setBills] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,6 +33,9 @@ const AllBookings = ({ setActiveTab }) => {
   const [selectedOrderForTransfer, setSelectedOrderForTransfer] = useState(null);
   const [showAddItemsModal, setShowAddItemsModal] = useState(false);
   const [selectedOrderForItems, setSelectedOrderForItems] = useState(null);
+  const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
+  const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
+  const [splitPayments, setSplitPayments] = useState([{ amount: '', method: 'cash' }]);
   const [showPaymentBill, setShowPaymentBill] = useState(false);
   const [paymentBillData, setPaymentBillData] = useState(null);
   const [showRestaurantBill, setShowRestaurantBill] = useState(false);
@@ -48,18 +51,9 @@ const AllBookings = ({ setActiveTab }) => {
     fetchItems();
     fetchCoupons();
     fetchBills();
-    
-    // Auto-refresh bookings (less frequent if WebSocket is available)
-    const refreshRate = socket ? 60000 : 15000; // 1 minute with WebSocket, 15 seconds without
-    const interval = setInterval(fetchBookings, refreshRate);
-    setRefreshInterval(interval);
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
   }, []);
 
-  // WebSocket listener for real-time updates (fallback to polling if no socket)
+  // WebSocket listener for real-time updates
   useEffect(() => {
     if (socket) {
       socket.on('kot-status-updated', () => {
@@ -74,10 +68,6 @@ const AllBookings = ({ setActiveTab }) => {
         socket.off('kot-status-updated');
         socket.off('order-status-updated');
       };
-    } else {
-      // Fallback: More frequent polling when WebSocket is not available
-      const pollInterval = setInterval(fetchBookings, 10000); // Poll every 10 seconds
-      return () => clearInterval(pollInterval);
     }
   }, [socket]);
 
@@ -279,6 +269,87 @@ const AllBookings = ({ setActiveTab }) => {
       console.error('Error processing payment:', error);
       showToast.error('Failed to process payment');
     }
+  };
+
+  const processSplitPayment = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Validate split payments
+      const validPayments = splitPayments.filter(p => p.amount && parseFloat(p.amount) > 0);
+      if (validPayments.length === 0) {
+        showToast.error('Please add at least one payment amount');
+        return;
+      }
+      
+      const totalSplitAmount = validPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const orderAmount = selectedOrderForPayment?.amount || selectedOrderForPayment?.advancePayment || 0;
+      
+      if (Math.abs(totalSplitAmount - orderAmount) > 0.01) {
+        showToast.error(`Split payment total (₹${totalSplitAmount}) must equal order amount (₹${orderAmount})`);
+        return;
+      }
+      
+      // Create bill first
+      const billResponse = await axios.post('/api/bills/create', {
+        orderId: selectedOrderForPayment._id,
+        discount: 0,
+        tax: 0,
+        paymentMethod: 'split'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Process split payment
+      await axios.patch(`/api/bills/${billResponse.data._id}/split-payment`, {
+        payments: validPayments.map(p => ({
+          amount: parseFloat(p.amount),
+          method: p.method
+        }))
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update order status to paid
+      await axios.patch(`/api/restaurant-orders/${selectedOrderForPayment._id}/status`, {
+        status: 'paid'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      showToast.success('Split payment processed successfully!');
+      setShowSplitPaymentModal(false);
+      setSelectedOrderForPayment(null);
+      setSplitPayments([{ amount: '', method: 'cash' }]);
+      await fetchBills();
+      await fetchBookings();
+      
+    } catch (error) {
+      console.error('Error processing split payment:', error);
+      showToast.error('Failed to process split payment');
+    }
+  };
+
+  const addSplitPayment = () => {
+    const orderAmount = selectedOrderForPayment?.amount || selectedOrderForPayment?.advancePayment || 0;
+    const currentTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    const remainingAmount = Math.max(0, orderAmount - currentTotal);
+    
+    setSplitPayments([...splitPayments, { amount: remainingAmount > 0 ? remainingAmount.toString() : '', method: 'cash' }]);
+  };
+
+  const removeSplitPayment = (index) => {
+    if (splitPayments.length > 1) {
+      setSplitPayments(splitPayments.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateSplitPayment = (index, field, value) => {
+    const updated = splitPayments.map((payment, i) => 
+      i === index ? { ...payment, [field]: value } : payment
+    );
+    setSplitPayments(updated);
   };
 
   const generateInvoice = async (orderId, invoiceType = 'tax') => {
@@ -738,29 +809,13 @@ const AllBookings = ({ setActiveTab }) => {
                               <>
                                 <button
                                   onClick={() => {
-                                    setPaymentBillData({
-                                      order: {
-                                        _id: booking._id,
-                                        orderType: 'Restaurant Order',
-                                        priority: 'medium',
-                                        status: booking.status,
-                                        items: booking.allKotItems || booking.items || [],
-                                        totalAmount: booking.amount || booking.advancePayment || 0,
-                                        notes: booking.specialRequests || '',
-                                        packagingCharge: 0,
-                                        labourCharge: 0
-                                      },
-                                      vendor: {
-                                        name: 'Ashoka Hotel',
-                                        UpiID: '9876543210@paytm',
-                                        scannerImg: null
-                                      }
-                                    });
-                                    setShowPaymentBill(true);
+                                    setSelectedOrderForPayment(booking);
+                                    setSplitPayments([{ amount: (booking.amount || booking.advancePayment || 0).toString(), method: 'cash' }]);
+                                    setShowSplitPaymentModal(true);
                                   }}
                                   className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 whitespace-nowrap"
                                 >
-                                  Pay Now
+                                  Split Pay
                                 </button>
                                 <button
                                   onClick={() => {
@@ -781,20 +836,7 @@ const AllBookings = ({ setActiveTab }) => {
                                 </button>
                               </>
                             ) : booking.status === 'paid' ? (
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => generateInvoice(booking._id, 'tax')}
-                                  className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap"
-                                >
-                                  Tax Invoice
-                                </button>
-                                <button
-                                  onClick={() => generateInvoice(booking._id, 'pos')}
-                                  className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 whitespace-nowrap"
-                                >
-                                  POS
-                                </button>
-                              </div>
+                              null
                             ) : (
                               <>
                                 <button
@@ -865,6 +907,130 @@ const AllBookings = ({ setActiveTab }) => {
           totalItems={bookings.length}
         />
       </div>
+
+      {/* Split Payment Modal */}
+      {showSplitPaymentModal && selectedOrderForPayment && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Split Payment</h3>
+              <button
+                onClick={() => {
+                  setShowSplitPaymentModal(false);
+                  setSelectedOrderForPayment(null);
+                  setSplitPayments([{ amount: '', method: 'cash' }]);
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-100 rounded">
+                <div className="font-semibold">Order Details:</div>
+                <div className="text-sm mt-1">
+                  <div>Order ID: {selectedOrderForPayment._id?.slice(-6)}</div>
+                  <div>Table: {selectedOrderForPayment.tableNo}</div>
+                  <div>Total Amount: ₹{selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0}</div>
+                </div>
+              </div>
+              
+              <form onSubmit={processSplitPayment} className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <label className="block font-semibold">Payment Methods:</label>
+                    <button
+                      type="button"
+                      onClick={addSplitPayment}
+                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                  
+                  {splitPayments.map((payment, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Amount"
+                        value={payment.amount}
+                        onChange={(e) => updateSplitPayment(index, 'amount', e.target.value)}
+                        className="flex-1 p-2 border border-gray-300 rounded focus:border-yellow-500 focus:outline-none"
+                        required
+                      />
+                      <select
+                        value={payment.method}
+                        onChange={(e) => updateSplitPayment(index, 'method', e.target.value)}
+                        className="p-2 border border-gray-300 rounded focus:border-yellow-500 focus:outline-none"
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="upi">UPI</option>
+                        <option value="online">Online</option>
+                      </select>
+                      {splitPayments.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeSplitPayment(index)}
+                          className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <div className="text-sm">
+                    <div className="text-gray-600">
+                      Total: ₹{splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0).toFixed(2)} / ₹{selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0}
+                    </div>
+                    {(() => {
+                      const orderAmount = selectedOrderForPayment?.amount || selectedOrderForPayment?.advancePayment || 0;
+                      const currentTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+                      const remaining = orderAmount - currentTotal;
+                      return remaining > 0 ? (
+                        <div className="text-orange-600 font-medium">
+                          Remaining: ₹{remaining.toFixed(2)}
+                        </div>
+                      ) : remaining < 0 ? (
+                        <div className="text-red-600 font-medium">
+                          Excess: ₹{Math.abs(remaining).toFixed(2)}
+                        </div>
+                      ) : (
+                        <div className="text-green-600 font-medium">
+                          ✓ Amount matched
+                        </div>
+                      );
+                    })()} 
+                  </div>
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSplitPaymentModal(false);
+                      setSelectedOrderForPayment(null);
+                      setSplitPayments([{ amount: '', method: 'cash' }]);
+                    }}
+                    className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+                  >
+                    Process Payment
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Items Modal */}
       {showAddItemsModal && selectedOrderForItems && (
@@ -1096,7 +1262,15 @@ const AllBookings = ({ setActiveTab }) => {
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span>Total Amount:</span>
-                  <span>₹{selectedOrderDetails.totalAmount || selectedOrderDetails.advancePayment || 0}</span>
+                  <span>₹{(() => {
+                    const items = selectedOrderDetails.allKotItems || selectedOrderDetails.items || [];
+                    const calculatedTotal = items.reduce((sum, item) => {
+                      const price = typeof item === 'object' ? (item.price || item.Price || 0) : 0;
+                      const quantity = typeof item === 'object' ? (item.quantity || 1) : 1;
+                      return sum + (price * quantity);
+                    }, 0);
+                    return calculatedTotal || selectedOrderDetails.totalAmount || selectedOrderDetails.amount || selectedOrderDetails.advancePayment || 0;
+                  })()}</span>
                 </div>
               </div>
               
