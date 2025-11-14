@@ -109,8 +109,8 @@ const ChefDashboard = () => {
         });
       
       // Separate active and history orders
-      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served');
-      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served');
+      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served' && order.status !== 'completed');
+      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served' || order.status === 'completed');
       
       setOrders(activeOrders);
       setHistoryOrders(historyOrders);
@@ -195,7 +195,7 @@ const ChefDashboard = () => {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        {orders.map((order) => (
+        {(activeTab === 'active' ? orders : historyOrders).map((order) => (
           <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 min-h-[320px] flex flex-col">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3">
@@ -297,149 +297,158 @@ const ChefDashboard = () => {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-1">
-              {order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.checked && itemStates[`${order._id}-${index}`]?.status !== 'served' && itemStates[`${order._id}-${index}`]?.status !== 'delivered') && (
-                <button
-                  onClick={async () => {
-                    const token = localStorage.getItem('token');
-                    const itemStatuses = [];
-                    
-                    order.items?.forEach((item, index) => {
-                      const key = `${order._id}-${index}`;
-                      if (itemStates[key]?.checked) {
-                        itemStatuses.push({itemIndex: index, status: 'served'});
-                        setItemStates(prev => ({
-                          ...prev,
-                          [key]: { 
-                            ...prev[key], 
-                            status: 'served',
-                            checked: false
+            {/* Action Buttons - Only show for non-completed orders */}
+            {order.status !== 'completed' && (
+              <div className="flex flex-col gap-1">
+                {order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.checked && itemStates[`${order._id}-${index}`]?.status !== 'served' && itemStates[`${order._id}-${index}`]?.status !== 'delivered') && (
+                  <button
+                    onClick={async () => {
+                      const token = localStorage.getItem('token');
+                      const itemStatuses = [];
+                      
+                      order.items?.forEach((item, index) => {
+                        const key = `${order._id}-${index}`;
+                        if (itemStates[key]?.checked) {
+                          itemStatuses.push({itemIndex: index, status: 'served'});
+                          setItemStates(prev => ({
+                            ...prev,
+                            [key]: { 
+                              ...prev[key], 
+                              status: 'served',
+                              checked: false
+                            }
+                          }));
+                        }
+                      });
+                      
+                      if (itemStatuses.length > 0) {
+                        try {
+                          console.log('Updating item statuses:', {kotId: order.kotId, itemStatuses});
+                          const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
+                            {itemStatuses}, 
+                            {headers: {Authorization: `Bearer ${token}`}}
+                          );
+                          console.log('Item statuses updated successfully:', response.data);
+                          fetchOrders();
+                        } catch (error) {
+                          console.error('Error updating item statuses:', error.response?.data || error.message);
+                        }
+                      }
+                    }}
+                    className="w-full bg-orange-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-orange-600"
+                  >
+                    Mark Item to be Served
+                  </button>
+                )}
+                {order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.status === 'served') && (
+                  <button
+                    onClick={async () => {
+                      const token = localStorage.getItem('token');
+                      const itemStatuses = [];
+                      
+                      const hasCheckedItems = order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.checked);
+                      
+                      order.items?.forEach((item, index) => {
+                        const key = `${order._id}-${index}`;
+                        if (hasCheckedItems) {
+                          // Only update checked items
+                          if (itemStates[key]?.checked && itemStates[key]?.status === 'served') {
+                            itemStatuses.push({itemIndex: index, status: 'delivered'});
+                            setItemStates(prev => ({
+                              ...prev,
+                              [key]: { 
+                                ...prev[key], 
+                                status: 'delivered',
+                                checked: false
+                              }
+                            }));
                           }
-                        }));
+                        } else {
+                          // Update all served items
+                          if (itemStates[key]?.status === 'served') {
+                            itemStatuses.push({itemIndex: index, status: 'delivered'});
+                            setItemStates(prev => ({
+                              ...prev,
+                              [key]: { 
+                                ...prev[key], 
+                                status: 'delivered',
+                                checked: false
+                              }
+                            }));
+                          }
+                        }
+                      });
+                      
+                      if (itemStatuses.length > 0) {
+                        try {
+                          console.log('Marking served items delivered:', {kotId: order.kotId, itemStatuses});
+                          const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
+                            {itemStatuses}, 
+                            {headers: {Authorization: `Bearer ${token}`}}
+                          );
+                          console.log('Served items marked delivered:', response.data);
+                          fetchOrders();
+                        } catch (error) {
+                          console.error('Error marking served items delivered:', error.response?.data || error.message);
+                        }
                       }
-                    });
-                    
-                    if (itemStatuses.length > 0) {
-                      try {
-                        console.log('Updating item statuses:', {kotId: order.kotId, itemStatuses});
-                        const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
-                          {itemStatuses}, 
-                          {headers: {Authorization: `Bearer ${token}`}}
-                        );
-                        console.log('Item statuses updated successfully:', response.data);
-                        fetchOrders();
-                      } catch (error) {
-                        console.error('Error updating item statuses:', error.response?.data || error.message);
-                      }
-                    }
-                  }}
-                  className="w-full bg-orange-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-orange-600"
-                >
-                  Mark Item to be Served
-                </button>
-              )}
-              {order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.status === 'served') && (
+                    }}
+                    className="w-full bg-green-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-green-600"
+                  >
+                    Mark Served Items Delivered
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     const token = localStorage.getItem('token');
-                    const itemStatuses = [];
-                    
-                    const hasCheckedItems = order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.checked);
+                    const itemStatuses = order.items?.map((item, index) => ({
+                      itemIndex: index, 
+                      status: 'delivered'
+                    })) || [];
                     
                     order.items?.forEach((item, index) => {
                       const key = `${order._id}-${index}`;
-                      if (hasCheckedItems) {
-                        // Only update checked items
-                        if (itemStates[key]?.checked && itemStates[key]?.status === 'served') {
-                          itemStatuses.push({itemIndex: index, status: 'delivered'});
-                          setItemStates(prev => ({
-                            ...prev,
-                            [key]: { 
-                              ...prev[key], 
-                              status: 'delivered',
-                              checked: false
-                            }
-                          }));
+                      setItemStates(prev => ({
+                        ...prev,
+                        [key]: { 
+                          ...prev[key], 
+                          status: 'delivered',
+                          checked: false
                         }
-                      } else {
-                        // Update all served items
-                        if (itemStates[key]?.status === 'served') {
-                          itemStatuses.push({itemIndex: index, status: 'delivered'});
-                          setItemStates(prev => ({
-                            ...prev,
-                            [key]: { 
-                              ...prev[key], 
-                              status: 'delivered',
-                              checked: false
-                            }
-                          }));
-                        }
-                      }
+                      }));
                     });
                     
-                    if (itemStatuses.length > 0) {
-                      try {
-                        console.log('Marking served items delivered:', {kotId: order.kotId, itemStatuses});
-                        const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
-                          {itemStatuses}, 
-                          {headers: {Authorization: `Bearer ${token}`}}
-                        );
-                        console.log('Served items marked delivered:', response.data);
-                        fetchOrders();
-                      } catch (error) {
-                        console.error('Error marking served items delivered:', error.response?.data || error.message);
-                      }
+                    try {
+                      console.log('Marking all items delivered:', {kotId: order.kotId, itemStatuses});
+                      const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
+                        {itemStatuses}, 
+                        {headers: {Authorization: `Bearer ${token}`}}
+                      );
+                      console.log('All items marked delivered:', response.data);
+                      fetchOrders();
+                    } catch (error) {
+                      console.error('Error marking items delivered:', error.response?.data || error.message);
                     }
                   }}
+                  className="w-full bg-blue-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-blue-600"
+                >
+                  Mark All Items Delivered
+                </button>
+                <button
+                  onClick={() => updateOrderStatus(order._id, 'completed')}
                   className="w-full bg-green-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-green-600"
                 >
-                  Mark Served Items Delivered
+                  Mark Order Complete
                 </button>
-              )}
-              <button
-                onClick={async () => {
-                  const token = localStorage.getItem('token');
-                  const itemStatuses = order.items?.map((item, index) => ({
-                    itemIndex: index, 
-                    status: 'delivered'
-                  })) || [];
-                  
-                  order.items?.forEach((item, index) => {
-                    const key = `${order._id}-${index}`;
-                    setItemStates(prev => ({
-                      ...prev,
-                      [key]: { 
-                        ...prev[key], 
-                        status: 'delivered',
-                        checked: false
-                      }
-                    }));
-                  });
-                  
-                  try {
-                    console.log('Marking all items delivered:', {kotId: order.kotId, itemStatuses});
-                    const response = await axios.patch(`/api/kot/${order.kotId}/item-statuses`, 
-                      {itemStatuses}, 
-                      {headers: {Authorization: `Bearer ${token}`}}
-                    );
-                    console.log('All items marked delivered:', response.data);
-                    fetchOrders();
-                  } catch (error) {
-                    console.error('Error marking items delivered:', error.response?.data || error.message);
-                  }
-                }}
-                className="w-full bg-blue-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-blue-600"
-              >
-                Mark All Items Delivered
-              </button>
-              <button
-                onClick={() => updateOrderStatus(order._id, 'completed')}
-                className="w-full bg-green-500 text-white py-1 px-2 rounded text-xs font-medium hover:bg-green-600"
-              >
-                Mark Order Complete
-              </button>
-            </div>
+              </div>
+            )}
+            
+            {/* Completed Status Display */}
+            {order.status === 'completed' && (
+              <div className="bg-green-100 border border-green-300 rounded-lg p-2 text-center">
+                <span className="text-green-700 font-medium text-sm">✓ Order Completed</span>
+              </div>
+            )}
           </div>
         ))}
       </div>
