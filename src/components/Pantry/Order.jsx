@@ -271,8 +271,16 @@ const Order = () => {
       await axios.delete(`/api/pantry/orders/${orderId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      
+      // Update local state immediately without refreshing
+      setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
+      
+      // Emit WebSocket event for real-time sync
+      if (socket && wsConnected) {
+        socket.emit('pantry-order-deleted', { orderId });
+      }
+      
       showToast.success('Order deleted successfully');
-      fetchOrders();
     } catch (error) {
       showToast.error('Failed to delete order');
     }
