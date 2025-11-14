@@ -50,7 +50,7 @@ const Order = () => {
     try {
       // Fetch items (usually works without auth)
       try {
-        const itemsRes = await axios.get('/api/items/all');
+        const itemsRes = await axios.get('/api/items/available');
         const itemsData = Array.isArray(itemsRes.data) ? itemsRes.data : (itemsRes.data.items || []);
         setMenuItems(itemsData);
       } catch (error) {
