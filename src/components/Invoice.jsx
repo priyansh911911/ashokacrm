@@ -11,6 +11,8 @@ export default function Invoice() {
   
   const [invoiceData, setInvoiceData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Fetch invoice data from checkout API or use restaurant order data
   const fetchInvoiceData = async (checkoutId) => {
@@ -99,6 +101,39 @@ export default function Invoice() {
     }
   };
 
+  const saveInvoiceUpdates = async () => {
+    if (!invoiceData?.clientDetails?.gstin) {
+      alert('GST Number is required to save details');
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const { gstin, name, address, city, company, mobileNo } = invoiceData.clientDetails;
+      
+      const params = new URLSearchParams({
+        name: name || '',
+        address: address || '',
+        city: city || '',
+        company: company || '',
+        mobileNumber: mobileNo || ''
+      });
+      
+      await axios.get(`/api/gst/details/${gstin}?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setIsEditing(false);
+      alert('GST details saved successfully!');
+    } catch (error) {
+      console.error('Error saving GST details:', error);
+      alert('Failed to save GST details');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (bookingData) {
       console.log('Booking Data from Navigation:', bookingData);
@@ -179,24 +214,105 @@ export default function Invoice() {
           </div>
         </div>
 
-        <div className="text-center font-bold text-lg mb-4">
-          TAX INVOICE
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-center font-bold text-lg flex-1">
+            TAX INVOICE
+          </div>
+          <button
+            onClick={isEditing ? saveInvoiceUpdates : () => setIsEditing(true)}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : (isEditing ? 'Save' : 'Edit')}
+          </button>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
           <div className="border-r border-black p-2">
-            <p><span className="font-bold">GSTIN No.:</span>{invoiceData.clientDetails?.gstin}</p>
+            <p><span className="font-bold">GSTIN No.:</span>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={invoiceData.clientDetails?.gstin || ''}
+                  onChange={(e) => setInvoiceData({
+                    ...invoiceData,
+                    clientDetails: {...invoiceData.clientDetails, gstin: e.target.value}
+                  })}
+                  className="border px-1 ml-1 text-xs w-32"
+                />
+              ) : invoiceData.clientDetails?.gstin}
+            </p>
             <div className="grid grid-cols-3 gap-y-1">
               <p className="col-span-1">Name</p>
-              <p className="col-span-2">:{invoiceData.clientDetails?.name}</p>
+              <p className="col-span-2">:
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={invoiceData.clientDetails?.name || ''}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      clientDetails: {...invoiceData.clientDetails, name: e.target.value}
+                    })}
+                    className="border px-1 ml-1 text-xs w-32"
+                  />
+                ) : invoiceData.clientDetails?.name}
+              </p>
               <p className="col-span-1">Address</p>
-              <p className="col-span-2">:{invoiceData.clientDetails?.address}</p>
+              <p className="col-span-2">:
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={invoiceData.clientDetails?.address || ''}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      clientDetails: {...invoiceData.clientDetails, address: e.target.value}
+                    })}
+                    className="border px-1 ml-1 text-xs w-32"
+                  />
+                ) : invoiceData.clientDetails?.address}
+              </p>
               <p className="col-span-1">City</p>
-              <p className="col-span-2">:{invoiceData.clientDetails?.city}</p>
+              <p className="col-span-2">:
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={invoiceData.clientDetails?.city || ''}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      clientDetails: {...invoiceData.clientDetails, city: e.target.value}
+                    })}
+                    className="border px-1 ml-1 text-xs w-32"
+                  />
+                ) : invoiceData.clientDetails?.city}
+              </p>
               <p className="col-span-1">Company</p>
-              <p className="col-span-2">:{invoiceData.clientDetails?.company}</p>
+              <p className="col-span-2">:
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={invoiceData.clientDetails?.company || ''}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      clientDetails: {...invoiceData.clientDetails, company: e.target.value}
+                    })}
+                    className="border px-1 ml-1 text-xs w-32"
+                  />
+                ) : invoiceData.clientDetails?.company}
+              </p>
               <p className="col-span-1">Mobile No.</p>
-              <p className="col-span-2">:{invoiceData.clientDetails?.mobileNo}</p>
+              <p className="col-span-2">:
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={invoiceData.clientDetails?.mobileNo || ''}
+                    onChange={(e) => setInvoiceData({
+                      ...invoiceData,
+                      clientDetails: {...invoiceData.clientDetails, mobileNo: e.target.value}
+                    })}
+                    className="border px-1 ml-1 text-xs w-32"
+                  />
+                ) : invoiceData.clientDetails?.mobileNo}
+              </p>
             </div>
           </div>
 
@@ -240,8 +356,6 @@ export default function Invoice() {
                   <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.pax || 1) : 1}</td>
                   <td className="p-1 border border-black text-right">₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</td>
                   <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.hsn || 'N/A') : 'N/A'}</td>
-
-
                   <td className="p-1 border border-black text-right font-bold">₹{typeof item === 'object' ? (item.amount?.toFixed(2) || '0.00') : '0.00'}</td>
                 </tr>
               ))}
