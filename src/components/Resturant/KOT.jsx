@@ -649,7 +649,7 @@ const KOT = () => {
                       {filteredKots.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((kot, index) => (
                         <tr key={kot._id} className={index % 2 === 0 ? 'bg-background' : 'bg-white'}>
                           <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm font-mono" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                            <div className="font-semibold">{kot.orderId?.slice(-6) || 'N/A'}</div>
+                            <div className="font-semibold">{kot.displayNumber || kot.kotNumber?.slice(-3) || kot.orderId?.slice(-6) || 'N/A'}</div>
                           </td>
                           <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
                             <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">

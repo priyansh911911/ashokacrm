@@ -154,6 +154,7 @@ const ManageTables = () => {
                 onChange={handleInputChange}
                 required
                 min="1"
+                max="4"
                 className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 transition duration-200 ease-in-out hover:border-hover"
               />
             </div>
