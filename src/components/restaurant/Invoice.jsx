@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import ashokaLogo from '../assets/Lakeview Rooftop.png';
+import ashokaLogo from '../../assets/Lakeview Rooftop.png';
 import { RiPhoneFill, RiMailFill } from 'react-icons/ri';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 
 export default function Invoice() {
   const { axios } = useAppContext();
@@ -82,6 +82,30 @@ export default function Invoice() {
         };
         
         setInvoiceData(invoiceData);
+        
+        // Try to load saved restaurant invoice details first
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`/api/restaurant-invoices/${orderData._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (response.data.success && response.data.invoice) {
+            const savedDetails = response.data.invoice.clientDetails;
+            setInvoiceData(prev => ({
+              ...prev,
+              clientDetails: {
+                ...prev.clientDetails,
+                ...savedDetails
+              }
+            }));
+          }
+        } catch (error) {
+          // If no saved invoice details, fetch GST details if GST number exists
+          if (orderData.gstin && orderData.gstin !== 'N/A') {
+            fetchGSTDetails(orderData.gstin);
+          }
+        }
       } else {
         // This is a checkout order, use the existing API
         const response = await axios.get(`/api/checkout/${checkoutId}/invoice`, { headers });
@@ -92,6 +116,11 @@ export default function Invoice() {
         
         console.log('Mapped Invoice Data:', mappedData);
         setInvoiceData(mappedData);
+        
+        // Fetch GST details if GST number exists
+        if (mappedData.clientDetails?.gstin && mappedData.clientDetails.gstin !== 'N/A') {
+          fetchGSTDetails(mappedData.clientDetails.gstin);
+        }
       }
       
     } catch (error) {
@@ -101,34 +130,84 @@ export default function Invoice() {
     }
   };
 
+  const fetchGSTDetails = async (gstNumber) => {
+    if (!gstNumber || gstNumber === 'N/A' || gstNumber.trim() === '') return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/api/gst-numbers/details/${gstNumber}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success && response.data.gstNumber) {
+        const gstDetails = response.data.gstNumber;
+        setInvoiceData(prev => ({
+          ...prev,
+          clientDetails: {
+            ...prev.clientDetails,
+            name: gstDetails.name || prev.clientDetails.name,
+            address: gstDetails.address || prev.clientDetails.address,
+            city: gstDetails.city || prev.clientDetails.city,
+            company: gstDetails.company || prev.clientDetails.company,
+            mobileNo: gstDetails.mobileNumber || prev.clientDetails.mobileNo
+          }
+        }));
+      }
+    } catch (error) {
+      console.log('GST details not found, using manual entry');
+    }
+  };
+
   const saveInvoiceUpdates = async () => {
-    if (!invoiceData?.clientDetails?.gstin) {
-      alert('GST Number is required to save details');
+    const { gstin, name, address, city, company, mobileNo } = invoiceData.clientDetails;
+    
+    if (!gstin || gstin === 'N/A' || gstin.trim() === '') {
+      alert('Valid GST Number is required to save details');
       return;
     }
     
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
-      const { gstin, name, address, city, company, mobileNo } = invoiceData.clientDetails;
       
-      const params = new URLSearchParams({
+      // Save GST details
+      const gstData = {
+        gstNumber: gstin,
         name: name || '',
         address: address || '',
         city: city || '',
         company: company || '',
         mobileNumber: mobileNo || ''
-      });
+      };
       
-      await axios.get(`/api/gst/details/${gstin}?${params}`, {
+      await axios.post('/api/gst-numbers/create', gstData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Save restaurant invoice details if this is a restaurant order
+      if (bookingData && (bookingData.tableNo || bookingData.staffName)) {
+        const invoiceData = {
+          orderId: bookingData._id,
+          clientDetails: {
+            name: name || '',
+            address: address || '',
+            city: city || '',
+            company: company || '',
+            mobileNo: mobileNo || '',
+            gstin: gstin
+          }
+        };
+        
+        await axios.post('/api/restaurant-invoices/save', invoiceData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      
       setIsEditing(false);
-      alert('GST details saved successfully!');
+      alert('Invoice details saved successfully!');
     } catch (error) {
-      console.error('Error saving GST details:', error);
-      alert('Failed to save GST details');
+      console.error('Error saving invoice details:', error);
+      alert('Failed to save invoice details');
     } finally {
       setSaving(false);
     }
@@ -234,10 +313,16 @@ export default function Invoice() {
                 <input
                   type="text"
                   value={invoiceData.clientDetails?.gstin || ''}
-                  onChange={(e) => setInvoiceData({
-                    ...invoiceData,
-                    clientDetails: {...invoiceData.clientDetails, gstin: e.target.value}
-                  })}
+                  onChange={(e) => {
+                    const newGstin = e.target.value;
+                    setInvoiceData({
+                      ...invoiceData,
+                      clientDetails: {...invoiceData.clientDetails, gstin: newGstin}
+                    });
+                    if (newGstin.length >= 15) {
+                      fetchGSTDetails(newGstin);
+                    }
+                  }}
                   className="border px-1 ml-1 text-xs w-32"
                 />
               ) : invoiceData.clientDetails?.gstin}
