@@ -207,15 +207,43 @@ const Menu = () => {
             {item.Discount > 0 && <p className="text-sm" style={{ color: 'hsl(120, 60%, 50%)' }}>Discount: ₹{item.Discount}</p>}
             <p className="text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>Category: {item.category}</p>
             {item.timeToPrepare > 0 && <p className="text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>Prep Time: {item.timeToPrepare} min</p>}
-            <div className="flex justify-between items-center text-sm">
-              <span className={`${item.status === 'available' ? 'text-green-600' : 'text-red-600'}`}>
-                {item.status}
-              </span>
+            <div className="flex justify-between items-center text-sm mb-2">
               <span className={`${item.in_oostock ? 'text-green-600' : 'text-red-600'}`}>
                 {item.in_oostock ? 'In Stock' : 'Out of Stock'}
               </span>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium" style={{ color: 'hsl(45, 100%, 40%)' }}>Active:</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={item.status === 'available'}
+                  onChange={async (e) => {
+                    try {
+                      const token = localStorage.getItem('token');
+                      await axios.put(`/api/items/${item._id}`, {
+                        ...item,
+                        status: e.target.checked ? 'available' : 'unavailable'
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      fetchMenuItems();
+                    } catch (error) {
+                      console.error('Error updating item status:', error);
+                    }
+                  }}
+                  className="sr-only"
+                />
+                <div className={`w-11 h-6 rounded-full transition-colors ${
+                  item.status === 'available' ? 'bg-green-500' : 'bg-gray-300'
+                }`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${
+                    item.status === 'available' ? 'translate-x-5' : 'translate-x-0.5'
+                  } mt-0.5`}></div>
+                </div>
+              </label>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 mt-2">
               <button
                 onClick={() => handleEdit(item)}
                 className="px-3 py-1 rounded text-sm flex-1"

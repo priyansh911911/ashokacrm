@@ -72,7 +72,7 @@ const ViewKOTModal = ({ isOpen, onClose, kotData }) => {
                                     <div className="flex justify-between items-start mb-3">
                                         <div>
                                             <h4 className="text-lg font-semibold text-gray-800">
-                                                KOT #{kot._id.slice(-6)}
+                                                KOT #{kot.displayNumber || kot.kotNumber?.slice(-3) || kot._id.slice(-6)}
                                             </h4>
                                             <p className="text-sm text-gray-600 mt-1">
                                                 Table {kot.tableNumber || 'N/A'}

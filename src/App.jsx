@@ -46,7 +46,8 @@ import Customer from "./components/Customer.jsx";
 import Resturantreservation from "./components/Resturant/Resturantreservation.jsx";
 import Billing from "./components/Resturant/Billing.jsx";
 import Payment from "./components/payment/Payment.jsx";
-import Invoice from "./components/Invoice.jsx";
+import Invoice from "./components/restaurant/Invoice.jsx";
+import POSInvoice from "./components/POSInvoice.jsx";
 import Users from "./components/Users/Users.jsx";
 import AddBooking from "./components/Banquet/pages/Students/AddBooking.jsx";
 import ListBooking from "./components/Banquet/pages/Students/ListBooking.jsx";
@@ -235,6 +236,7 @@ const App = () => {
                       />
                       <Route path="/payment" element={<Payment />} />
                       <Route path="/invoice" element={<Invoice />} />
+                      <Route path="/pos-invoice" element={<POSInvoice />} />
                       <Route path="/users" element={<Users />} />
                       <Route path="/add-booking" element={<AddBooking />} />
                       <Route

@@ -10,6 +10,10 @@ const BillLookup = () => {
   const [grcNo, setGrcNo] = useState("");
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [gstData, setGstData] = useState(null);
+  const [hotelGstNumber, setHotelGstNumber] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableBill, setEditableBill] = useState(null);
 
   useEffect(() => {
     const navGrcNo = location.state?.grcNo;
@@ -17,7 +21,26 @@ const BillLookup = () => {
       setGrcNo(navGrcNo);
       fetchBillsForGrc(navGrcNo);
     }
+    fetchGstData();
   }, [location.state]);
+
+  const fetchGstData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const [gstResponse, gstNumberResponse] = await Promise.all([
+        axios.get('/api/gst/all', { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get('/api/gst-numbers/all', { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      
+      const activeGst = gstResponse.data.find(gst => gst.isActive);
+      const activeGstNumber = gstNumberResponse.data.find(gstn => gstn.isActive);
+      
+      setGstData(activeGst);
+      setHotelGstNumber(activeGstNumber);
+    } catch (error) {
+      console.error('Error fetching GST data:', error);
+    }
+  };
 
   const fetchBillsForGrc = async (grcNumber) => {
     if (!grcNumber.trim()) return;
@@ -58,8 +81,10 @@ const BillLookup = () => {
         };
         
         setBills([consolidatedBill]);
+        setEditableBill(consolidatedBill);
       } else {
         setBills([]);
+        setEditableBill(null);
       }
     } catch (error) {
       console.error('Error fetching bills:', error);
@@ -87,7 +112,27 @@ const BillLookup = () => {
       `}</style>
       <div className="min-h-screen p-6" style={{backgroundColor: 'var(--color-background)'}}>
         <div className="max-w-6xl mx-auto">
-
+          <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+            <h1 className="text-2xl font-bold mb-4" style={{color: 'var(--color-text)'}}>Bill Lookup</h1>
+            <div className="flex gap-4">
+              <input
+                type="text"
+                placeholder="Enter GRC Number"
+                value={grcNo}
+                onChange={(e) => setGrcNo(e.target.value)}
+                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                style={{borderColor: 'var(--color-border)', '--tw-ring-color': 'var(--color-primary)'}}
+              />
+              <button
+                onClick={fetchBills}
+                disabled={!grcNo.trim() || loading}
+                className="px-6 py-2 rounded-lg text-white font-medium disabled:opacity-50"
+                style={{backgroundColor: 'var(--color-primary)'}}
+              >
+                {loading ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+          </div>
 
         {loading ? (
           <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500">
@@ -109,14 +154,23 @@ const BillLookup = () => {
                   <h2 className="text-3xl font-bold mb-2" style={{color: 'var(--color-text)'}}>ASHOKA HOTEL</h2>
                   <p className="text-lg text-gray-600">Consolidated Room Service Bill</p>
                 </div>
-                <button 
-                  onClick={() => window.print()} 
-                  className="flex items-center px-4 py-2 rounded-lg border hover:bg-gray-50 no-print"
-                  style={{borderColor: 'var(--color-border)', color: 'var(--color-text)'}}
-                >
-                  <Printer className="w-4 h-4 mr-2" />
-                  Print
-                </button>
+                <div className="flex gap-2 no-print">
+                  <button
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="flex items-center px-4 py-2 rounded-lg border hover:bg-gray-50"
+                    style={{borderColor: 'var(--color-border)', color: 'var(--color-text)'}}
+                  >
+                    {isEditing ? 'Save' : 'Edit'}
+                  </button>
+                  <button 
+                    onClick={() => window.print()} 
+                    className="flex items-center px-4 py-2 rounded-lg border hover:bg-gray-50"
+                    style={{borderColor: 'var(--color-border)', color: 'var(--color-text)'}}
+                  >
+                    <Printer className="w-4 h-4 mr-2" />
+                    Print
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -136,7 +190,16 @@ const BillLookup = () => {
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="font-medium">Guest:</span>
-                    <span>{bills[0].guestName || 'Guest'}</span>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editableBill?.guestName || 'Guest'}
+                        onChange={(e) => setEditableBill({...editableBill, guestName: e.target.value})}
+                        className="border rounded px-2 py-1 text-sm"
+                      />
+                    ) : (
+                      <span>{editableBill?.guestName || 'Guest'}</span>
+                    )}
                   </div>
                 </div>
                 
@@ -170,11 +233,44 @@ const BillLookup = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {bills[0].items?.map((item, index) => (
+                      {editableBill?.items?.map((item, index) => (
                         <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                           <td className="px-4 py-3">{item.itemName || item.name}</td>
-                          <td className="px-4 py-3">{item.quantity}</td>
-                          <td className="px-4 py-3">₹{item.price?.toFixed(2) || '0.00'}</td>
+                          <td className="px-4 py-3">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const newItems = [...editableBill.items];
+                                  newItems[index].quantity = parseInt(e.target.value) || 0;
+                                  const newAmount = newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+                                  setEditableBill({...editableBill, items: newItems, amount: newAmount, totalAmount: Math.round(newAmount * 1.28)});
+                                }}
+                                className="border rounded px-2 py-1 w-16 text-sm"
+                              />
+                            ) : (
+                              item.quantity
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={item.price?.toFixed(2) || '0.00'}
+                                onChange={(e) => {
+                                  const newItems = [...editableBill.items];
+                                  newItems[index].price = parseFloat(e.target.value) || 0;
+                                  const newAmount = newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+                                  setEditableBill({...editableBill, items: newItems, amount: newAmount, totalAmount: Math.round(newAmount * 1.28)});
+                                }}
+                                className="border rounded px-2 py-1 w-20 text-sm"
+                              />
+                            ) : (
+                              `₹${item.price?.toFixed(2) || '0.00'}`
+                            )}
+                          </td>
                           <td className="px-4 py-3 font-semibold">₹{(item.price * item.quantity).toFixed(2)}</td>
                         </tr>
                       ))}
@@ -187,19 +283,31 @@ const BillLookup = () => {
                 <div className="max-w-md ml-auto space-y-3">
                   <div className="flex justify-between py-2">
                     <span className="font-medium">Subtotal:</span>
-                    <span>₹{bills[0].amount.toFixed(2)}</span>
+                    <span>₹{editableBill?.amount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-2">
-                    <span className="font-medium">Tax (18%):</span>
-                    <span>₹{(bills[0].amount * 0.18).toFixed(2)}</span>
+                    <span className="font-medium">CGST ({gstData?.cgst || 9}%):</span>
+                    <span>₹{(editableBill?.amount * ((gstData?.cgst || 9) / 100)).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="font-medium">SGST ({gstData?.sgst || 9}%):</span>
+                    <span>₹{(editableBill?.amount * ((gstData?.sgst || 9) / 100)).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="font-medium">Service Charge (10%):</span>
-                    <span>₹{(bills[0].amount * 0.1).toFixed(2)}</span>
+                    <span>₹{(editableBill?.amount * 0.1).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-3 border-t-2 text-xl font-bold" style={{color: 'var(--color-primary)'}}>
                     <span>TOTAL:</span>
-                    <span>₹{bills[0].totalAmount.toFixed(2)}</span>
+                    <span>₹{editableBill?.totalAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="mt-4 p-3 bg-gray-50 rounded">
+                    <div className="text-sm font-medium mb-2">Hotel GST Details:</div>
+                    <div className="text-xs text-gray-600">
+                      <div>GSTIN: {hotelGstNumber?.gstNumber || 'Not Available'}</div>
+                      <div>Company: {hotelGstNumber?.companyName || 'ASHOKA HOTEL'}</div>
+                      <div>Total GST: {gstData?.totalGST || 18}%</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -210,7 +318,7 @@ const BillLookup = () => {
               </div>
             </div>
           </div>
-        ) : grcNo && (
+        ) : grcNo && !loading && (
           <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500">
             No orders found for GRC: {grcNo}
           </div>
