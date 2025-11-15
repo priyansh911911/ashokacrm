@@ -825,10 +825,7 @@ const AllBookings = ({ setActiveTab }) => {
                                 POS
                               </button>
                             </div>
-                            {booking.status === 'served' ? (
-                              // Only show Invoice button for served orders
-                              null
-                            ) : booking.status === 'completed' ? (
+                            {booking.status === 'completed' && (
                               <>
                                 <button
                                   onClick={() => {
@@ -859,9 +856,8 @@ const AllBookings = ({ setActiveTab }) => {
                                   Bill
                                 </button>
                               </>
-                            ) : booking.status === 'paid' ? (
-                              null
-                            ) : (
+                            )}
+                            {!['served', 'completed', 'paid'].includes(booking.status) && (
                               <>
                                 <button
                                   onClick={() => {

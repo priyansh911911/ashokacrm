@@ -110,8 +110,8 @@ const ChefDashboard = () => {
         });
       
       // Separate active and history orders
-      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served' && order.status !== 'completed');
-      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served' || order.status === 'completed');
+      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served' && order.status !== 'completed' && order.status !== 'cancelled');
+      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served' || order.status === 'completed' || order.status === 'cancelled');
       
       setOrders(activeOrders);
       setHistoryOrders(historyOrders);
@@ -327,8 +327,8 @@ const ChefDashboard = () => {
               </div>
             </div>
 
-            {/* Action Buttons - Only show for non-completed orders */}
-            {order.status !== 'completed' && (
+            {/* Action Buttons - Only show for non-completed and non-cancelled orders */}
+            {order.status !== 'completed' && order.status !== 'cancelled' && (
               <div className="flex flex-col gap-1">
                 {order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.checked && itemStates[`${order._id}-${index}`]?.status !== 'served' && itemStates[`${order._id}-${index}`]?.status !== 'delivered') && (
                   <button
@@ -477,6 +477,13 @@ const ChefDashboard = () => {
             {order.status === 'completed' && (
               <div className="bg-green-100 border border-green-300 rounded-lg p-2 text-center">
                 <span className="text-green-700 font-medium text-sm">✓ Order Completed</span>
+              </div>
+            )}
+            
+            {/* Cancelled Status Display */}
+            {order.status === 'cancelled' && (
+              <div className="bg-red-100 border border-red-300 rounded-lg p-2 text-center">
+                <span className="text-red-700 font-medium text-sm">✗ Order Cancelled</span>
               </div>
             )}
           </div>
