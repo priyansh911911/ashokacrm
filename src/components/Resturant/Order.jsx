@@ -18,7 +18,6 @@ const Order = () => {
   const [itemToNote, setItemToNote] = useState(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  // const [isInHouse, setIsInHouse] = useState(false);
   const [orderData, setOrderData] = useState({
     staffName: '',
     staffId: '',
@@ -209,17 +208,10 @@ const Order = () => {
       return;
     }
     
-    // if (isInHouse) {
-    //   if (!orderData.bookingId) {
-    //     showToast.error('Please select a booking for in-house order!');
-    //     return;
-    //   }
-    // } else {
-      if (!orderData.phoneNumber.trim()) {
-        showToast.error('Please enter phone number for regular order!');
-        return;
-      }
-    // }
+    if (!orderData.phoneNumber.trim()) {
+      showToast.error('Please enter phone number for regular order!');
+      return;
+    }
     
     setIsPlacingOrder(true);
     try {
@@ -266,13 +258,6 @@ const Order = () => {
         discount: 0,
         isMembership: false,
         isLoyalty: false
-        // ...(isInHouse && {
-        //   bookingId: orderData.bookingId,
-        //   grcNo: orderData.grcNo,
-        //   roomNumber: orderData.roomNumber,
-        //   guestName: orderData.guestName,
-        //   guestPhone: orderData.guestPhone
-        // })
       };
       
       console.log('Sending order data:', finalOrderData);
@@ -293,14 +278,9 @@ const Order = () => {
         }
       });
       
-      // WebSocket notification is handled by backend
-      
-
-      
       showToast.success('🎉 Order placed successfully!');
       setCartItems([]);
       setOrderData({ staffName: '', staffId: '', phoneNumber: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });
-      // setIsInHouse(false);
       setIsCartOpen(false);
       
     } catch (error) {
@@ -322,14 +302,9 @@ const Order = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
           
-          // WebSocket notification is handled by backend
-          
-
-          
           showToast.success('🎉 Order placed successfully!');
           setCartItems([]);
           setOrderData({ staffName: '', staffId: '', phoneNumber: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });
-          // setIsInHouse(false);
           setIsCartOpen(false);
           return;
         } catch (retryError) {
@@ -349,67 +324,9 @@ const Order = () => {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-
-
   return (
     <div className="min-h-screen font-sans p-4 sm:p-6 bg-gradient-to-br from-[#f7f5ef] to-[#c3ad6b]/30">
-      {/* Staff Notification */}
-      {false && (
-        <div className="fixed top-4 left-4 z-50 bg-[#c3ad6b] text-white p-4 rounded-lg shadow-lg animate-pulse max-w-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h4 className="font-bold flex items-center">
-                👨‍💼 Order Assigned!
-              </h4>
-              <p className="text-sm mt-1">
-                Staff: {staffNotification.staffName}
-              </p>
-              <p className="text-xs opacity-90">
-                Table {staffNotification.tableNo} - {staffNotification.itemCount} items
-              </p>
-              <p className="text-xs opacity-90">
-                Order: {staffNotification.orderId?.slice(-6)}
-              </p>
-            </div>
-            <button 
-              onClick={() => setStaffNotification(null)}
-              className="ml-3 text-white hover:text-gray-200 text-lg flex-shrink-0"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30">
-        {/* <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
-            <label className="font-bold text-lg text-[#b39b5a]">Order Type:</label>
-            <div className="flex items-center space-x-6">
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="orderType"
-                  checked={!isInHouse}
-                  onChange={() => setIsInHouse(false)}
-                  className="w-5 h-5 text-[#c3ad6b] focus:ring-[#c3ad6b] focus:ring-2"
-                />
-                <span className="text-base font-medium text-gray-700">Regular</span>
-              </label>
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="orderType"
-                  checked={isInHouse}
-                  onChange={() => setIsInHouse(true)}
-                  className="w-5 h-5 text-[#c3ad6b] focus:ring-[#c3ad6b] focus:ring-2"
-                />
-                <span className="text-base font-medium text-gray-700">In-House</span>
-              </label>
-            </div>
-          </div>
-        </div> */
-        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
           <div className="flex flex-col space-y-3">
             <label htmlFor="table-number" className="font-bold text-[#b39b5a]">Table Number</label>
@@ -446,76 +363,18 @@ const Order = () => {
               ))}
             </select>
           </div>
-          {/* {isInHouse ? (
-            <div className="flex flex-col space-y-3">
-              <label htmlFor="booking" className="font-bold text-[#b39b5a]">Booking</label>
-              <select 
-                id="booking" 
-                value={orderData.bookingId}
-                onChange={(e) => {
-                  const selectedBooking = bookings.find(b => b._id === e.target.value);
-                  if (selectedBooking) {
-                    setOrderData({
-                      ...orderData,
-                      bookingId: e.target.value,
-                      grcNo: selectedBooking.grcNo || '',
-                      roomNumber: selectedBooking.roomNumber || '',
-                      guestName: selectedBooking.name || '',
-                      guestPhone: selectedBooking.mobileNo || '',
-                      phoneNumber: selectedBooking.mobileNo || ''
-                    });
-                  }
-                }}
-                className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
-              >
-                <option value="">Select Booking ({bookings.length} available)</option>
-                {bookings.map(booking => (
-                  <option key={booking._id} value={booking._id}>
-                    {booking.grcNo || 'No GRC'} - {booking.name || 'No Name'} (Room {booking.roomNumber || 'No Room'})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : ( */}
-            <div className="flex flex-col space-y-3">
-              <label htmlFor="phone" className="font-bold text-[#b39b5a]">Phone</label>
-              <input
-                id="phone"
-                type="tel"
-                value={orderData.phoneNumber}
-                onChange={(e) => setOrderData({...orderData, phoneNumber: e.target.value})}
-                className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
-                placeholder="Phone Number"
-              />
-            </div>
-          {/* )} */}
-        </div>
-        
-        {/* {isInHouse && orderData.bookingId && (
-          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-[#f7f5ef] to-[#c3ad6b]/20 border border-[#c3ad6b]/30">
-            <h3 className="font-bold mb-4 text-lg text-[#b39b5a]">Guest Information:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold text-[#b39b5a]">GRC:</span>
-                <span className="text-gray-700">{orderData.grcNo}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold text-[#b39b5a]">Room:</span>
-                <span className="text-gray-700">{orderData.roomNumber}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold text-[#b39b5a]">Guest:</span>
-                <span className="text-gray-700">{orderData.guestName}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold text-[#b39b5a]">Phone:</span>
-                <span className="text-gray-700">{orderData.guestPhone}</span>
-              </div>
-            </div>
+          <div className="flex flex-col space-y-3">
+            <label htmlFor="phone" className="font-bold text-[#b39b5a]">Phone</label>
+            <input
+              id="phone"
+              type="tel"
+              value={orderData.phoneNumber}
+              onChange={(e) => setOrderData({...orderData, phoneNumber: e.target.value})}
+              className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
+              placeholder="Phone Number"
+            />
           </div>
-        )} */}
-        
-
+        </div>
       </div>
 
       {/* Search bar section */}
