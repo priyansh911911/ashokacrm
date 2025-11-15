@@ -18,7 +18,7 @@ const Order = () => {
   const [itemToNote, setItemToNote] = useState(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isInHouse, setIsInHouse] = useState(false);
+  // const [isInHouse, setIsInHouse] = useState(false);
   const [orderData, setOrderData] = useState({
     staffName: '',
     staffId: '',
@@ -209,17 +209,17 @@ const Order = () => {
       return;
     }
     
-    if (isInHouse) {
-      if (!orderData.bookingId) {
-        showToast.error('Please select a booking for in-house order!');
-        return;
-      }
-    } else {
+    // if (isInHouse) {
+    //   if (!orderData.bookingId) {
+    //     showToast.error('Please select a booking for in-house order!');
+    //     return;
+    //   }
+    // } else {
       if (!orderData.phoneNumber.trim()) {
         showToast.error('Please enter phone number for regular order!');
         return;
       }
-    }
+    // }
     
     setIsPlacingOrder(true);
     try {
@@ -265,14 +265,14 @@ const Order = () => {
         amount: getTotalAmount(),
         discount: 0,
         isMembership: false,
-        isLoyalty: false,
-        ...(isInHouse && {
-          bookingId: orderData.bookingId,
-          grcNo: orderData.grcNo,
-          roomNumber: orderData.roomNumber,
-          guestName: orderData.guestName,
-          guestPhone: orderData.guestPhone
-        })
+        isLoyalty: false
+        // ...(isInHouse && {
+        //   bookingId: orderData.bookingId,
+        //   grcNo: orderData.grcNo,
+        //   roomNumber: orderData.roomNumber,
+        //   guestName: orderData.guestName,
+        //   guestPhone: orderData.guestPhone
+        // })
       };
       
       console.log('Sending order data:', finalOrderData);
@@ -300,7 +300,7 @@ const Order = () => {
       showToast.success('🎉 Order placed successfully!');
       setCartItems([]);
       setOrderData({ staffName: '', staffId: '', phoneNumber: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });
-      setIsInHouse(false);
+      // setIsInHouse(false);
       setIsCartOpen(false);
       
     } catch (error) {
@@ -329,7 +329,7 @@ const Order = () => {
           showToast.success('🎉 Order placed successfully!');
           setCartItems([]);
           setOrderData({ staffName: '', staffId: '', phoneNumber: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });
-          setIsInHouse(false);
+          // setIsInHouse(false);
           setIsCartOpen(false);
           return;
         } catch (retryError) {
@@ -382,7 +382,7 @@ const Order = () => {
       )}
 
       <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
+        {/* <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
           <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
             <label className="font-bold text-lg text-[#b39b5a]">Order Type:</label>
             <div className="flex items-center space-x-6">
@@ -408,7 +408,7 @@ const Order = () => {
               </label>
             </div>
           </div>
-        </div>
+        </div> */
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
           <div className="flex flex-col space-y-3">
@@ -446,7 +446,7 @@ const Order = () => {
               ))}
             </select>
           </div>
-          {isInHouse ? (
+          {/* {isInHouse ? (
             <div className="flex flex-col space-y-3">
               <label htmlFor="booking" className="font-bold text-[#b39b5a]">Booking</label>
               <select 
@@ -476,7 +476,7 @@ const Order = () => {
                 ))}
               </select>
             </div>
-          ) : (
+          ) : ( */}
             <div className="flex flex-col space-y-3">
               <label htmlFor="phone" className="font-bold text-[#b39b5a]">Phone</label>
               <input
@@ -488,10 +488,10 @@ const Order = () => {
                 placeholder="Phone Number"
               />
             </div>
-          )}
+          {/* )} */}
         </div>
         
-        {isInHouse && orderData.bookingId && (
+        {/* {isInHouse && orderData.bookingId && (
           <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-[#f7f5ef] to-[#c3ad6b]/20 border border-[#c3ad6b]/30">
             <h3 className="font-bold mb-4 text-lg text-[#b39b5a]">Guest Information:</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -513,7 +513,7 @@ const Order = () => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
         
 
       </div>
