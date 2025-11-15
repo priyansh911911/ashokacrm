@@ -16,6 +16,7 @@ const Order = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isNoteOpen, setIsNoteOpen] = useState(false);
   const [itemToNote, setItemToNote] = useState(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isInHouse, setIsInHouse] = useState(false);
   const [orderData, setOrderData] = useState({
@@ -196,6 +197,8 @@ const Order = () => {
 
   // Function to place order
   const handlePlaceOrder = async () => {
+    if (isPlacingOrder) return; // Prevent double submission
+    
     if (cartItems.length === 0) {
       showToast.error('Please add items to cart first!');
       return;
@@ -218,6 +221,7 @@ const Order = () => {
       }
     }
     
+    setIsPlacingOrder(true);
     try {
       const token = localStorage.getItem('token');
       
@@ -335,6 +339,8 @@ const Order = () => {
       
       const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to place order!';
       showToast.error(errorMsg);
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
@@ -704,10 +710,11 @@ const Order = () => {
                     Clear All
                   </button>
                   <button
-                    className="w-full py-3 px-4 rounded-md text-white bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] font-semibold hover:from-[#b39b5a] hover:to-[#c3ad6b] transition-all duration-200 text-sm"
+                    className="w-full py-3 px-4 rounded-md text-white bg-gradient-to-r from-[#c3ad6b] to-[#b39b5a] font-semibold hover:from-[#b39b5a] hover:to-[#c3ad6b] transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handlePlaceOrder}
+                    disabled={isPlacingOrder}
                   >
-                    Place Order
+                    {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
                   </button>
                 </div>
               </div>

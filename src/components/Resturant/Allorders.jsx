@@ -36,6 +36,9 @@ const AllBookings = ({ setActiveTab }) => {
   const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
   const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
   const [splitPayments, setSplitPayments] = useState([{ amount: '', method: 'cash' }]);
+  const [showPayNowModal, setShowPayNowModal] = useState(false);
+  const [paymentType, setPaymentType] = useState('full'); // 'full' or 'split'
+  const [showFullPaymentModal, setShowFullPaymentModal] = useState(false);
   const [showPaymentBill, setShowPaymentBill] = useState(false);
   const [paymentBillData, setPaymentBillData] = useState(null);
   const [showRestaurantBill, setShowRestaurantBill] = useState(false);
@@ -251,6 +254,15 @@ const AllBookings = ({ setActiveTab }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Add transaction to order history
+      await axios.patch(`/api/restaurant-orders/${paymentForm.orderId}/add-transaction`, {
+        amount: parseFloat(paymentForm.amount),
+        method: paymentForm.method,
+        billId: billResponse.data._id
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
       // Update order status to paid
       await axios.patch(`/api/restaurant-orders/${paymentForm.orderId}/status`, {
         status: 'paid'
@@ -310,6 +322,17 @@ const AllBookings = ({ setActiveTab }) => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      // Add each split payment to transaction history
+      for (const payment of validPayments) {
+        await axios.patch(`/api/restaurant-orders/${selectedOrderForPayment._id}/add-transaction`, {
+          amount: parseFloat(payment.amount),
+          method: payment.method,
+          billId: billResponse.data._id
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
       
       // Update order status to paid
       await axios.patch(`/api/restaurant-orders/${selectedOrderForPayment._id}/status`, {
@@ -810,12 +833,13 @@ const AllBookings = ({ setActiveTab }) => {
                                 <button
                                   onClick={() => {
                                     setSelectedOrderForPayment(booking);
+                                    setPaymentType('full');
                                     setSplitPayments([{ amount: (booking.amount || booking.advancePayment || 0).toString(), method: 'cash' }]);
-                                    setShowSplitPaymentModal(true);
+                                    setShowPayNowModal(true);
                                   }}
-                                  className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 whitespace-nowrap"
+                                  className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 whitespace-nowrap"
                                 >
-                                  Split Pay
+                                  Pay Now
                                 </button>
                                 <button
                                   onClick={() => {
@@ -907,6 +931,190 @@ const AllBookings = ({ setActiveTab }) => {
           totalItems={bookings.length}
         />
       </div>
+
+      {/* Pay Now Modal */}
+      {showPayNowModal && selectedOrderForPayment && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-black to-gray-900 rounded-xl p-6 max-w-md w-full mx-4 border-2 border-yellow-500 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-yellow-400">💰 Payment Options</h3>
+              <button
+                onClick={() => {
+                  setShowPayNowModal(false);
+                  setSelectedOrderForPayment(null);
+                  setPaymentType('full');
+                }}
+                className="text-yellow-400 hover:text-yellow-300 text-3xl font-bold transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="p-4 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-lg border border-yellow-500/30">
+                <div className="font-bold text-yellow-400 text-lg mb-2">📋 Order Summary</div>
+                <div className="text-yellow-100 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Order ID:</span>
+                    <span className="font-mono text-yellow-300">#{selectedOrderForPayment._id?.slice(-6)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Table:</span>
+                    <span className="font-semibold text-yellow-300">{selectedOrderForPayment.tableNo}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold border-t border-yellow-500/30 pt-2 mt-2">
+                    <span>Total Amount:</span>
+                    <span className="text-yellow-400">₹{selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="text-center font-bold text-yellow-400 text-lg">Choose Payment Method:</div>
+                
+                <button
+                  onClick={() => {
+                    setPaymentType('full');
+                    setShowPayNowModal(false);
+                    setShowFullPaymentModal(true);
+                  }}
+                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-black py-4 px-6 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all duration-300 font-bold text-lg shadow-lg transform hover:scale-105"
+                >
+                  💳 Full Payment
+                  <div className="text-sm font-medium opacity-90 mt-1">Pay ₹{selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0} at once</div>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setPaymentType('split');
+                    setSplitPayments([{ amount: (selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0).toString(), method: 'cash' }]);
+                    setShowPayNowModal(false);
+                    setShowSplitPaymentModal(true);
+                  }}
+                  className="w-full bg-gradient-to-r from-gray-700 to-gray-800 text-yellow-400 py-4 px-6 rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-bold text-lg border-2 border-yellow-500/50 shadow-lg transform hover:scale-105"
+                >
+                  🔄 Split Bill
+                  <div className="text-sm font-medium opacity-90 mt-1">Pay with multiple methods</div>
+                </button>
+              </div>
+              
+              <div className="flex justify-center pt-4 border-t border-yellow-500/30">
+                <button
+                  onClick={() => {
+                    setShowPayNowModal(false);
+                    setSelectedOrderForPayment(null);
+                    setPaymentType('full');
+                  }}
+                  className="text-yellow-400 hover:text-yellow-300 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Payment Method Modal */}
+      {showFullPaymentModal && selectedOrderForPayment && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-black to-gray-900 rounded-xl p-6 max-w-md w-full mx-4 border-2 border-yellow-500 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-yellow-400">💳 Select Payment Method</h3>
+              <button
+                onClick={() => {
+                  setShowFullPaymentModal(false);
+                  setSelectedOrderForPayment(null);
+                }}
+                className="text-yellow-400 hover:text-yellow-300 text-3xl font-bold transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="p-4 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-lg border border-yellow-500/30">
+                <div className="font-bold text-yellow-400 text-lg mb-2">📋 Payment Details</div>
+                <div className="text-yellow-100 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Order ID:</span>
+                    <span className="font-mono text-yellow-300">#{selectedOrderForPayment._id?.slice(-6)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Table:</span>
+                    <span className="font-semibold text-yellow-300">{selectedOrderForPayment.tableNo}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold border-t border-yellow-500/30 pt-2 mt-2">
+                    <span>Amount to Pay:</span>
+                    <span className="text-yellow-400">₹{selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="text-center font-bold text-yellow-400 text-lg">Choose Payment Method:</div>
+                
+                <button
+                  onClick={() => {
+                    setPaymentForm({
+                      orderId: selectedOrderForPayment._id,
+                      amount: (selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0).toString(),
+                      method: 'cash'
+                    });
+                    setShowFullPaymentModal(false);
+                    processPayment({ preventDefault: () => {} });
+                  }}
+                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-4 rounded-lg hover:from-green-500 hover:to-green-600 transition-all duration-300 font-medium shadow-lg transform hover:scale-105"
+                >
+                  💵 Cash Payment
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setPaymentForm({
+                      orderId: selectedOrderForPayment._id,
+                      amount: (selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0).toString(),
+                      method: 'card'
+                    });
+                    setShowFullPaymentModal(false);
+                    processPayment({ preventDefault: () => {} });
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-lg hover:from-blue-500 hover:to-blue-600 transition-all duration-300 font-medium shadow-lg transform hover:scale-105"
+                >
+                  💳 Card Payment
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setPaymentForm({
+                      orderId: selectedOrderForPayment._id,
+                      amount: (selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0).toString(),
+                      method: 'upi'
+                    });
+                    setShowFullPaymentModal(false);
+                    processPayment({ preventDefault: () => {} });
+                  }}
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 px-4 rounded-lg hover:from-purple-500 hover:to-purple-600 transition-all duration-300 font-medium shadow-lg transform hover:scale-105"
+                >
+                  📱 UPI Payment
+                </button>
+              </div>
+              
+              <div className="flex justify-center pt-4 border-t border-yellow-500/30">
+                <button
+                  onClick={() => {
+                    setShowFullPaymentModal(false);
+                    setShowPayNowModal(true);
+                  }}
+                  className="text-yellow-400 hover:text-yellow-300 font-medium transition-colors"
+                >
+                  ← Back to Payment Options
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Split Payment Modal */}
       {showSplitPaymentModal && selectedOrderForPayment && (
