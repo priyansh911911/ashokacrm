@@ -82,51 +82,27 @@ function Item() {
   const getAuthToken = () => localStorage.getItem("token");
 
   const fetchItems = async () => {
-    setLoading(true);
-    try {
-      const token = getAuthToken();
-      console.log('Fetching pantry items...');
-      const { data } = await axios.get('/api/pantry/items', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Items fetched:', data);
-      setItems(data.items || []);
-    } catch (err) {
-      console.error('Error fetching items:', err);
-      throw new Error(`Failed to fetch items: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setLoading(false);
-    }
+    const token = getAuthToken();
+    const { data } = await axios.get('/api/pantry/items', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return data.items || [];
   };
 
   const fetchCategories = async () => {
-    try {
-      const token = getAuthToken();
-      console.log('Fetching categories...');
-      const { data } = await axios.get('/api/pantry-categories/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Categories fetched:', data);
-      setCategories(data || []);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      // Don't throw error for categories - provide fallback
-      setCategories([]);
-      console.warn('Using empty categories list as fallback');
-    }
+    const token = getAuthToken();
+    const { data } = await axios.get('/api/pantry-categories/all', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return data || [];
   };
 
   const fetchUnits = async () => {
-    try {
-      const token = getAuthToken();
-      const { data } = await axios.get('/api/units/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUnits(data || []);
-    } catch (err) {
-      console.error('Error fetching units:', err);
-      setUnits([]);
-    }
+    const token = getAuthToken();
+    const { data } = await axios.get('/api/units/all', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return data || [];
   };
 
   const handleEdit = (item) => {
@@ -141,29 +117,33 @@ function Item() {
   useEffect(() => {
     const initializePage = async () => {
       try {
-        // Only items are critical - fetch them first
-        await fetchItems();
+        // Load all data concurrently for faster loading
+        const [itemsData, categoriesData, unitsData] = await Promise.allSettled([
+          fetchItems(),
+          fetchCategories(),
+          fetchUnits()
+        ]);
         
-        // Fetch categories and units (non-critical)
-        fetchCategories().catch(err => {
-          console.warn('Failed to fetch categories:', err);
-          setCategories([]);
-        });
+        // Set items (critical)
+        if (itemsData.status === 'fulfilled') {
+          setItems(itemsData.value);
+        } else {
+          throw new Error('Failed to load items');
+        }
         
-        fetchUnits().catch(err => {
-          console.warn('Failed to fetch units:', err);
-          setUnits([{ _id: 'piece', name: 'Piece', shortName: 'pc' }]);
-        });
+        // Set categories (non-critical)
+        setCategories(categoriesData.status === 'fulfilled' ? categoriesData.value : []);
         
-        // Check if accessed from sidebar for category creation
+        // Set units (non-critical)
+        setUnits(unitsData.status === 'fulfilled' ? unitsData.value : [{ _id: 'piece', name: 'Piece', shortName: 'pc' }]);
+        
+        // Check URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('action') === 'create-category') {
           setShowCategoryForm(true);
-          // Clear the URL parameter
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       } catch (error) {
-        console.error('Error initializing page:', error);
         setError(error.message || 'Failed to load page data');
       } finally {
         setPageLoading(false);
@@ -208,7 +188,8 @@ function Item() {
       setSuccessMessage(`Item ${editingItem ? 'updated' : 'added'} successfully!`);
       setShowSuccessModal(true);
       resetForm();
-      fetchItems();
+      const updatedItems = await fetchItems();
+      setItems(updatedItems);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -226,7 +207,8 @@ function Item() {
         });
         setSuccessMessage('Item deleted successfully!');
         setShowSuccessModal(true);
-        fetchItems();
+        const updatedItems = await fetchItems();
+        setItems(updatedItems);
       } catch (err) {
         setError(err.message);
       } finally {
