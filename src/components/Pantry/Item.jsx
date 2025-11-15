@@ -93,7 +93,7 @@ function Item() {
       setItems(data.items || []);
     } catch (err) {
       console.error('Error fetching items:', err);
-      setError(err.message);
+      throw new Error(`Failed to fetch items: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -110,6 +110,22 @@ function Item() {
       setCategories(data || []);
     } catch (err) {
       console.error('Error fetching categories:', err);
+      // Don't throw error for categories - provide fallback
+      setCategories([]);
+      console.warn('Using empty categories list as fallback');
+    }
+  };
+
+  const fetchUnits = async () => {
+    try {
+      const token = getAuthToken();
+      const { data } = await axios.get('/api/units/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUnits(data || []);
+    } catch (err) {
+      console.error('Error fetching units:', err);
+      setUnits([]);
     }
   };
 
@@ -125,7 +141,19 @@ function Item() {
   useEffect(() => {
     const initializePage = async () => {
       try {
-        await Promise.all([fetchItems(), fetchCategories(), fetchUnits()]);
+        // Only items are critical - fetch them first
+        await fetchItems();
+        
+        // Fetch categories and units (non-critical)
+        fetchCategories().catch(err => {
+          console.warn('Failed to fetch categories:', err);
+          setCategories([]);
+        });
+        
+        fetchUnits().catch(err => {
+          console.warn('Failed to fetch units:', err);
+          setUnits([{ _id: 'piece', name: 'Piece', shortName: 'pc' }]);
+        });
         
         // Check if accessed from sidebar for category creation
         const urlParams = new URLSearchParams(window.location.search);
@@ -136,7 +164,7 @@ function Item() {
         }
       } catch (error) {
         console.error('Error initializing page:', error);
-        setError('Failed to load page data');
+        setError(error.message || 'Failed to load page data');
       } finally {
         setPageLoading(false);
       }
@@ -221,19 +249,6 @@ function Item() {
     });
     setEditingItem(null);
     setShowForm(false);
-  };
-
-  const fetchUnits = async () => {
-    try {
-      const token = getAuthToken();
-      const { data } = await axios.get('/api/units/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUnits(data || []);
-    } catch (err) {
-      console.error('Error fetching units:', err);
-      setUnits([]);
-    }
   };
 
   const handleChange = (e) => {

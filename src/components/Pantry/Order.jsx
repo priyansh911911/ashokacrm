@@ -1288,6 +1288,13 @@ const Order = () => {
                           <div className="space-y-1">
                             {displayItems.slice(0, 2).map((item, idx) => {
                               let itemName = item.name || item.itemName;
+                              
+                              // Try to get from populated itemId first
+                              if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
+                                itemName = item.itemId.name;
+                              }
+                              
+                              // Try to find in current pantry items
                               if (!itemName && (item.itemId || item.pantryItemId)) {
                                 const itemRef = item.itemId || item.pantryItemId;
                                 const pantryItem = pantryItems.find(p => 
@@ -1296,9 +1303,13 @@ const Order = () => {
                                 );
                                 itemName = pantryItem?.name;
                               }
-                              // If still no name, try to get from populated itemId
-                              if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
-                                itemName = item.itemId.name;
+                              
+                              // Check if this is from original request (for Kitchen to Pantry orders)
+                              if (!itemName && order.originalRequest?.items) {
+                                const originalItem = order.originalRequest.items.find(orig => 
+                                  (orig.itemId || orig.pantryItemId) === (item.itemId?._id || item.itemId || item.pantryItemId)
+                                );
+                                itemName = originalItem?.name;
                               }
                               // For Kitchen to Pantry orders, show original requested quantity if current is 0
                               const displayQuantity = order.orderType === 'Kitchen to Pantry' && (item.quantity === 0 || item.quantity === '0') ?
@@ -1498,6 +1509,13 @@ const Order = () => {
                         <div className="space-y-1">
                           {displayItems.slice(0, 2).map((item, idx) => {
                             let itemName = item.name || item.itemName;
+                            
+                            // Try to get from populated itemId first
+                            if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
+                              itemName = item.itemId.name;
+                            }
+                            
+                            // Try to find in current pantry items
                             if (!itemName && (item.itemId || item.pantryItemId)) {
                               const itemRef = item.itemId || item.pantryItemId;
                               const pantryItem = pantryItems.find(p => 
@@ -1506,9 +1524,13 @@ const Order = () => {
                               );
                               itemName = pantryItem?.name;
                             }
-                            // If still no name, try to get from populated itemId
-                            if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
-                              itemName = item.itemId.name;
+                            
+                            // Check if this is from original request (for Kitchen to Pantry orders)
+                            if (!itemName && order.originalRequest?.items) {
+                              const originalItem = order.originalRequest.items.find(orig => 
+                                (orig.itemId || orig.pantryItemId) === (item.itemId?._id || item.itemId || item.pantryItemId)
+                              );
+                              itemName = originalItem?.name;
                             }
                             // For Kitchen to Pantry orders, show original requested quantity if current is 0
                             const displayQuantity = order.orderType === 'Kitchen to Pantry' && (item.quantity === 0 || item.quantity === '0') ?
@@ -2356,9 +2378,28 @@ const Order = () => {
                     {viewingOrder.items?.map((item, index) => {
                       // Get item name from multiple possible sources
                       let itemName = item.name || item.itemName;
+                      
+                      // Try to get from populated itemId first
+                      if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
+                        itemName = item.itemId.name;
+                      }
+                      
+                      // Try to find in current pantry items
                       if (!itemName && (item.itemId || item.pantryItemId)) {
-                        const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                        const itemRef = item.itemId || item.pantryItemId;
+                        const pantryItem = pantryItems.find(p => 
+                          p._id === itemRef || 
+                          p._id === (typeof itemRef === 'object' ? itemRef._id : itemRef)
+                        );
                         itemName = pantryItem?.name;
+                      }
+                      
+                      // Check if this is from original request (for Kitchen to Pantry orders)
+                      if (!itemName && viewingOrder.originalRequest?.items) {
+                        const originalItem = viewingOrder.originalRequest.items.find(orig => 
+                          (orig.itemId || orig.pantryItemId) === (item.itemId?._id || item.itemId || item.pantryItemId)
+                        );
+                        itemName = originalItem?.name;
                       }
                       
                       return (
