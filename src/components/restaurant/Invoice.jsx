@@ -264,8 +264,32 @@ export default function Invoice() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-2 sm:p-4">
-      <div className="max-w-7xl mx-auto border-2 border-black p-2 sm:p-4">
+    <>
+      <style>{`
+        @media print {
+          * { visibility: hidden; }
+          .print-content, .print-content * { visibility: visible !important; }
+          .print-content { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            box-sizing: border-box;
+            padding: 10px;
+          }
+          .no-print { display: none !important; }
+          @page { 
+            margin: 0.5in; 
+            size: A4;
+          }
+          body { margin: 0; padding: 0; background: white !important; }
+          .overflow-x-auto { overflow: visible !important; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+        }
+      `}</style>
+      <div className="min-h-screen bg-white p-2 sm:p-4">
+      <div className="max-w-7xl mx-auto border-2 border-black p-2 sm:p-4 print-content">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 space-y-4 lg:space-y-0">
           <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="border border-black p-2">
@@ -297,13 +321,21 @@ export default function Invoice() {
           <div className="text-center font-bold text-lg flex-1">
             TAX INVOICE
           </div>
-          <button
-            onClick={isEditing ? saveInvoiceUpdates : () => setIsEditing(true)}
-            disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : (isEditing ? 'Save' : 'Edit')}
-          </button>
+          <div className="flex gap-2 no-print">
+            <button
+              onClick={isEditing ? saveInvoiceUpdates : () => setIsEditing(true)}
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : (isEditing ? 'Save' : 'Edit')}
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+            >
+              Print
+            </button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
@@ -578,5 +610,6 @@ export default function Invoice() {
         </div>
       </div>
     </div>
+    </>
   );
 }
