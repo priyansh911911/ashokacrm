@@ -21,7 +21,7 @@ const Order = () => {
   const [orderData, setOrderData] = useState({
     staffName: '',
     staffId: '',
-    phoneNumber: '',
+    customerName: '',
     tableNo: '',
     bookingId: '',
     grcNo: '',
@@ -208,10 +208,7 @@ const Order = () => {
       return;
     }
     
-    if (!orderData.phoneNumber.trim()) {
-      showToast.error('Please enter phone number for regular order!');
-      return;
-    }
+
     
     setIsPlacingOrder(true);
     try {
@@ -244,7 +241,7 @@ const Order = () => {
       
       const finalOrderData = {
         staffName: orderData.staffName,
-        phoneNumber: orderData.phoneNumber,
+        customerName: orderData.customerName,
         tableNo: orderData.tableNo,
         items: orderItems.map(item => {
           const cartItem = cartItems.find(ci => ci._id === item.itemId);
@@ -280,7 +277,7 @@ const Order = () => {
       
       showToast.success('🎉 Order placed successfully!');
       setCartItems([]);
-      setOrderData({ staffName: '', staffId: '', phoneNumber: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });
+      setOrderData({ staffName: '', staffId: '', customerName: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });
       setIsCartOpen(false);
       
     } catch (error) {
@@ -304,7 +301,7 @@ const Order = () => {
           
           showToast.success('🎉 Order placed successfully!');
           setCartItems([]);
-          setOrderData({ staffName: '', staffId: '', phoneNumber: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });
+          setOrderData({ staffName: '', staffId: '', customerName: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });
           setIsCartOpen(false);
           return;
         } catch (retryError) {
@@ -364,14 +361,14 @@ const Order = () => {
             </select>
           </div>
           <div className="flex flex-col space-y-3">
-            <label htmlFor="phone" className="font-bold text-[#b39b5a]">Phone</label>
+            <label htmlFor="customerName" className="font-bold text-[#b39b5a]">Customer Name</label>
             <input
-              id="phone"
-              type="tel"
-              value={orderData.phoneNumber}
-              onChange={(e) => setOrderData({...orderData, phoneNumber: e.target.value})}
+              id="customerName"
+              type="text"
+              value={orderData.customerName}
+              onChange={(e) => setOrderData({...orderData, customerName: e.target.value})}
               className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
-              placeholder="Phone Number"
+              placeholder="Customer Name"
             />
           </div>
         </div>
