@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { showToast } from '../utils/toaster';
+import soundManager from '../utils/sound';
 
 /**
  * Custom hook for real-time order and KOT updates
@@ -27,6 +28,9 @@ export const useOrderSocket = (options = {}) => {
   const handleNewOrder = useCallback((data) => {
     console.log('🍽️ New restaurant order received:', data);
     
+    // Play buzzer sound for new order
+    soundManager.playNewKOTSound();
+    
     if (showNotifications) {
       showToast.success(`New order for Table ${data.tableNo} - ${data.itemCount} items`);
     }
@@ -52,6 +56,9 @@ export const useOrderSocket = (options = {}) => {
   // Handle new KOTs
   const handleNewKOT = useCallback((data) => {
     console.log('🧾 New KOT received:', data);
+    
+    // Play buzzer sound for new KOT
+    soundManager.playNewKOTSound();
     
     if (showNotifications) {
       showToast.success(`New KOT #${data.kot.displayNumber} for Table ${data.tableNo}`);

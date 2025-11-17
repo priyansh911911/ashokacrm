@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import Pagination from '../common/Pagination';
 import { useSocket } from '../../context/SocketContext';
+import soundManager from '../../utils/sound';
+import SoundToggle from '../common/SoundToggle';
 
 const KOT = () => {
   const { axios } = useAppContext();
@@ -50,6 +52,10 @@ const KOT = () => {
       
       socket.on('new-order', (data) => {
         console.log('New order received in KOT:', data);
+        
+        // Play buzzer sound for new KOT
+        soundManager.playNewKOTSound();
+        
         setNewOrderNotification({
           tableNo: data.tableNo,
           itemCount: data.itemCount,
@@ -81,6 +87,9 @@ const KOT = () => {
     if (socket) {
 
       socket.on('new-kot', (data) => {
+        // Play buzzer sound for new KOT
+        soundManager.playNewKOTSound();
+        
         setNewOrderNotification({
           tableNo: data.tableNo,
           itemCount: data.itemCount,
@@ -136,6 +145,9 @@ const KOT = () => {
         const newOrder = sortedOrders[0];
         
         console.log('New order detected:', newOrder);
+        
+        // Play buzzer sound for new KOT
+        soundManager.playNewKOTSound();
         
         setNewOrderNotification({
           tableNo: newOrder.tableNo,
@@ -246,6 +258,10 @@ const KOT = () => {
       // Check for new orders
       if (kots.length > 0 && activeOrders.length > kots.length) {
         const newOrder = activeOrders[activeOrders.length - 1];
+        
+        // Play buzzer sound for new KOT
+        soundManager.playNewKOTSound();
+        
         setNewOrderNotification({
           tableNo: newOrder.tableNo,
           itemCount: newOrder.items?.length || 0,
@@ -565,7 +581,10 @@ const KOT = () => {
       )}
       
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-text">Kitchen Order Tickets (KOT)</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-text">Kitchen Order Tickets (KOT)</h1>
+          <SoundToggle />
+        </div>
         
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="border-b border-border">
