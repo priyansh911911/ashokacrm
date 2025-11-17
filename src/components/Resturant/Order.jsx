@@ -3,11 +3,25 @@ import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import { useSocket } from '../../context/SocketContext';
 import { useLocation } from 'react-router-dom';
+import { useOrderSocket } from '../../hooks/useOrderSocket';
 
 const Order = () => {
   const { axios } = useAppContext();
   const { socket } = useSocket();
   const location = useLocation();
+  
+  // Real-time order updates
+  const { isConnected } = useOrderSocket({
+    onNewOrder: (data) => {
+      console.log('📱 New order notification received:', data);
+      // Optionally refresh data or update UI
+    },
+    onOrderStatusUpdate: (data) => {
+      console.log('📱 Order status update received:', data);
+      // Update local state if needed
+    },
+    showNotifications: false // Disable notifications for order creation page
+  });
   const [menuItems, setMenuItems] = useState([]);
   const [staff, setStaff] = useState([]);
   const [tables, setTables] = useState([]);
@@ -324,6 +338,20 @@ const Order = () => {
   return (
     <div className="min-h-screen font-sans p-4 sm:p-6 bg-gradient-to-br from-[#f7f5ef] to-[#c3ad6b]/30">
       <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30">
+        {/* Real-time connection status */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-[#b39b5a]">Create New Order</h2>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${
+              isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+            }`}></div>
+            <span className={`text-xs font-medium ${
+              isConnected ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {isConnected ? 'Live Updates Active' : 'Offline Mode'}
+            </span>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
           <div className="flex flex-col space-y-3">
             <label htmlFor="table-number" className="font-bold text-[#b39b5a]">Table Number</label>

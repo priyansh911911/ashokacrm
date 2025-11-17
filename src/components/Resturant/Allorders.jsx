@@ -4,13 +4,36 @@ import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
 import Pagination from '../common/Pagination';
 import { useSocket } from '../../context/SocketContext';
+import { useOrderSocket } from '../../hooks/useOrderSocket';
 import PaymentBill from '../Pantry/PaymentBill';
 import RestaurantBill from '../Pantry/RestaurantBill';
+import LiveOrderNotifications from './LiveOrderNotifications';
 
 const AllBookings = ({ setActiveTab }) => {
   const { axios } = useAppContext();
   const { socket } = useSocket();
   const navigate = useNavigate();
+  
+  // Real-time order updates
+  const { isConnected } = useOrderSocket({
+    onNewOrder: (data) => {
+      console.log('📱 New order received in AllOrders:', data);
+      fetchBookings(); // Refresh the orders list
+    },
+    onOrderStatusUpdate: (data) => {
+      console.log('📱 Order status update in AllOrders:', data);
+      fetchBookings(); // Refresh the orders list
+    },
+    onNewKOT: (data) => {
+      console.log('📱 New KOT received in AllOrders:', data);
+      fetchBookings(); // Refresh the orders list
+    },
+    onKOTStatusUpdate: (data) => {
+      console.log('📱 KOT status update in AllOrders:', data);
+      fetchBookings(); // Refresh the orders list
+    },
+    showNotifications: false // We use the LiveOrderNotifications component
+  });
   const [bookings, setBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [transferForm, setTransferForm] = useState({ orderId: '', newTable: '' });
@@ -56,23 +79,18 @@ const AllBookings = ({ setActiveTab }) => {
     fetchBills();
   }, []);
 
-  // WebSocket listener for real-time updates
-  useEffect(() => {
-    if (socket) {
-      socket.on('kot-status-updated', () => {
-        fetchBookings(); // Refresh orders when KOT status changes
-      });
-      
-      socket.on('order-status-updated', () => {
-        fetchBookings(); // Refresh orders when order status changes
-      });
-      
-      return () => {
-        socket.off('kot-status-updated');
-        socket.off('order-status-updated');
-      };
-    }
-  }, [socket]);
+  // Connection status indicator
+  const connectionStatus = isConnected ? (
+    <div className="flex items-center gap-2 text-green-600">
+      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+      <span className="text-sm font-medium">Live Updates Active</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-2 text-red-600">
+      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+      <span className="text-sm font-medium">Offline Mode</span>
+    </div>
+  );
 
   const fetchUserRole = async () => {
     try {
@@ -695,7 +713,10 @@ const AllBookings = ({ setActiveTab }) => {
     <div className="p-4 sm:p-6 bg-background min-h-screen">
       <div className="w-full">
         <div className="mb-4 sm:mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-text">All Bookings</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl sm:text-3xl font-bold text-text">All Bookings</h2>
+            {connectionStatus}
+          </div>
         </div>
         
 
@@ -1523,6 +1544,9 @@ const AllBookings = ({ setActiveTab }) => {
           }}
         />
       )}
+      
+      {/* Live Order Notifications */}
+      <LiveOrderNotifications />
     </div>
   );
 };

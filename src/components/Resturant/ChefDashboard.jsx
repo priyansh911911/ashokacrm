@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../context/AppContext";
 import CountdownTimer from "./CountdownTimer";
-import io from 'socket.io-client';
+import { useKitchenSocket } from "../../hooks/useOrderSocket";
+import { Wifi, WifiOff } from 'lucide-react';
 
 const ChefDashboard = () => {
   const { axios } = useAppContext();
@@ -9,6 +10,27 @@ const ChefDashboard = () => {
   const [historyOrders, setHistoryOrders] = useState([]);
   const [itemStates, setItemStates] = useState({});
   const [activeTab, setActiveTab] = useState('active');
+  
+  // Real-time KOT updates for kitchen staff
+  const { isConnected } = useKitchenSocket({
+    onNewKOT: (data) => {
+      console.log('🍳 Chef received new KOT:', data);
+      fetchOrders(); // Refresh orders when new KOT arrives
+    },
+    onNewOrder: (data) => {
+      console.log('🍳 CHEF: New restaurant order received, refreshing...');
+      setTimeout(() => fetchOrders(), 1000); // Delay to ensure DB is updated
+    },
+    onKOTStatusUpdate: (data) => {
+      console.log('🍳 Chef received KOT status update:', data);
+      fetchOrders(); // Refresh orders when KOT status changes
+    },
+    onKOTItemUpdate: (data) => {
+      console.log('🍳 Chef received KOT item update:', data);
+      fetchOrders(); // Refresh orders when item status changes
+    },
+    showNotifications: true
+  });
 
   const fetchOrders = async () => {
     try {
@@ -16,6 +38,9 @@ const ChefDashboard = () => {
       const response = await axios.get('/api/kot/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log('KOT API response:', response.data);
+      console.log('Total KOTs found:', response.data?.length || 0);
       
       // Get menu items for price lookup
       const menuResponse = await axios.get('/api/items/all');
@@ -27,13 +52,14 @@ const ChefDashboard = () => {
       });
       const allOrders = ordersResponse.data;
       
+      console.log('Restaurant orders:', allOrders?.length || 0);
+      
       // Initialize item states from backend
       const newItemStates = {};
       
       // Group KOTs by orderId and merge items
       const kotsByOrder = {};
       response.data
-        .filter(kot => kot.status !== 'served')
         .forEach(kot => {
           if (!kotsByOrder[kot.orderId]) {
             kotsByOrder[kot.orderId] = {
@@ -110,13 +136,22 @@ const ChefDashboard = () => {
         });
       
       // Separate active and history orders
-      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served' && order.status !== 'completed' && order.status !== 'cancelled');
-      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served' || order.status === 'completed' || order.status === 'cancelled');
+      const activeOrders = kotOrders.filter(order => 
+        order.status === 'pending' || order.status === 'preparing' || order.status === 'ready'
+      );
+      const historyOrders = kotOrders.filter(order => 
+        order.status === 'served' || order.status === 'completed' || order.status === 'cancelled'
+      );
+      
+      console.log('All KOT orders:', kotOrders.length);
+      console.log('Active orders:', activeOrders.length);
+      console.log('History orders:', historyOrders.length);
+      console.log('Order statuses:', kotOrders.map(o => `${o._id.slice(-4)}: ${o.status}`));
+      console.log('Raw KOT statuses:', response.data.map(k => `${k._id.slice(-4)}: ${k.status}`));
       
       setOrders(activeOrders);
       setHistoryOrders(historyOrders);
       setItemStates(newItemStates);
-      console.log('Item states initialized:', newItemStates);
     } catch (error) {
       console.error('Error fetching KOT data:', error);
       setOrders([]);
@@ -126,37 +161,6 @@ const ChefDashboard = () => {
 
   useEffect(() => {
     fetchOrders();
-    
-    // Setup WebSocket connection
-    const socketUrl = window.location.hostname === 'localhost' 
-      ? 'https://ashoka-api.shineinfosolutions.in' 
-      : `${window.location.protocol}//${window.location.hostname}:5000`;
-    const socket = io(socketUrl, {
-      transports: ['polling', 'websocket']
-    });
-    
-    // Join kitchen updates room
-    socket.emit('join-kitchen-updates');
-    
-    // Listen for order updates
-    socket.on('kitchen-order-update', (data) => {
-      console.log('Kitchen order update received:', data);
-      fetchOrders();
-    });
-    
-    socket.on('new-restaurant-order', (data) => {
-      console.log('New restaurant order received:', data);
-      fetchOrders();
-    });
-    
-    socket.on('order-status-update', (data) => {
-      console.log('Order status update received:', data);
-      fetchOrders();
-    });
-    
-    return () => {
-      socket.disconnect();
-    };
   }, []);
 
   const updateOrderStatus = async (orderId, newStatus) => {
@@ -194,8 +198,24 @@ const ChefDashboard = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Chef Dashboard</h1>
-        <p className="text-gray-600">Manage kitchen orders</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Chef Dashboard</h1>
+            <p className="text-gray-600">Manage kitchen orders</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isConnected ? (
+              <Wifi className="w-5 h-5 text-green-500" />
+            ) : (
+              <WifiOff className="w-5 h-5 text-red-500" />
+            )}
+            <span className={`text-sm font-medium ${
+              isConnected ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {isConnected ? 'Live Updates Active' : 'Offline Mode'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Tab Navigation */}

@@ -2,11 +2,42 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { showToast } from '../utils/toaster';
 import useSocket from '../hooks/useSocket';
+import { useKitchenSocket } from '../hooks/useOrderSocket';
 import { Plus, Edit, Trash2, Package, Clock, CheckCircle, Wifi, WifiOff } from 'lucide-react';
 
 const Kitchen = () => {
   const { axios } = useAppContext();
   const { socket, isConnected } = useSocket();
+  
+  // Real-time KOT updates for kitchen staff
+  useKitchenSocket({
+    onNewKOT: (data) => {
+      console.log('🍳 Kitchen received new KOT:', data);
+      // Add new KOT to the list
+      if (data.kot) {
+        setOrders(prev => [data.kot, ...prev]);
+      }
+    },
+    onKOTStatusUpdate: (data) => {
+      console.log('🍳 Kitchen received KOT status update:', data);
+      // Update KOT status in the list
+      if (data.kot) {
+        setOrders(prev => prev.map(order => 
+          order._id === data.kotId ? { ...order, ...data.kot } : order
+        ));
+      }
+    },
+    onKOTItemUpdate: (data) => {
+      console.log('🍳 Kitchen received KOT item update:', data);
+      // Update KOT item statuses
+      if (data.kot) {
+        setOrders(prev => prev.map(order => 
+          order._id === data.kotId ? { ...order, itemStatuses: data.itemStatuses } : order
+        ));
+      }
+    },
+    showNotifications: true
+  });
   const [orders, setOrders] = useState([]);
   const [items, setItems] = useState([]);
   const [vendors, setVendors] = useState([]);
