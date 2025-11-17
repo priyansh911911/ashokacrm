@@ -286,6 +286,55 @@ export default function Invoice() {
           .overflow-x-auto { overflow: visible !important; }
           table { page-break-inside: auto; }
           tr { page-break-inside: avoid; page-break-after: auto; }
+          
+          /* Maintain client details layout */
+          .client-details-grid {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            border: 1px solid black !important;
+          }
+          .client-details-left {
+            border-right: 1px solid black !important;
+            padding: 8px !important;
+          }
+          .client-details-right {
+            padding: 8px !important;
+          }
+          .client-info-grid {
+            display: grid !important;
+            grid-template-columns: auto auto 1fr !important;
+            gap: 0px 4px !important;
+          }
+          .invoice-info-grid {
+            display: grid !important;
+            grid-template-columns: auto 1fr !important;
+            gap: 4px 8px !important;
+          }
+          .items-table {
+            width: 100% !important;
+            table-layout: fixed !important;
+            font-size: 7px !important;
+          }
+          .items-table th, .items-table td {
+            padding: 1px !important;
+            font-size: 7px !important;
+            word-break: break-word !important;
+          }
+          .items-table th:nth-child(1), .items-table td:nth-child(1) { width: 10% !important; }
+          .items-table th:nth-child(2), .items-table td:nth-child(2) { width: 35% !important; }
+          .items-table th:nth-child(3), .items-table td:nth-child(3) { width: 8% !important; }
+          .items-table th:nth-child(4), .items-table td:nth-child(4) { width: 15% !important; }
+          .items-table th:nth-child(5), .items-table td:nth-child(5) { width: 12% !important; }
+          .items-table th:nth-child(6), .items-table td:nth-child(6) { width: 20% !important; }
+          .contact-info {
+            position: absolute !important;
+            top: 10px !important;
+            right: 10px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-end !important;
+            font-size: 10px !important;
+          }
         }
       `}</style>
       <div className="min-h-screen bg-white p-2 sm:p-4">
@@ -305,7 +354,7 @@ export default function Invoice() {
               <p className="text-xs">team@ashoka.in</p>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+          <div className="contact-info flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
             <div className="text-xs flex items-center space-x-2">
                 <RiPhoneFill className="text-lg text-yellow-600" />
                 <span>0551.3510264</span>
@@ -338,8 +387,8 @@ export default function Invoice() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
-          <div className="border-r border-black p-2">
+        <div className="client-details-grid grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
+          <div className="client-details-left border-r border-black p-2">
             <p><span className="font-bold">GSTIN No.:</span>
               {isEditing ? (
                 <input
@@ -359,10 +408,9 @@ export default function Invoice() {
                 />
               ) : invoiceData.clientDetails?.gstin}
             </p>
-            <div className="grid grid-cols-3 gap-y-1">
+            <div className="client-info-grid grid grid-cols-3 gap-x-1 gap-y-1">
               <p className="col-span-1">Name</p>
-              <p className="col-span-2">:
-                {isEditing ? (
+              <p className="col-span-2">:{isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.name || ''}
@@ -372,11 +420,9 @@ export default function Invoice() {
                     })}
                     className="border px-1 ml-1 text-xs w-32"
                   />
-                ) : invoiceData.clientDetails?.name}
-              </p>
+                ) : invoiceData.clientDetails?.name}</p>
               <p className="col-span-1">Address</p>
-              <p className="col-span-2">:
-                {isEditing ? (
+              <p className="col-span-2">:{isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.address || ''}
@@ -386,11 +432,9 @@ export default function Invoice() {
                     })}
                     className="border px-1 ml-1 text-xs w-32"
                   />
-                ) : invoiceData.clientDetails?.address}
-              </p>
+                ) : invoiceData.clientDetails?.address}</p>
               <p className="col-span-1">City</p>
-              <p className="col-span-2">:
-                {isEditing ? (
+              <p className="col-span-2">:{isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.city || ''}
@@ -400,11 +444,9 @@ export default function Invoice() {
                     })}
                     className="border px-1 ml-1 text-xs w-32"
                   />
-                ) : invoiceData.clientDetails?.city}
-              </p>
+                ) : invoiceData.clientDetails?.city}</p>
               <p className="col-span-1">Company</p>
-              <p className="col-span-2">:
-                {isEditing ? (
+              <p className="col-span-2">:{isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.company || ''}
@@ -414,11 +456,9 @@ export default function Invoice() {
                     })}
                     className="border px-1 ml-1 text-xs w-32"
                   />
-                ) : invoiceData.clientDetails?.company}
-              </p>
+                ) : invoiceData.clientDetails?.company}</p>
               <p className="col-span-1">Mobile No.</p>
-              <p className="col-span-2">:
-                {isEditing ? (
+              <p className="col-span-2">:{isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.mobileNo || ''}
@@ -428,13 +468,12 @@ export default function Invoice() {
                     })}
                     className="border px-1 ml-1 text-xs w-32"
                   />
-                ) : invoiceData.clientDetails?.mobileNo}
-              </p>
+                ) : invoiceData.clientDetails?.mobileNo}</p>
             </div>
           </div>
 
-          <div className="p-2">
-            <div className="grid grid-cols-2 gap-y-1">
+          <div className="client-details-right p-2">
+            <div className="invoice-info-grid grid grid-cols-2 gap-y-1">
               <p className="font-bold">Bill No. & Date</p>
               <p className="font-medium">:{invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
               <p className="font-bold">GRC No.</p>
@@ -452,7 +491,7 @@ export default function Invoice() {
         </div>
 
         <div className="mb-4 overflow-x-auto">
-          <table className="w-full min-w-[800px] text-xs border-collapse">
+          <table className="items-table w-full text-xs border-collapse">
             <thead>
               <tr className="border border-black bg-gray-200">
                 <th className="p-1 border border-black whitespace-nowrap">Date</th>
@@ -476,13 +515,11 @@ export default function Invoice() {
                   <td className="p-1 border border-black text-right font-bold">₹{typeof item === 'object' ? (item.amount?.toFixed(2) || '0.00') : '0.00'}</td>
                 </tr>
               ))}
-              <tr>
-                <td colSpan="3" className="p-1 text-right font-bold">SUB TOTAL :</td>
-                <td className="p-1 text-right border-l border-black font-bold">{invoiceData.taxes?.[0]?.taxableAmount?.toFixed(2)}</td>
-                <td className="p-1 border-l border-black font-bold"></td>
-
-
-                <td className="p-1 text-right border-l border-black font-bold">{calculateTotal()}</td>
+              <tr className="border border-black bg-gray-100">
+                <td colSpan="3" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
+                <td className="p-1 text-right border border-black font-bold">₹{invoiceData.taxes?.[0]?.taxableAmount?.toFixed(2)}</td>
+                <td className="p-1 border border-black font-bold"></td>
+                <td className="p-1 text-right border border-black font-bold">₹{calculateTotal()}</td>
               </tr>
             </tbody>
           </table>
