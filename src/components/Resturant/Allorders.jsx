@@ -1072,14 +1072,56 @@ const AllBookings = ({ setActiveTab }) => {
                 <div className="text-center font-bold text-yellow-400 text-lg">Choose Payment Method:</div>
                 
                 <button
-                  onClick={() => {
-                    setPaymentForm({
+                  onClick={async () => {
+                    const paymentData = {
                       orderId: selectedOrderForPayment._id,
                       amount: (selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0).toString(),
                       method: 'cash'
-                    });
+                    };
+                    setPaymentForm(paymentData);
                     setShowFullPaymentModal(false);
-                    processPayment({ preventDefault: () => {} });
+                    
+                    // Process payment directly with the data
+                    try {
+                      const token = localStorage.getItem('token');
+                      
+                      const billResponse = await axios.post('/api/bills/create', {
+                        orderId: paymentData.orderId,
+                        discount: 0,
+                        tax: 0,
+                        paymentMethod: paymentData.method
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/bills/${billResponse.data._id}/payment`, {
+                        paidAmount: parseFloat(paymentData.amount),
+                        paymentMethod: paymentData.method
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/restaurant-orders/${paymentData.orderId}/add-transaction`, {
+                        amount: parseFloat(paymentData.amount),
+                        method: paymentData.method,
+                        billId: billResponse.data._id
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/restaurant-orders/${paymentData.orderId}/status`, {
+                        status: 'paid'
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      showToast.success('Cash payment processed successfully!');
+                      await fetchBills();
+                      await fetchBookings();
+                    } catch (error) {
+                      console.error('Error processing cash payment:', error);
+                      showToast.error('Failed to process cash payment');
+                    }
                   }}
                   className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-4 rounded-lg hover:from-green-500 hover:to-green-600 transition-all duration-300 font-medium shadow-lg transform hover:scale-105"
                 >
@@ -1087,14 +1129,54 @@ const AllBookings = ({ setActiveTab }) => {
                 </button>
                 
                 <button
-                  onClick={() => {
-                    setPaymentForm({
+                  onClick={async () => {
+                    const paymentData = {
                       orderId: selectedOrderForPayment._id,
                       amount: (selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0).toString(),
                       method: 'card'
-                    });
+                    };
                     setShowFullPaymentModal(false);
-                    processPayment({ preventDefault: () => {} });
+                    
+                    try {
+                      const token = localStorage.getItem('token');
+                      
+                      const billResponse = await axios.post('/api/bills/create', {
+                        orderId: paymentData.orderId,
+                        discount: 0,
+                        tax: 0,
+                        paymentMethod: paymentData.method
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/bills/${billResponse.data._id}/payment`, {
+                        paidAmount: parseFloat(paymentData.amount),
+                        paymentMethod: paymentData.method
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/restaurant-orders/${paymentData.orderId}/add-transaction`, {
+                        amount: parseFloat(paymentData.amount),
+                        method: paymentData.method,
+                        billId: billResponse.data._id
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/restaurant-orders/${paymentData.orderId}/status`, {
+                        status: 'paid'
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      showToast.success('Card payment processed successfully!');
+                      await fetchBills();
+                      await fetchBookings();
+                    } catch (error) {
+                      console.error('Error processing card payment:', error);
+                      showToast.error('Failed to process card payment');
+                    }
                   }}
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-lg hover:from-blue-500 hover:to-blue-600 transition-all duration-300 font-medium shadow-lg transform hover:scale-105"
                 >
@@ -1102,14 +1184,54 @@ const AllBookings = ({ setActiveTab }) => {
                 </button>
                 
                 <button
-                  onClick={() => {
-                    setPaymentForm({
+                  onClick={async () => {
+                    const paymentData = {
                       orderId: selectedOrderForPayment._id,
                       amount: (selectedOrderForPayment.amount || selectedOrderForPayment.advancePayment || 0).toString(),
                       method: 'upi'
-                    });
+                    };
                     setShowFullPaymentModal(false);
-                    processPayment({ preventDefault: () => {} });
+                    
+                    try {
+                      const token = localStorage.getItem('token');
+                      
+                      const billResponse = await axios.post('/api/bills/create', {
+                        orderId: paymentData.orderId,
+                        discount: 0,
+                        tax: 0,
+                        paymentMethod: paymentData.method
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/bills/${billResponse.data._id}/payment`, {
+                        paidAmount: parseFloat(paymentData.amount),
+                        paymentMethod: paymentData.method
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/restaurant-orders/${paymentData.orderId}/add-transaction`, {
+                        amount: parseFloat(paymentData.amount),
+                        method: paymentData.method,
+                        billId: billResponse.data._id
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      await axios.patch(`/api/restaurant-orders/${paymentData.orderId}/status`, {
+                        status: 'paid'
+                      }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      
+                      showToast.success('UPI payment processed successfully!');
+                      await fetchBills();
+                      await fetchBookings();
+                    } catch (error) {
+                      console.error('Error processing UPI payment:', error);
+                      showToast.error('Failed to process UPI payment');
+                    }
                   }}
                   className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 px-4 rounded-lg hover:from-purple-500 hover:to-purple-600 transition-all duration-300 font-medium shadow-lg transform hover:scale-105"
                 >
