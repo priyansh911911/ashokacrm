@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../context/AppContext";
 import CountdownTimer from "./CountdownTimer";
+import io from 'socket.io-client';
 
 const ChefDashboard = () => {
   const { axios } = useAppContext();
@@ -109,8 +110,8 @@ const ChefDashboard = () => {
         });
       
       // Separate active and history orders
-      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served' && order.status !== 'completed');
-      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served' || order.status === 'completed');
+      const activeOrders = kotOrders.filter(order => !order.isPaid && order.status !== 'served' && order.status !== 'completed' && order.status !== 'cancelled');
+      const historyOrders = kotOrders.filter(order => order.isPaid || order.status === 'served' || order.status === 'completed' || order.status === 'cancelled');
       
       setOrders(activeOrders);
       setHistoryOrders(historyOrders);
@@ -125,8 +126,37 @@ const ChefDashboard = () => {
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 30000);
-    return () => clearInterval(interval);
+    
+    // Setup WebSocket connection
+    const socketUrl = window.location.hostname === 'localhost' 
+      ? 'https://ashoka-api.shineinfosolutions.in' 
+      : `${window.location.protocol}//${window.location.hostname}:5000`;
+    const socket = io(socketUrl, {
+      transports: ['polling', 'websocket']
+    });
+    
+    // Join kitchen updates room
+    socket.emit('join-kitchen-updates');
+    
+    // Listen for order updates
+    socket.on('kitchen-order-update', (data) => {
+      console.log('Kitchen order update received:', data);
+      fetchOrders();
+    });
+    
+    socket.on('new-restaurant-order', (data) => {
+      console.log('New restaurant order received:', data);
+      fetchOrders();
+    });
+    
+    socket.on('order-status-update', (data) => {
+      console.log('Order status update received:', data);
+      fetchOrders();
+    });
+    
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const updateOrderStatus = async (orderId, newStatus) => {
@@ -297,8 +327,8 @@ const ChefDashboard = () => {
               </div>
             </div>
 
-            {/* Action Buttons - Only show for non-completed orders */}
-            {order.status !== 'completed' && (
+            {/* Action Buttons - Only show for non-completed and non-cancelled orders */}
+            {order.status !== 'completed' && order.status !== 'cancelled' && (
               <div className="flex flex-col gap-1">
                 {order.items?.some((item, index) => itemStates[`${order._id}-${index}`]?.checked && itemStates[`${order._id}-${index}`]?.status !== 'served' && itemStates[`${order._id}-${index}`]?.status !== 'delivered') && (
                   <button
@@ -447,6 +477,13 @@ const ChefDashboard = () => {
             {order.status === 'completed' && (
               <div className="bg-green-100 border border-green-300 rounded-lg p-2 text-center">
                 <span className="text-green-700 font-medium text-sm">✓ Order Completed</span>
+              </div>
+            )}
+            
+            {/* Cancelled Status Display */}
+            {order.status === 'cancelled' && (
+              <div className="bg-red-100 border border-red-300 rounded-lg p-2 text-center">
+                <span className="text-red-700 font-medium text-sm">✗ Order Cancelled</span>
               </div>
             )}
           </div>

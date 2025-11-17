@@ -65,6 +65,9 @@ function Item() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUnitForm, setShowUnitForm] = useState(false);
+  const [unitFormData, setUnitFormData] = useState({ name: '', shortName: '' });
+  const [units, setUnits] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -79,35 +82,27 @@ function Item() {
   const getAuthToken = () => localStorage.getItem("token");
 
   const fetchItems = async () => {
-    setLoading(true);
-    try {
-      const token = getAuthToken();
-      console.log('Fetching pantry items...');
-      const { data } = await axios.get('/api/pantry/items', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Items fetched:', data);
-      setItems(data.items || []);
-    } catch (err) {
-      console.error('Error fetching items:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    const token = getAuthToken();
+    const { data } = await axios.get('/api/pantry/items', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return data.items || [];
   };
 
   const fetchCategories = async () => {
-    try {
-      const token = getAuthToken();
-      console.log('Fetching categories...');
-      const { data } = await axios.get('/api/pantry-categories/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Categories fetched:', data);
-      setCategories(data || []);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
+    const token = getAuthToken();
+    const { data } = await axios.get('/api/pantry-categories/all', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return data || [];
+  };
+
+  const fetchUnits = async () => {
+    const token = getAuthToken();
+    const { data } = await axios.get('/api/units/all', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return data || [];
   };
 
   const handleEdit = (item) => {
@@ -122,18 +117,34 @@ function Item() {
   useEffect(() => {
     const initializePage = async () => {
       try {
-        await Promise.all([fetchItems(), fetchCategories()]);
+        // Load all data concurrently for faster loading
+        const [itemsData, categoriesData, unitsData] = await Promise.allSettled([
+          fetchItems(),
+          fetchCategories(),
+          fetchUnits()
+        ]);
         
-        // Check if accessed from sidebar for category creation
+        // Set items (critical)
+        if (itemsData.status === 'fulfilled') {
+          setItems(itemsData.value);
+        } else {
+          throw new Error('Failed to load items');
+        }
+        
+        // Set categories (non-critical)
+        setCategories(categoriesData.status === 'fulfilled' ? categoriesData.value : []);
+        
+        // Set units (non-critical)
+        setUnits(unitsData.status === 'fulfilled' ? unitsData.value : [{ _id: 'piece', name: 'Piece', shortName: 'pc' }]);
+        
+        // Check URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('action') === 'create-category') {
           setShowCategoryForm(true);
-          // Clear the URL parameter
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       } catch (error) {
-        console.error('Error initializing page:', error);
-        setError('Failed to load page data');
+        setError(error.message || 'Failed to load page data');
       } finally {
         setPageLoading(false);
       }
@@ -177,7 +188,8 @@ function Item() {
       setSuccessMessage(`Item ${editingItem ? 'updated' : 'added'} successfully!`);
       setShowSuccessModal(true);
       resetForm();
-      fetchItems();
+      const updatedItems = await fetchItems();
+      setItems(updatedItems);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -195,7 +207,8 @@ function Item() {
         });
         setSuccessMessage('Item deleted successfully!');
         setShowSuccessModal(true);
-        fetchItems();
+        const updatedItems = await fetchItems();
+        setItems(updatedItems);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -222,10 +235,37 @@ function Item() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === 'unit' && value === 'create_new') {
+      setShowUnitForm(true);
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleUnitSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = getAuthToken();
+      const { data } = await axios.post('/api/units/add', unitFormData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchUnits();
+      setFormData(prev => ({ ...prev, unit: data._id }));
+      setUnitFormData({ name: '', shortName: '' });
+      setShowUnitForm(false);
+      setSuccessMessage('Unit created successfully!');
+      setShowSuccessModal(true);
+    } catch (err) {
+      console.error('Error creating unit:', err);
+      if (err.response?.status === 404) {
+        setError('Unit creation feature is not available yet. Please contact your administrator.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to create unit');
+      }
+    }
   };
 
   const exportToExcel = async () => {
@@ -371,6 +411,12 @@ function Item() {
                       required
                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                     >
+                      <option value="create_new" style={{backgroundColor: '#f0f0f0', fontWeight: 'bold'}}>+ Create New Unit</option>
+                      {units.map((unit) => (
+                        <option key={unit._id} value={unit._id}>
+                          {unit.name} ({unit.shortName})
+                        </option>
+                      ))}
                       <option value="piece">Piece</option>
                       <option value="bag">Bag</option>
                       <option value="plate">Plate</option>
@@ -453,6 +499,56 @@ function Item() {
           </div>
         )}
 
+        {showUnitForm && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Create New Unit</h2>
+              <form onSubmit={handleUnitSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Unit Name</label>
+                  <input
+                    type="text"
+                    value={unitFormData.name}
+                    onChange={(e) => setUnitFormData(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                    placeholder="e.g., Kilogram"
+                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Short Name</label>
+                  <input
+                    type="text"
+                    value={unitFormData.shortName}
+                    onChange={(e) => setUnitFormData(prev => ({ ...prev, shortName: e.target.value }))}
+                    required
+                    placeholder="e.g., kg"
+                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUnitForm(false);
+                      setUnitFormData({ name: '', shortName: '' });
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Create Unit
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {!loading && (
           <div className="mt-8">
             <h2 className="text-2xl font-bold mb-4 black">All Items</h2>
@@ -488,7 +584,9 @@ function Item() {
                             {item.stockQuantity < 0 ? `${item.stockQuantity} (Negative Stock!)` : item.stockQuantity}
                           </span>
                         </td>
-                        <td className="px-6 py-3 text-sm text-gray-500">{item.unit}</td>
+                        <td className="px-6 py-3 text-sm text-gray-500">
+                          {typeof item.unit === 'object' ? item.unit.shortName : item.unit}
+                        </td>
                         <td className="px-6 py-3 text-sm">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             item.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'

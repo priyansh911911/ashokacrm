@@ -62,7 +62,6 @@ const Order = () => {
 
   // WebSocket real-time updates
   const handleOrderUpdate = useCallback((data) => {
-    console.log('📦 Real-time order update:', data);
     if (data.type === 'created') {
       setOrders(prev => [data.order, ...prev]);
       showToast.success('New order received!');
@@ -74,14 +73,12 @@ const Order = () => {
   }, []);
 
   const handleItemUpdate = useCallback((data) => {
-    console.log('🍽️ Real-time item update:', data);
     if (data.type === 'updated') {
       setPantryItems(prev => prev.map(i => i._id === data.item._id ? data.item : i));
     }
   }, []);
 
   const handleVendorUpdate = useCallback((data) => {
-    console.log('🏢 Real-time vendor update:', data);
     if (data.type === 'updated') {
       setVendors(prev => prev.map(v => v._id === data.vendor._id ? data.vendor : v));
     }
@@ -91,48 +88,49 @@ const Order = () => {
 
   useEffect(() => {
     setWsConnected(isConnected);
-  }, [isConnected]);
+    
+    if (socket && isConnected) {
+      // Listen for refresh events
+      socket.on('pantry-data-refreshed', (data) => {
+        if (data.orders) setOrders(data.orders);
+        if (data.items) setPantryItems(data.items);
+        if (data.vendors) setVendors(data.vendors);
+        showToast.success('Data refreshed via WebSocket');
+      });
+      
+      // Request initial data via WebSocket
+      socket.emit('get-pantry-data');
+    }
+    
+    return () => {
+      if (socket) {
+        socket.off('pantry-data-refreshed');
+      }
+    };
+  }, [isConnected, socket]);
 
   useEffect(() => {
     const loadInitialData = async () => {
       setIsInitialLoading(true);
-      await Promise.all([
-        fetchOrders(),
-        fetchPantryItems(),
-        fetchVendors()
-      ]);
+      // Load orders first (most critical)
+      await fetchOrders();
       setIsInitialLoading(false);
+      
+      // Load other data in background
+      fetchPantryItems();
+      fetchVendors();
     };
     loadInitialData();
   }, []);
 
-  const fetchVendors = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/vendor/all', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const vendorsData = Array.isArray(response.data) ? response.data : (response.data.vendors || []);
-      setVendors(vendorsData);
-    } catch (err) {
-      console.error('Error fetching vendors:', err);
-      setVendors([]);
-    }
-  };
-
   const fetchOrders = async () => {
-    setLoading(true);
     try {
       const { data } = await axios.get('/api/pantry/orders', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      const ordersData = data.orders || data.data || data || [];
-      setOrders(ordersData);
+      setOrders(data.orders || data.data || data || []);
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      showToast.error('Failed to fetch orders');
-    } finally {
-      setLoading(false);
+      setOrders([]);
     }
   };
 
@@ -143,23 +141,25 @@ const Order = () => {
       });
       
       let items = [];
-      if (Array.isArray(data)) {
-        items = data;
-      } else if (data.items && Array.isArray(data.items)) {
-        items = data.items;
-      } else if (data.data && Array.isArray(data.data)) {
-        items = data.data;
-      }
+      if (Array.isArray(data)) items = data;
+      else if (data.items && Array.isArray(data.items)) items = data.items;
+      else if (data.data && Array.isArray(data.data)) items = data.data;
       
       setPantryItems(items);
-      
-      if (items.length === 0) {
-        showToast.error('No pantry items found. Please add some items first.');
-      }
     } catch (error) {
-      console.error('Pantry Items Error:', error);
-      showToast.error('Failed to fetch pantry items: ' + error.message);
       setPantryItems([]);
+    }
+  };
+
+  const fetchVendors = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/vendor/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setVendors(Array.isArray(response.data) ? response.data : (response.data.vendors || []));
+    } catch (err) {
+      setVendors([]);
     }
   };
 
@@ -170,12 +170,8 @@ const Order = () => {
       return;
     }
 
-    // Debug current form data
-    console.log('Form data before validation:', formData.selectedItems);
-    
     // Filter out items without valid pantryItemId and validate quantities
     const validItems = formData.selectedItems.filter((item, index) => {
-      console.log(`Item ${index}:`, item);
       if (!item.pantryItemId || item.pantryItemId === '') {
         showToast.error(`Item ${index + 1} must have a valid selection`);
         return false;
@@ -186,8 +182,6 @@ const Order = () => {
       }
       return true;
     });
-
-    console.log('Valid items after filtering:', validItems);
 
     if (validItems.length === 0) {
       showToast.error('Please ensure all items have valid selections and quantities');
@@ -221,8 +215,6 @@ const Order = () => {
         vendorId: formData.vendor || null
       };
       
-      console.log('Submitting order data:', orderData);
-
       if (editingOrder) {
         await axios.put(`/api/pantry/orders/${editingOrder._id}`, orderData, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -255,7 +247,14 @@ const Order = () => {
       }
 
       resetForm();
-      // WebSocket handles real-time updates automatically
+      
+      // Emit WebSocket event for immediate UI update
+      if (socket && wsConnected) {
+        socket.emit('pantry-order-action', { 
+          action: editingOrder ? 'updated' : 'created',
+          orderId: editingOrder?._id 
+        });
+      }
     } catch (error) {
       console.error('Order submission error:', error.response?.data);
       showToast.error(error.response?.data?.message || 'Failed to save order');
@@ -374,9 +373,10 @@ const Order = () => {
   };
 
   const addItem = () => {
-    console.log('Add Item clicked, pantryItems:', pantryItems);
+    // Lazy load pantry items if not loaded yet
     if (pantryItems.length === 0) {
-      showToast.error('No pantry items available. Please add items first.');
+      fetchPantryItems();
+      showToast.info('Loading pantry items...');
       return;
     }
     
@@ -917,11 +917,22 @@ const Order = () => {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
-            onClick={() => Promise.all([fetchOrders(), fetchPantryItems(), fetchVendors()])}
+            onClick={() => {
+              if (socket && wsConnected) {
+                // Use WebSocket to request fresh data
+                socket.emit('refresh-pantry-data');
+                showToast.success('Refreshing data via WebSocket...');
+              } else {
+                // Fallback to API calls if WebSocket not connected
+                setLoading(true);
+                Promise.all([fetchOrders(), fetchPantryItems(), fetchVendors()])
+                  .finally(() => setLoading(false));
+              }
+            }}
             disabled={loading}
             className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium disabled:opacity-50"
           >
-            {loading ? 'Refreshing...' : 'Refresh'}
+            {wsConnected ? 'Sync' : (loading ? 'Refreshing...' : 'Refresh')}
           </button>
           <button
             onClick={exportToExcel}
@@ -1288,6 +1299,13 @@ const Order = () => {
                           <div className="space-y-1">
                             {displayItems.slice(0, 2).map((item, idx) => {
                               let itemName = item.name || item.itemName;
+                              
+                              // Try to get from populated itemId first
+                              if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
+                                itemName = item.itemId.name;
+                              }
+                              
+                              // Try to find in current pantry items
                               if (!itemName && (item.itemId || item.pantryItemId)) {
                                 const itemRef = item.itemId || item.pantryItemId;
                                 const pantryItem = pantryItems.find(p => 
@@ -1296,9 +1314,13 @@ const Order = () => {
                                 );
                                 itemName = pantryItem?.name;
                               }
-                              // If still no name, try to get from populated itemId
-                              if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
-                                itemName = item.itemId.name;
+                              
+                              // Check if this is from original request (for Kitchen to Pantry orders)
+                              if (!itemName && order.originalRequest?.items) {
+                                const originalItem = order.originalRequest.items.find(orig => 
+                                  (orig.itemId || orig.pantryItemId) === (item.itemId?._id || item.itemId || item.pantryItemId)
+                                );
+                                itemName = originalItem?.name;
                               }
                               // For Kitchen to Pantry orders, show original requested quantity if current is 0
                               const displayQuantity = order.orderType === 'Kitchen to Pantry' && (item.quantity === 0 || item.quantity === '0') ?
@@ -1498,6 +1520,13 @@ const Order = () => {
                         <div className="space-y-1">
                           {displayItems.slice(0, 2).map((item, idx) => {
                             let itemName = item.name || item.itemName;
+                            
+                            // Try to get from populated itemId first
+                            if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
+                              itemName = item.itemId.name;
+                            }
+                            
+                            // Try to find in current pantry items
                             if (!itemName && (item.itemId || item.pantryItemId)) {
                               const itemRef = item.itemId || item.pantryItemId;
                               const pantryItem = pantryItems.find(p => 
@@ -1506,9 +1535,13 @@ const Order = () => {
                               );
                               itemName = pantryItem?.name;
                             }
-                            // If still no name, try to get from populated itemId
-                            if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
-                              itemName = item.itemId.name;
+                            
+                            // Check if this is from original request (for Kitchen to Pantry orders)
+                            if (!itemName && order.originalRequest?.items) {
+                              const originalItem = order.originalRequest.items.find(orig => 
+                                (orig.itemId || orig.pantryItemId) === (item.itemId?._id || item.itemId || item.pantryItemId)
+                              );
+                              itemName = originalItem?.name;
                             }
                             // For Kitchen to Pantry orders, show original requested quantity if current is 0
                             const displayQuantity = order.orderType === 'Kitchen to Pantry' && (item.quantity === 0 || item.quantity === '0') ?
@@ -1827,6 +1860,12 @@ const Order = () => {
                     <select
                       value={formData.vendor}
                       onChange={(e) => setFormData(prev => ({ ...prev, vendor: e.target.value }))}
+                      onFocus={() => {
+                        // Lazy load vendors when dropdown is opened
+                        if (vendors.length === 0) {
+                          fetchVendors();
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                       required
                     >
@@ -2356,9 +2395,28 @@ const Order = () => {
                     {viewingOrder.items?.map((item, index) => {
                       // Get item name from multiple possible sources
                       let itemName = item.name || item.itemName;
+                      
+                      // Try to get from populated itemId first
+                      if (!itemName && typeof item.itemId === 'object' && item.itemId?.name) {
+                        itemName = item.itemId.name;
+                      }
+                      
+                      // Try to find in current pantry items
                       if (!itemName && (item.itemId || item.pantryItemId)) {
-                        const pantryItem = pantryItems.find(p => p._id === (item.itemId || item.pantryItemId));
+                        const itemRef = item.itemId || item.pantryItemId;
+                        const pantryItem = pantryItems.find(p => 
+                          p._id === itemRef || 
+                          p._id === (typeof itemRef === 'object' ? itemRef._id : itemRef)
+                        );
                         itemName = pantryItem?.name;
+                      }
+                      
+                      // Check if this is from original request (for Kitchen to Pantry orders)
+                      if (!itemName && viewingOrder.originalRequest?.items) {
+                        const originalItem = viewingOrder.originalRequest.items.find(orig => 
+                          (orig.itemId || orig.pantryItemId) === (item.itemId?._id || item.itemId || item.pantryItemId)
+                        );
+                        itemName = originalItem?.name;
                       }
                       
                       return (
