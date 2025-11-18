@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import Pagination from '../common/Pagination';
 import { useSocket } from '../../context/SocketContext';
+import { showToast } from '../../utils/toaster';
 
 const ManageTables = () => {
   const { axios } = useAppContext();
@@ -14,6 +15,8 @@ const ManageTables = () => {
     status: 'available',
     isActive: true,
   });
+  const [editingTable, setEditingTable] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8);
 
@@ -40,6 +43,10 @@ const ManageTables = () => {
             : table
         ));
       });
+
+      socket.on('table-deleted', (data) => {
+        setTables(prev => prev.filter(table => table._id !== data.tableId));
+      });
     }
 
     return () => {
@@ -47,6 +54,7 @@ const ManageTables = () => {
         socket.off('table-status-updated');
         socket.off('table-created');
         socket.off('table-updated');
+        socket.off('table-deleted');
       }
     };
   }, [socket]);
@@ -79,7 +87,7 @@ const ManageTables = () => {
       await axios.post('/api/restaurant/tables', newTable, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Table created successfully!');
+      showToast.success('Table created successfully!');
       setNewTable({
         tableNumber: '',
         capacity: 1,
@@ -89,8 +97,20 @@ const ManageTables = () => {
       });
     } catch (error) {
       console.error('Error creating table:', error);
-      alert('Failed to create table!');
+      showToast.error('Failed to create table!');
     }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditingTable(null);
+    setNewTable({
+      tableNumber: '',
+      capacity: 1,
+      location: 'restaurant',
+      status: 'available',
+      isActive: true,
+    });
   };
 
   const handleStatusUpdate = async (id, newStatus) => {
@@ -104,8 +124,62 @@ const ManageTables = () => {
       // WebSocket will handle the update
     } catch (error) {
       console.error('Error updating table status:', error);
-      alert('Failed to update table status!');
+      showToast.error('Failed to update table status!');
     }
+  };
+
+  const handleEditTable = (table) => {
+    setEditingTable({ ...table });
+    setNewTable({ ...table });
+    setIsEditing(true);
+    // Scroll to form
+    document.getElementById('table-form').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleUpdateTable = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`/api/restaurant/tables/${editingTable._id}`, newTable, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      showToast.success('Table updated successfully!');
+      setIsEditing(false);
+      setEditingTable(null);
+      setNewTable({
+        tableNumber: '',
+        capacity: 1,
+        location: 'restaurant',
+        status: 'available',
+        isActive: true,
+      });
+    } catch (error) {
+      console.error('Error updating table:', error);
+      showToast.error('Failed to update table!');
+    }
+  };
+
+  const handleDeleteTable = async (id) => {
+    if (window.confirm('Are you sure you want to delete this table?')) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`/api/restaurant/tables/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showToast.success('Table deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting table:', error);
+        showToast.error('Failed to delete table!');
+      }
+    }
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditingTable(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const getStatusColor = (status) => {
@@ -128,10 +202,12 @@ const ManageTables = () => {
       <div className="container mx-auto">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-text mb-6 text-center">Manage Tables</h1>
 
-        {/* Form to add a new table */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-8">
-          <h2 className="text-xl sm:text-2xl font-bold text-text mb-4">Add a New Table</h2>
-          <form onSubmit={handleAddTable} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Form to add/edit table */}
+        <div id="table-form" className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-text mb-4">
+            {isEditing ? 'Edit Table' : 'Add a New Table'}
+          </h2>
+          <form onSubmit={isEditing ? handleUpdateTable : handleAddTable} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label htmlFor="tableNumber" className="block text-sm font-medium text-text">Table Number</label>
               <input
@@ -201,12 +277,21 @@ const ManageTables = () => {
               />
               <label htmlFor="isActive" className="ml-2 block text-sm font-medium text-text">Is Active</label>
             </div>
-            <div className="col-span-1 sm:col-span-2 md:col-span-3 flex justify-end">
+            <div className="col-span-1 sm:col-span-2 md:col-span-3 flex justify-end gap-3">
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-200 ease-in-out"
+                >
+                  Cancel
+                </button>
+              )}
               <button
                 type="submit"
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-text bg-primary hover:bg-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-200 ease-in-out"
               >
-                Add Table
+                {isEditing ? 'Update Table' : 'Add Table'}
               </button>
             </div>
           </form>
@@ -222,24 +307,47 @@ const ManageTables = () => {
               <p className="text-sm text-gray-600">Status: <span className="font-semibold capitalize">{table.status}</span></p>
               <p className="text-sm text-gray-600">Active: <span className="font-semibold">{table.isActive ? 'Yes' : 'No'}</span></p>
 
-              {/* Status Update Buttons */}
-              <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
-                {['available', 'occupied', 'reserved', 'maintenance'].map(statusOption => (
+              {/* Action Buttons */}
+              <div className="mt-4 space-y-2">
+                {/* Edit and Delete Buttons */}
+                <div className="flex gap-2">
                   <button
-                    key={statusOption}
-                    onClick={() => handleStatusUpdate(table._id || table.id, statusOption)}
-                    disabled={table.status === statusOption}
-                    className={`
-                      px-3 py-1 text-xs font-medium rounded-full
-                      ${table.status === statusOption
-                        ? 'bg-gray-400 text-white cursor-not-allowed'
-                        : 'bg-primary text-text hover:bg-hover transition duration-150'
-                      }
-                    `}
+                    onClick={() => handleEditTable(table)}
+                    className="flex-1 px-3 py-2 text-blue-500 hover:text-blue-600 transition duration-150 flex items-center justify-center"
                   >
-                    Set to {statusOption.charAt(0).toUpperCase() + statusOption.slice(1)}
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
                   </button>
-                ))}
+                  <button
+                    onClick={() => handleDeleteTable(table._id || table.id)}
+                    className="flex-1 px-3 py-2 text-red-500 hover:text-red-600 transition duration-150 flex items-center justify-center"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {/* Status Update Buttons */}
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                  {['available', 'occupied', 'reserved', 'maintenance'].map(statusOption => (
+                    <button
+                      key={statusOption}
+                      onClick={() => handleStatusUpdate(table._id || table.id, statusOption)}
+                      disabled={table.status === statusOption}
+                      className={`
+                        px-3 py-1 text-xs font-medium rounded-full
+                        ${table.status === statusOption
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-primary text-text hover:bg-hover transition duration-150'
+                        }
+                      `}
+                    >
+                      Set to {statusOption.charAt(0).toUpperCase() + statusOption.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
@@ -252,6 +360,8 @@ const ManageTables = () => {
           itemsPerPage={itemsPerPage}
           totalItems={tables.length}
         />
+
+
       </div>
     </div>
   );
