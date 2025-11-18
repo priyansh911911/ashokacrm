@@ -182,10 +182,12 @@ const Sidebar = () => {
     // If restaurant staff, add direct menu items
     if (role === "restaurant" && restaurantRole === "staff") {
       items.push(
+        { icon: UserRound, label: "Available Tables", path: "/restaurant/available-tables" },
         { icon: ShoppingCart, label: "Create Order", path: "/resturant/order-table" },
         { icon: ListChecks, label: "All Orders", path: "/resturant/all-orders" },
         { icon: FileText, label: "Reservation", path: "/resturant/reservation" },
         { icon: UserRound, label: "Table View", path: "/restaurant/available-tables" }
+        { icon: FileText, label: "Reservation", path: "/resturant/reservation" }
       );
       return items;
     }
@@ -193,11 +195,13 @@ const Sidebar = () => {
     // If restaurant cashier, add direct menu items
     if (role === "restaurant" && restaurantRole === "cashier") {
       items.push(
+        { icon: UserRound, label: "Available Tables", path: "/restaurant/available-tables" },
         { icon: ShoppingCart, label: "Create Order", path: "/resturant/order-table" },
         { icon: ListChecks, label: "All Orders", path: "/resturant/all-orders" },
         { icon: FileText, label: "Billing", path: "/billing" },
         { icon: ListChecks, label: "KOT", path: "/kot" },
         { icon: UserRound, label: "Table View", path: "/restaurant/available-tables" }
+        { icon: ListChecks, label: "KOT", path: "/kot" }
       );
       return items;
     }
@@ -494,16 +498,17 @@ const Sidebar = () => {
                   { label: "Chef Dashboard", path: "/chef-dashboard", icon: LayoutDashboard },
                 ];
               } else if (restRole === 'cashier') {
-                console.log('Cashier menu selected - showing Order, Billing, KOT');
+                console.log('Cashier menu selected - showing Available Tables, Order, KOT');
                 return [
+                  { label: "Available Tables", path: "/restaurant/available-tables", icon: UserRound },
                   { label: "Create Order", path: "/resturant/order-table", icon: ShoppingCart },
                   { label: "All Orders", path: "/resturant/all-orders", icon: ListChecks },
-                  { label: "Billing", path: "/billing", icon: FileText },
                   { label: "KOT", path: "/kot", icon: ListChecks },
                 ];
               } else if (restRole === 'staff') {
                 console.log('Restaurant staff menu selected');
                 return [
+                  { label: "Available Tables", path: "/restaurant/available-tables", icon: UserRound },
                   { label: "Create Order", path: "/resturant/order-table", icon: ShoppingCart },
                   { label: "All Orders", path: "/resturant/all-orders", icon: ListChecks },
                   { label: "Reservation", path: "/resturant/reservation", icon: FileText },
@@ -535,7 +540,6 @@ const Sidebar = () => {
                 { label: "Chef Dashboard", path: "/chef-dashboard", icon: UserRound },
                 { label: "Reservation", path: "/resturant/reservation", icon: FileText },
                 { label: "KOT", path: "/kot", icon: ListChecks },
-                { label: "Billing", path: "/billing", icon: FileText },
                 { label: "Menu", path: "/menu", icon: UserRound },
                 { label: "Manage Tables", path: "/restaurant/manage-tables", icon: UserRound },
                 { label: "Table View", path: "/restaurant/available-tables", icon: UserRound },
