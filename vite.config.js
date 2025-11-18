@@ -6,12 +6,12 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
 
   server: {
-    port: 5174,
+    port: 5173,
     host: true,
   },
 
   preview: {
-    port: 5174,
+    port: 5173,
     host: true,
     allowedHosts: ['ashoka-frontend.shineinfosolutions.in']   // ✅ Correct location
   }

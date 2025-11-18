@@ -16,13 +16,10 @@ export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Only try to connect to Socket.io in development mode with localhost
-    const isDevelopment = import.meta.env.DEV;
     const apiUrl = import.meta.env.VITE_API_URL;
-    const isLocalhost = apiUrl && apiUrl.includes('localhost');
     
-    if (!isDevelopment || !isLocalhost) {
-      console.log('Socket.io disabled - not in development mode or not using localhost');
+    if (!apiUrl) {
+      console.log('Socket.io disabled - no API URL configured');
       return;
     }
 
@@ -40,7 +37,7 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('connect', () => {
-        console.log('Socket connected to local server');
+        console.log('Socket connected to server:', apiUrl);
         setIsConnected(true);
         newSocket.emit('join-waiter-dashboard');
       });
@@ -51,7 +48,7 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('connect_error', (error) => {
-        console.log('Socket connection failed - local server not running');
+        console.log('Socket connection failed:', error.message);
         setIsConnected(false);
       });
 
