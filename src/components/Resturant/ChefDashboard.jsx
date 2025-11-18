@@ -10,6 +10,8 @@ const ChefDashboard = () => {
   const [historyOrders, setHistoryOrders] = useState([]);
   const [itemStates, setItemStates] = useState({});
   const [activeTab, setActiveTab] = useState('active');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showCalendar, setShowCalendar] = useState(false);
   
   // Real-time KOT updates for kitchen staff
   const { isConnected } = useKitchenSocket({
@@ -32,10 +34,14 @@ const ChefDashboard = () => {
     showNotifications: true
   });
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (filterDate = null) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/kot/all', {
+      let url = '/api/kot/all';
+      if (filterDate) {
+        url += `?date=${filterDate}`;
+      }
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -139,9 +145,18 @@ const ChefDashboard = () => {
       const activeOrders = kotOrders.filter(order => 
         order.status === 'pending' || order.status === 'preparing' || order.status === 'ready'
       );
-      const historyOrders = kotOrders.filter(order => 
+      let historyOrders = kotOrders.filter(order => 
         order.status === 'served' || order.status === 'completed' || order.status === 'cancelled'
       );
+      
+      // Filter history by selected date if in history tab
+      if (filterDate) {
+        const filterDateObj = new Date(filterDate);
+        historyOrders = historyOrders.filter(order => {
+          const orderDate = new Date(order.createdAt);
+          return orderDate.toDateString() === filterDateObj.toDateString();
+        });
+      }
       
       console.log('All KOT orders:', kotOrders.length);
       console.log('Active orders:', activeOrders.length);
@@ -162,6 +177,12 @@ const ChefDashboard = () => {
   useEffect(() => {
     fetchOrders();
   }, []);
+  
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchOrders(selectedDate);
+    }
+  }, [selectedDate, activeTab]);
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
@@ -220,28 +241,169 @@ const ChefDashboard = () => {
 
       {/* Tab Navigation */}
       <div className="mb-6">
-        <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
-          <button
-            onClick={() => setActiveTab('active')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'active'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            Active Orders ({orders.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'history'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            History ({historyOrders.length})
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
+            <button
+              onClick={() => setActiveTab('active')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'active'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Active Orders ({orders.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'history'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              History ({historyOrders.length})
+            </button>
+          </div>
+          
+          {/* Date Filter for History */}
+          {activeTab === 'history' && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Filter by Date:</label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className={`px-3 py-2 rounded-md text-sm transition-colors ${
+                    showCalendar 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                >
+                  📅 {showCalendar ? 'Hide Calendar' : 'Show Calendar'}
+                </button>
+              </div>
+              
+              {/* Inline Calendar */}
+              {showCalendar && (
+                <div className="bg-white border border-gray-300 rounded-lg p-4 shadow-lg">
+                  {(() => {
+                    const currentDate = new Date(selectedDate);
+                    const currentMonth = currentDate.getMonth();
+                    const currentYear = currentDate.getFullYear();
+                    const today = new Date();
+                    
+                    const firstDay = new Date(currentYear, currentMonth, 1);
+                    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                    const startDate = new Date(firstDay);
+                    startDate.setDate(startDate.getDate() - firstDay.getDay());
+                    
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+                    
+                    const days = [];
+                    const current = new Date(startDate);
+                    
+                    for (let i = 0; i < 42; i++) {
+                      days.push(new Date(current));
+                      current.setDate(current.getDate() + 1);
+                    }
+                    
+                    return (
+                      <div className="w-80">
+                        {/* Month Navigation */}
+                        <div className="flex justify-between items-center mb-4">
+                          <button
+                            onClick={() => {
+                              const newDate = new Date(currentYear, currentMonth - 1, 1);
+                              setSelectedDate(newDate.toISOString().split('T')[0]);
+                            }}
+                            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                          >
+                            ‹
+                          </button>
+                          <span className="font-semibold text-lg">
+                            {monthNames[currentMonth]} {currentYear}
+                          </span>
+                          <button
+                            onClick={() => {
+                              const newDate = new Date(currentYear, currentMonth + 1, 1);
+                              setSelectedDate(newDate.toISOString().split('T')[0]);
+                            }}
+                            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                          >
+                            ›
+                          </button>
+                        </div>
+                        
+                        {/* Days of Week */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                              {day}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Calendar Grid */}
+                        <div className="grid grid-cols-7 gap-1">
+                          {days.map((day, index) => {
+                            const isCurrentMonth = day.getMonth() === currentMonth;
+                            const isToday = day.toDateString() === today.toDateString();
+                            const isSelected = day.toDateString() === currentDate.toDateString();
+                            
+                            return (
+                              <button
+                                key={index}
+                                onClick={() => {
+                                  setSelectedDate(day.toISOString().split('T')[0]);
+                                }}
+                                className={`
+                                  w-10 h-10 text-sm rounded transition-colors
+                                  ${isCurrentMonth ? 'text-gray-900' : 'text-gray-300'}
+                                  ${isToday ? 'bg-blue-100 text-blue-600 font-semibold' : ''}
+                                  ${isSelected ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}
+                                `}
+                              >
+                                {day.getDate()}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Quick Actions */}
+                        <div className="mt-4 flex gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedDate(new Date().toISOString().split('T')[0]);
+                            }}
+                            className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+                          >
+                            Today
+                          </button>
+                          <button
+                            onClick={() => setShowCalendar(false)}
+                            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
         </div>
+        
+
       </div>
 
       <div className="grid grid-cols-3 gap-4">
