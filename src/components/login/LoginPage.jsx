@@ -71,9 +71,9 @@ const LoginPage = () => {
       } else if (response.data.role === "restaurant" && response.data.restaurantRole === "chef") {
         navigate("/staff/clock-dashboard", { replace: true });
       } else if (response.data.role === "restaurant" && response.data.restaurantRole === "staff") {
-        navigate("/staff/clock-dashboard", { replace: true });
+        navigate("/restaurant/available-tables", { replace: true });
       } else if (response.data.role === "restaurant" && response.data.restaurantRole === "cashier") {
-        navigate("/staff/clock-dashboard", { replace: true });
+        navigate("/restaurant/available-tables", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
       }

@@ -44,7 +44,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Customer from "./components/Customer.jsx";
 import Resturantreservation from "./components/Resturant/Resturantreservation.jsx";
-import Billing from "./components/Resturant/Billing.jsx";
+
 import Payment from "./components/payment/Payment.jsx";
 import Invoice from "./components/restaurant/Invoice.jsx";
 import POSInvoice from "./components/POSInvoice.jsx";
@@ -132,6 +132,14 @@ const App = () => {
                   <Header />
                   <main className="flex-1 overflow-y-auto">
                     <Routes>
+                      <Route path="/" element={<Navigate to={(() => {
+                        const role = localStorage.getItem("role");
+                        const restaurantRole = localStorage.getItem("restaurantRole");
+                        if (role === "restaurant" && (restaurantRole === "cashier" || restaurantRole === "staff")) {
+                          return "/restaurant/available-tables";
+                        }
+                        return "/dashboard";
+                      })()} replace />} />
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route
                         path="/pantry/dashboard"
@@ -229,7 +237,7 @@ const App = () => {
                         path="/resturant/reservation"
                         element={<Resturantreservation />}
                       />
-                      <Route path="/billing" element={<Billing />} />
+
                       <Route
                         path="/chef-dashboard"
                         element={<ChefDashboard />}
