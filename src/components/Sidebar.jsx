@@ -185,6 +185,8 @@ const Sidebar = () => {
         { icon: UserRound, label: "Available Tables", path: "/restaurant/available-tables" },
         { icon: ShoppingCart, label: "Create Order", path: "/resturant/order-table" },
         { icon: ListChecks, label: "All Orders", path: "/resturant/all-orders" },
+        { icon: FileText, label: "Reservation", path: "/resturant/reservation" },
+        { icon: UserRound, label: "Table View", path: "/restaurant/available-tables" }
         { icon: FileText, label: "Reservation", path: "/resturant/reservation" }
       );
       return items;
@@ -196,6 +198,9 @@ const Sidebar = () => {
         { icon: UserRound, label: "Available Tables", path: "/restaurant/available-tables" },
         { icon: ShoppingCart, label: "Create Order", path: "/resturant/order-table" },
         { icon: ListChecks, label: "All Orders", path: "/resturant/all-orders" },
+        { icon: FileText, label: "Billing", path: "/billing" },
+        { icon: ListChecks, label: "KOT", path: "/kot" },
+        { icon: UserRound, label: "Table View", path: "/restaurant/available-tables" }
         { icon: ListChecks, label: "KOT", path: "/kot" }
       );
       return items;
@@ -537,7 +542,7 @@ const Sidebar = () => {
                 { label: "KOT", path: "/kot", icon: ListChecks },
                 { label: "Menu", path: "/menu", icon: UserRound },
                 { label: "Manage Tables", path: "/restaurant/manage-tables", icon: UserRound },
-                { label: "Available Tables", path: "/restaurant/available-tables", icon: UserRound },
+                { label: "Table View", path: "/restaurant/available-tables", icon: UserRound },
                 { label: "Wastage", path: "/wastage", icon: Package },
               ];
             }

@@ -32,6 +32,7 @@ class SoundManager {
     } catch (error) {
       console.warn('Error playing buzzer sound:', error);
     }
+
   }
 
   // Enable/disable sounds

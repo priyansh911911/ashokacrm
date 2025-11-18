@@ -11,7 +11,7 @@ const ManageTables = () => {
   const [newTable, setNewTable] = useState({
     tableNumber: '',
     capacity: 1,
-    location: 'restaurant',
+    location: 'dining',
     status: 'available',
     isActive: true,
   });
@@ -84,19 +84,33 @@ const ManageTables = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/restaurant/tables', newTable, {
+      
+      // Auto-format table number based on location
+      const tableData = {
+        ...newTable,
+        tableNumber: newTable.location === 'rooftop' && !newTable.tableNumber.startsWith('T') 
+          ? `T${newTable.tableNumber}` 
+          : newTable.tableNumber
+      };
+      
+      console.log('Sending table data:', tableData);
+      await axios.post('/api/restaurant/tables', tableData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       showToast.success('Table created successfully!');
       setNewTable({
         tableNumber: '',
         capacity: 1,
-        location: 'restaurant',
+        location: 'dining',
         status: 'available',
         isActive: true,
       });
+      fetchTables(); // Refresh the tables list
     } catch (error) {
       console.error('Error creating table:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.error || 'Failed to create table!';
+      alert(errorMessage);
       showToast.error('Failed to create table!');
     }
   };
@@ -209,7 +223,9 @@ const ManageTables = () => {
           </h2>
           <form onSubmit={isEditing ? handleUpdateTable : handleAddTable} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="tableNumber" className="block text-sm font-medium text-text">Table Number</label>
+              <label htmlFor="tableNumber" className="block text-sm font-medium text-text">
+                Table Number {newTable.location === 'rooftop' && <span className="text-xs text-gray-500">(T prefix will be added automatically)</span>}
+              </label>
               <input
                 type="text"
                 name="tableNumber"
@@ -217,6 +233,7 @@ const ManageTables = () => {
                 value={newTable.tableNumber}
                 onChange={handleInputChange}
                 required
+                placeholder={newTable.location === 'rooftop' ? '101 (will become T101)' : '1'}
                 className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 transition duration-200 ease-in-out hover:border-hover"
               />
             </div>
@@ -244,10 +261,8 @@ const ManageTables = () => {
                 required
                 className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 transition duration-200 ease-in-out hover:border-hover"
               >
-                <option value="restaurant">Restaurant</option>
-                <option value="bar">Bar</option>
-                <option value="terrace">Terrace</option>
-                <option value="private_dining">Private Dining</option>
+                <option value="dining">Dining</option>
+                <option value="rooftop">Rooftop</option>
               </select>
             </div>
             <div>

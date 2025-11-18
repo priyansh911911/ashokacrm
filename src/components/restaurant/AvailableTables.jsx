@@ -16,11 +16,20 @@ const AvailableTables = () => {
   const [tableAmounts, setTableAmounts] = useState({});
   const [tableStartTimes, setTableStartTimes] = useState({});
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [roomServiceOrders, setRoomServiceOrders] = useState([]);
+  const [bookedRooms, setBookedRooms] = useState([]);
+  const [allRooms, setAllRooms] = useState([]);
+  const [categories, setCategories] = useState([]);
+
 
   useEffect(() => {
     fetchTables();
     fetchItems();
     fetchTableAmounts();
+    fetchRoomServiceOrders();
+    fetchBookedRooms();
+    fetchAllRooms();
+    fetchCategories();
     
     // Update timer every second
     const timer = setInterval(() => {
@@ -115,6 +124,72 @@ const AvailableTables = () => {
       setTableStartTimes(startTimes);
     } catch (error) {
       console.error('Error fetching table amounts:', error);
+    }
+  };
+
+  const fetchRoomServiceOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await axios.get('/api/room-service/orders?status=pending&status=confirmed&status=preparing&status=ready', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setRoomServiceOrders(response.data.orders || []);
+      }
+    } catch (error) {
+      console.error('Error fetching room service orders:', error);
+    }
+  };
+
+  const fetchBookedRooms = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await axios.get('/api/bookings/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const bookedRooms = response.data.filter(booking => 
+        (booking.status === 'Confirmed' || booking.status === 'Booked' || booking.status === 'CheckedIn') && booking.isActive
+      );
+      
+      setBookedRooms(bookedRooms);
+    } catch (error) {
+      console.error('Error fetching booked rooms:', error);
+    }
+  };
+
+  const fetchAllRooms = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await axios.get('/api/rooms/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setAllRooms(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Error fetching all rooms:', error);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await axios.get('/api/categories/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setCategories(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
     }
   };
 
@@ -218,6 +293,58 @@ const AvailableTables = () => {
       // Find existing order for this table and open add items modal
       await handleAddItemsForTable(table.tableNumber);
     }
+  };
+
+  const handleRoomServiceClick = (room, booking = null) => {
+    try {
+      // Check if room is available (no booking)
+      if (!booking) {
+        showToast.error('Room not booked - No guest assigned');
+        return;
+      }
+      
+      // Create room data with booking info like easy dashboard does
+      const roomWithBooking = { ...room, booking };
+      
+      // Store in localStorage like easy dashboard
+      localStorage.setItem('selectedRoomService', JSON.stringify(roomWithBooking));
+      
+      // Navigate to room service
+      navigate('/room-service');
+    } catch (error) {
+      console.error('Error navigating to room service:', error);
+      showToast.error('Failed to load room service');
+    }
+  };
+
+  const getRoomBooking = (roomNumber) => {
+    return bookedRooms.find(booking => {
+      const roomMatch = booking.roomNumber === roomNumber || 
+                       booking.roomNumber === roomNumber.toString() ||
+                       booking.room_number === roomNumber ||
+                       booking.room_number === roomNumber.toString();
+      return roomMatch;
+    });
+  };
+
+  const getRoomStatus = (room) => {
+    if (room.status === 'booked') return 'booked';
+    if (room.status === 'maintenance') return 'maintenance';
+    
+    const booking = getRoomBooking(room.room_number);
+    if (booking) return 'booked';
+    
+    return 'available';
+  };
+
+  const getRoomCategory = (room) => {
+    const categoryId = typeof room.category === 'object' ? room.category._id : room.category;
+    const category = categories.find(cat => cat._id === categoryId);
+    
+    if (typeof room.category === 'object' && room.category.name) {
+      return room.category.name;
+    }
+    return category ? category.name : 'Unknown Category';
   };
 
   const handleAddItemsForTable = async (tableNumber) => {
@@ -396,12 +523,147 @@ const AvailableTables = () => {
     );
   };
 
+  const RoomServiceComponent = ({ order }) => {
+    const getStatusStyle = (status) => {
+      switch (status) {
+        case 'pending':
+          return {
+            bg: 'bg-yellow-100',
+            border: 'border-yellow-300',
+            text: 'text-yellow-800'
+          };
+        case 'confirmed':
+        case 'preparing':
+          return {
+            bg: 'bg-blue-100',
+            border: 'border-blue-300',
+            text: 'text-blue-800'
+          };
+        case 'ready':
+          return {
+            bg: 'bg-green-100',
+            border: 'border-green-300',
+            text: 'text-green-800'
+          };
+        default:
+          return {
+            bg: 'bg-gray-100',
+            border: 'border-gray-300',
+            text: 'text-gray-800'
+          };
+      }
+    };
+
+    const style = getStatusStyle(order.status);
+    const elapsedTime = formatElapsedTime(new Date(order.createdAt));
+    
+    return (
+      <div className="relative">
+        <div 
+          className={`
+            ${style.bg} ${style.border} ${style.text}
+            border-2 rounded-lg p-4 min-h-[120px] flex flex-col items-center justify-center
+            transition-all duration-200 hover:shadow-lg cursor-pointer
+            hover:bg-purple-50 hover:border-purple-300
+          `}
+          onClick={() => handleRoomServiceClick(order.roomNumber)}
+        >
+          <div className="font-bold text-lg mb-2">
+            R{order.roomNumber}
+          </div>
+          <div className="text-sm font-semibold mb-1">
+            ₹{order.totalAmount}
+          </div>
+          <div className="text-xs mb-1 font-mono">
+            {elapsedTime}
+          </div>
+          <div className="text-xs text-center capitalize">
+            {order.status}
+          </div>
+          <div className="text-xs text-center mt-1">
+            {order.items?.length || 0} items
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const RoomCardComponent = ({ room }) => {
+    const currentStatus = getRoomStatus(room);
+    const booking = getRoomBooking(room.room_number);
+    const isAvailable = currentStatus === 'available';
+    const isBooked = currentStatus === 'booked';
+    
+    const statusMap = {
+      'available': { 
+        bg: 'bg-green-50 hover:bg-green-100', 
+        text: 'text-green-700', 
+        accent: 'border-green-500', 
+        label: 'AVAILABLE'
+      },
+      'booked': { 
+        bg: 'bg-red-200 hover:bg-red-300', 
+        text: 'text-red-900', 
+        accent: 'border-red-700', 
+        label: 'OCCUPIED'
+      },
+      'maintenance': { 
+        bg: 'bg-yellow-100 hover:bg-yellow-200', 
+        text: 'text-yellow-800', 
+        accent: 'border-yellow-600', 
+        label: 'MAINTENANCE'
+      }
+    };
+    
+    const statusProps = statusMap[currentStatus] || statusMap.available;
+    
+    return (
+      <div className="relative">
+        <div 
+          className={`
+            ${statusProps.bg}
+            rounded-lg shadow-md border-t-2 ${statusProps.accent} 
+            transition-all duration-300 cursor-pointer hover:shadow-lg
+            min-h-[120px] p-3 flex flex-col items-center justify-center
+          `}
+          onClick={() => handleRoomServiceClick(room, booking)}
+        >
+          <div className={`font-extrabold text-2xl mb-1 ${statusProps.text}`}>
+            {room.room_number}
+          </div>
+          
+          <div className="text-xs font-semibold uppercase tracking-wider mb-2 text-gray-500 text-center">
+            {statusProps.label}
+          </div>
+          
+          <div className="text-xs text-gray-400 italic mb-2 text-center">
+            {getRoomCategory(room)}
+          </div>
+          
+          {isBooked && booking && (
+            <div className="text-xs text-center w-full text-gray-600">
+              <span className="font-medium block truncate">
+                Guest: {booking.name || 'Unknown'}
+              </span>
+            </div>
+          )}
+          
+          {isAvailable && (
+            <div className="text-xs text-center text-gray-500">
+              Click for Room Service
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold">Select Table</h1>
+          <h1 className="text-xl font-semibold">Table View</h1>
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
@@ -418,7 +680,13 @@ const AvailableTables = () => {
           </div>
         </div>
         <button 
-          onClick={fetchTables}
+          onClick={() => {
+            fetchTables();
+            fetchRoomServiceOrders();
+            fetchBookedRooms();
+            fetchAllRooms();
+            fetchCategories();
+          }}
           className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
           <RefreshCw size={16} className="mr-2" />
@@ -426,12 +694,7 @@ const AvailableTables = () => {
         </button>
       </div>
 
-      {/* Floor tabs */}
-      <div className="flex gap-2 mb-6">
-        <button className="px-4 py-2 bg-blue-500 text-white rounded-lg">1st Floor</button>
-        <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">2nd Floor</button>
-        <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">3rd Floor</button>
-      </div>
+
 
       {/* Tables layout */}
       <div className="bg-white rounded-lg shadow p-8 min-h-[600px]">
@@ -440,12 +703,73 @@ const AvailableTables = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="relative">
-            {/* Grid layout for tables */}
-            <div className="grid grid-cols-3 gap-20 auto-rows-max max-w-6xl mx-auto">
-              {tables.map((table) => (
-                <TableComponent key={table._id} table={table} />
-              ))}
+          <div className="space-y-12">
+            {/* Dining Section */}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-blue-500 pb-2">Dining Area</h2>
+              <div className="grid grid-cols-3 gap-20 auto-rows-max max-w-6xl mx-auto">
+                {tables
+                  .filter(table => table.location === 'dining')
+                  .map((table) => (
+                    <TableComponent key={table._id} table={table} />
+                  ))}
+              </div>
+              {tables.filter(table => table.location === 'dining').length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No dining tables found</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Rooftop Section */}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-orange-500 pb-2">Rooftop Area</h2>
+              <div className="grid grid-cols-3 gap-20 auto-rows-max max-w-6xl mx-auto">
+                {tables
+                  .filter(table => table.location === 'rooftop')
+                  .map((table) => (
+                    <TableComponent key={table._id} table={table} />
+                  ))}
+              </div>
+              {tables.filter(table => table.location === 'rooftop').length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No rooftop tables found</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Room Service Section */}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-purple-500 pb-2">Room Service</h2>
+              
+              {/* Active Room Service Orders */}
+              {roomServiceOrders.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Active Orders</h3>
+                  <div className="grid grid-cols-3 gap-20 auto-rows-max max-w-6xl mx-auto">
+                    {roomServiceOrders.map((order) => (
+                      <RoomServiceComponent key={order._id} order={order} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* All Rooms */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-4">
+                  All Rooms ({allRooms.length})
+                </h3>
+                <div className="grid grid-cols-3 gap-20 auto-rows-max max-w-6xl mx-auto">
+                  {allRooms.map((room) => (
+                    <RoomCardComponent key={room._id} room={room} />
+                  ))}
+                </div>
+                {allRooms.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No rooms found</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
