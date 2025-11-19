@@ -296,13 +296,24 @@ const Order = () => {
           };
         }),
         notes: cartItems.map(item => item.note).filter(note => note).join(', ') || '',
-        amount: getTotalAmount(),
+        amount: cartItems.reduce((total, item) => {
+          const price = item.Price || item.price || 0;
+          return total + (item.isFree ? 0 : price * item.quantity);
+        }, 0),
         discount: 0,
         isMembership: false,
         isLoyalty: false
       };
       
       console.log('Sending order data:', finalOrderData);
+      console.log('Cart items with NOC status:', cartItems.map(item => ({
+        name: item.name,
+        price: item.Price || item.price,
+        quantity: item.quantity,
+        isFree: item.isFree,
+        nocId: item.nocId
+      })));
+      console.log('Calculated total amount:', finalOrderData.amount);
       console.log('Token exists:', !!token);
       console.log('Items validation:', finalOrderData.items.map(item => ({
         itemId: item.itemId,
@@ -320,6 +331,8 @@ const Order = () => {
         }
       });
       
+      console.log('Order response:', orderResponse.data);
+      console.log('Final order amount in DB:', orderResponse.data.order?.amount);
       showToast.success('🎉 Order placed successfully!');
       setCartItems([]);
       setOrderData({ staffName: '', staffId: '', customerName: '', tableNo: '', bookingId: '', grcNo: '', roomNumber: '', guestName: '', guestPhone: '', items: [], amount: 0 });

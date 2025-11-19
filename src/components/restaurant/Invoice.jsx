@@ -48,7 +48,7 @@ export default function Invoice() {
             checkOutDate: new Date().toLocaleDateString()
           },
           items: orderData.items?.map((item, index) => {
-            const itemPrice = typeof item === 'object' ? (item.price || item.Price || 0) : 0;
+            const itemPrice = item.isFree ? 0 : (typeof item === 'object' ? (item.price || item.Price || 0) : 0);
             return {
               date: new Date().toLocaleDateString(),
               particulars: typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item'),
@@ -58,20 +58,21 @@ export default function Invoice() {
               rate: 12,
               cgstRate: itemPrice * 0.06,
               sgstRate: itemPrice * 0.06,
-              amount: itemPrice
+              amount: itemPrice,
+              isFree: item.isFree || false
             };
           }) || [],
           taxes: [{
-            taxableAmount: orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0,
-            cgst: (orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0) * 0.06,
-            sgst: (orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0) * 0.06,
-            amount: orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0
+            taxableAmount: orderData.amount || orderData.totalAmount || 0,
+            cgst: (orderData.amount || orderData.totalAmount || 0) * 0.06,
+            sgst: (orderData.amount || orderData.totalAmount || 0) * 0.06,
+            amount: orderData.amount || orderData.totalAmount || 0
           }],
           payment: {
-            taxableAmount: orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0,
-            cgst: (orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0) * 0.06,
-            sgst: (orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0) * 0.06,
-            total: orderData.items?.reduce((sum, item) => sum + (typeof item === 'object' ? (item.price || item.Price || 0) : 0), 0) || 0
+            taxableAmount: orderData.amount || orderData.totalAmount || 0,
+            cgst: (orderData.amount || orderData.totalAmount || 0) * 0.06,
+            sgst: (orderData.amount || orderData.totalAmount || 0) * 0.06,
+            total: orderData.amount || orderData.totalAmount || 0
           },
           otherCharges: [
             {
@@ -510,9 +511,24 @@ export default function Invoice() {
                   <td className="p-1 border border-black">{typeof item === 'object' ? (item.date || 'N/A') : 'N/A'}</td>
                   <td className="p-1 border border-black">{typeof item === 'object' ? (item.particulars || 'N/A') : String(item)}</td>
                   <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.pax || 1) : 1}</td>
-                  <td className="p-1 border border-black text-right">₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</td>
+                  <td className="p-1 border border-black text-right">
+                    {item.isFree ? (
+                      <div>
+                        <span className="line-through text-gray-400">₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</span>
+                        <div className="text-green-600 font-bold text-xs">FREE</div>
+                      </div>
+                    ) : (
+                      <span>₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</span>
+                    )}
+                  </td>
                   <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.hsn || 'N/A') : 'N/A'}</td>
-                  <td className="p-1 border border-black text-right font-bold">₹{typeof item === 'object' ? (item.amount?.toFixed(2) || '0.00') : '0.00'}</td>
+                  <td className="p-1 border border-black text-right font-bold">
+                    {item.isFree ? (
+                      <span className="text-green-600">FREE</span>
+                    ) : (
+                      <span>₹{typeof item === 'object' ? (item.amount?.toFixed(2) || '0.00') : '0.00'}</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               <tr className="border border-black bg-gray-100">
