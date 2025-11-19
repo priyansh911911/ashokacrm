@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import { showToast } from "../../utils/toaster";
@@ -158,6 +158,11 @@ const ReservationPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState(null);
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [selectedRoom, setSelectedRoom] = useState('');
+  const [isConverting, setIsConverting] = useState(false);
 
   // Fetch reservations from the API
   const fetchReservations = async () => {
@@ -201,6 +206,68 @@ const ReservationPage = () => {
     } catch (err) {
       setError(`Failed to fetch booking data for GRC: ${grcNo}`);
     }
+  };
+
+  // Fetch available rooms
+  const fetchAvailableRooms = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get('/api/rooms/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const rooms = Array.isArray(data) ? data : [];
+      const available = rooms.filter(room => room.status === 'available');
+      setAvailableRooms(available);
+    } catch (err) {
+      console.error('Error fetching rooms:', err);
+    }
+  };
+
+  // Convert reservation to booking
+  const convertToBooking = async () => {
+    if (!selectedReservation || !selectedRoom) {
+      showToast.error('Please select a room');
+      return;
+    }
+
+    setIsConverting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        `/api/bookings/convert-reservation/${selectedReservation._id}`,
+        { 
+          roomNumber: selectedRoom,
+          // Required fields with defaults
+          idProofType: 'Aadhaar',
+          salutation: 'mr.',
+          // Ensure other required fields are present
+          name: selectedReservation.guestName || 'Guest',
+          mobileNo: selectedReservation.mobileNo || selectedReservation.phoneNo || '0000000000'
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      showToast.success('Reservation converted to booking successfully!');
+      setShowConvertModal(false);
+      setSelectedReservation(null);
+      setSelectedRoom('');
+      fetchReservations(); // Refresh reservations list
+    } catch (err) {
+      showToast.error(err.response?.data?.error || 'Failed to convert reservation');
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  // Open convert modal
+  const openConvertModal = (reservation) => {
+    if (reservation.status === 'Cancelled') {
+      showToast.error('Cannot convert cancelled reservation');
+      return;
+    }
+    setSelectedReservation(reservation);
+    setShowConvertModal(true);
+    fetchAvailableRooms();
   };
   // useeffect
   useEffect(() => {
@@ -421,6 +488,16 @@ const ReservationPage = () => {
                           >
                             <Edit size={16} />
                           </button>
+                          {b.status !== 'Cancelled' && !b.linkedCheckInId && (
+                            <button
+                              onClick={() => openConvertModal(b)}
+                              className="p-1.5 rounded-full transition-colors"
+                              style={{ color: 'hsl(120, 60%, 40%)' }}
+                              title="Convert to Booking"
+                            >
+                              <ArrowRight size={16} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(b)}
                             className="p-1.5 rounded-full transition-colors"
@@ -516,6 +593,16 @@ const ReservationPage = () => {
                     >
                       <Edit size={18} />
                     </button>
+                    {b.status !== 'Cancelled' && !b.linkedCheckInId && (
+                      <button
+                        onClick={() => openConvertModal(b)}
+                        className="p-2 rounded-full transition duration-300"
+                        style={{ color: 'hsl(120, 60%, 40%)' }}
+                        title="Convert to Booking"
+                      >
+                        <ArrowRight size={18} />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDelete(b)}
                       className="p-2 rounded-full transition duration-300"
@@ -554,6 +641,70 @@ const ReservationPage = () => {
               }}
               onCancel={() => setEditId(null)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Convert to Booking Modal */}
+      {showConvertModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+          <div className="rounded-lg shadow-xl w-full max-w-md" style={{ backgroundColor: 'hsl(45, 100%, 95%)' }}>
+            <div className="p-6">
+              <h3 className="text-xl font-bold mb-4" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                Convert Reservation to Booking
+              </h3>
+              
+              <div className="mb-4">
+                <p className="text-sm mb-2" style={{ color: 'hsl(45, 100%, 30%)' }}>
+                  Guest: <strong>{selectedReservation?.guestName}</strong>
+                </p>
+                <p className="text-sm mb-4" style={{ color: 'hsl(45, 100%, 30%)' }}>
+                  Check-in: <strong>{selectedReservation?.checkInDate ? new Date(selectedReservation.checkInDate).toLocaleDateString() : 'N/A'}</strong>
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  Select Room *
+                </label>
+                <select
+                  value={selectedRoom}
+                  onChange={(e) => setSelectedRoom(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2"
+                  style={{ border: '1px solid hsl(45, 100%, 85%)', backgroundColor: 'white', color: 'hsl(45, 100%, 20%)' }}
+                >
+                  <option value="">Choose a room...</option>
+                  {availableRooms.map((room) => (
+                    <option key={room._id} value={room.room_number || room.roomNumber}>
+                      Room {room.room_number || room.roomNumber} - {room.categoryId?.name || 'Standard'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowConvertModal(false);
+                    setSelectedReservation(null);
+                    setSelectedRoom('');
+                  }}
+                  className="px-4 py-2 rounded-md transition-colors"
+                  style={{ backgroundColor: 'hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)' }}
+                  disabled={isConverting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={convertToBooking}
+                  className="px-4 py-2 rounded-md transition-colors"
+                  style={{ backgroundColor: 'hsl(120, 60%, 40%)', color: 'white' }}
+                  disabled={isConverting || !selectedRoom}
+                >
+                  {isConverting ? 'Converting...' : 'Convert to Booking'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
