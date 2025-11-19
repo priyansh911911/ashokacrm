@@ -405,13 +405,8 @@ const AllBookings = ({ setActiveTab }) => {
         return;
       }
       
-      // Calculate total from items
-      const items = currentOrder.allKotItems || currentOrder.items || [];
-      const calculatedTotal = items.reduce((sum, item) => {
-        const price = typeof item === 'object' ? (item.price || item.Price || 0) : 0;
-        const quantity = typeof item === 'object' ? (item.quantity || 1) : 1;
-        return sum + (price * quantity);
-      }, 0);
+      // Use the stored amount from database (already calculated with NOC)
+      const finalAmount = currentOrder.amount || currentOrder.advancePayment || 0;
       
       // Create invoice data with current items
       const invoiceData = {
@@ -421,8 +416,8 @@ const AllBookings = ({ setActiveTab }) => {
           customerName: currentOrder.customerName || 'Guest',
           tableNo: currentOrder.tableNo,
           items: items,
-          amount: calculatedTotal,
-          totalAmount: calculatedTotal,
+          amount: finalAmount,
+          totalAmount: finalAmount,
           status: currentOrder.status,
           createdAt: currentOrder.createdAt,
           kotCount: currentOrder.kotCount || 1
@@ -1599,8 +1594,20 @@ const AllBookings = ({ setActiveTab }) => {
                         <span className="bg-blue-500 text-white px-1 rounded text-xs">K{item.kotNumber || 1}</span>
                         <span>{typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item')}</span>
                         <span className="text-gray-500 text-sm">×{item.quantity || 1}</span>
+                        {item.isFree && (
+                          <span className="bg-green-100 text-green-800 px-1 rounded text-xs">NOC</span>
+                        )}
                       </div>
-                      <span>₹{typeof item === 'object' ? (item.price || item.Price || 0) : 0}</span>
+                      <span>
+                        {item.isFree ? (
+                          <div className="text-right">
+                            <span className="line-through text-gray-400">₹{typeof item === 'object' ? (item.price || item.Price || 0) : 0}</span>
+                            <div className="text-green-600 font-bold text-sm">FREE</div>
+                          </div>
+                        ) : (
+                          <span>₹{typeof item === 'object' ? (item.price || item.Price || 0) : 0}</span>
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1609,15 +1616,7 @@ const AllBookings = ({ setActiveTab }) => {
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span>Total Amount:</span>
-                  <span>₹{(() => {
-                    const items = selectedOrderDetails.allKotItems || selectedOrderDetails.items || [];
-                    const calculatedTotal = items.reduce((sum, item) => {
-                      const price = typeof item === 'object' ? (item.price || item.Price || 0) : 0;
-                      const quantity = typeof item === 'object' ? (item.quantity || 1) : 1;
-                      return sum + (price * quantity);
-                    }, 0);
-                    return calculatedTotal || selectedOrderDetails.totalAmount || selectedOrderDetails.amount || selectedOrderDetails.advancePayment || 0;
-                  })()}</span>
+                  <span>₹{selectedOrderDetails.amount || selectedOrderDetails.totalAmount || selectedOrderDetails.advancePayment || 0}</span>
                 </div>
               </div>
               
