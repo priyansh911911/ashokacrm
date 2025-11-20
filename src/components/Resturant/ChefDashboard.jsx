@@ -7,10 +7,11 @@ import { Wifi, WifiOff } from 'lucide-react';
 const ChefDashboard = () => {
   const { axios } = useAppContext();
   const [orders, setOrders] = useState([]);
+  const [allHistoryOrders, setAllHistoryOrders] = useState([]);
   const [historyOrders, setHistoryOrders] = useState([]);
   const [itemStates, setItemStates] = useState({});
   const [activeTab, setActiveTab] = useState('active');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
   
   // Real-time KOT updates for kitchen staff
@@ -34,14 +35,10 @@ const ChefDashboard = () => {
     showNotifications: true
   });
 
-  const fetchOrders = async (filterDate = null) => {
+  const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      let url = '/api/kot/all';
-      if (filterDate) {
-        url += `?date=${filterDate}`;
-      }
-      const response = await axios.get(url, {
+      const response = await axios.get('/api/kot/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -145,27 +142,16 @@ const ChefDashboard = () => {
       const activeOrders = kotOrders.filter(order => 
         order.status === 'pending' || order.status === 'preparing' || order.status === 'ready'
       );
-      let historyOrders = kotOrders.filter(order => 
+      const allHistory = kotOrders.filter(order => 
         order.status === 'served' || order.status === 'completed' || order.status === 'cancelled'
       );
       
-      // Filter history by selected date if in history tab
-      if (filterDate) {
-        const filterDateObj = new Date(filterDate);
-        historyOrders = historyOrders.filter(order => {
-          const orderDate = new Date(order.createdAt);
-          return orderDate.toDateString() === filterDateObj.toDateString();
-        });
-      }
-      
       console.log('All KOT orders:', kotOrders.length);
       console.log('Active orders:', activeOrders.length);
-      console.log('History orders:', historyOrders.length);
-      console.log('Order statuses:', kotOrders.map(o => `${o._id.slice(-4)}: ${o.status}`));
-      console.log('Raw KOT statuses:', response.data.map(k => `${k._id.slice(-4)}: ${k.status}`));
+      console.log('All history orders:', allHistory.length);
       
       setOrders(activeOrders);
-      setHistoryOrders(historyOrders);
+      setAllHistoryOrders(allHistory);
       setItemStates(newItemStates);
     } catch (error) {
       console.error('Error fetching KOT data:', error);
@@ -178,11 +164,19 @@ const ChefDashboard = () => {
     fetchOrders();
   }, []);
   
+  // Client-side date filtering for history orders
   useEffect(() => {
-    if (activeTab === 'history') {
-      fetchOrders(selectedDate);
+    if (selectedDate && selectedDate.trim() !== '') {
+      const filterDateObj = new Date(selectedDate);
+      const filtered = allHistoryOrders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate.toDateString() === filterDateObj.toDateString();
+      });
+      setHistoryOrders(filtered);
+    } else {
+      setHistoryOrders(allHistoryOrders);
     }
-  }, [selectedDate, activeTab]);
+  }, [selectedDate, allHistoryOrders]);
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
@@ -279,6 +273,12 @@ const ChefDashboard = () => {
                   />
                 </div>
                 <button
+                  onClick={() => setSelectedDate('')}
+                  className="px-3 py-2 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
+                >
+                  Show All
+                </button>
+                <button
                   onClick={() => setShowCalendar(!showCalendar)}
                   className={`px-3 py-2 rounded-md text-sm transition-colors ${
                     showCalendar 
@@ -294,7 +294,7 @@ const ChefDashboard = () => {
               {showCalendar && (
                 <div className="bg-white border border-gray-300 rounded-lg p-4 shadow-lg">
                   {(() => {
-                    const currentDate = new Date(selectedDate);
+                    const currentDate = selectedDate ? new Date(selectedDate) : new Date();
                     const currentMonth = currentDate.getMonth();
                     const currentYear = currentDate.getFullYear();
                     const today = new Date();
@@ -356,7 +356,7 @@ const ChefDashboard = () => {
                           {days.map((day, index) => {
                             const isCurrentMonth = day.getMonth() === currentMonth;
                             const isToday = day.toDateString() === today.toDateString();
-                            const isSelected = day.toDateString() === currentDate.toDateString();
+                            const isSelected = selectedDate && day.toDateString() === currentDate.toDateString();
                             
                             return (
                               <button
@@ -388,6 +388,15 @@ const ChefDashboard = () => {
                             Today
                           </button>
                           <button
+                            onClick={() => {
+                              setSelectedDate('');
+                              setShowCalendar(false);
+                            }}
+                            className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm"
+                          >
+                            Show All
+                          </button>
+                          <button
                             onClick={() => setShowCalendar(false)}
                             className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
                           >
@@ -406,7 +415,7 @@ const ChefDashboard = () => {
 
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {(activeTab === 'active' ? orders : historyOrders).map((order) => (
           <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 min-h-[320px] flex flex-col">
             {/* Header */}
