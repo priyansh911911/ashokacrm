@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Soup, CheckCircle } from 'lucide-react';
+import { Clock, Soup, CheckCircle, Printer } from 'lucide-react';
 
 const KOTStatusBadge = ({ status }) => {
     const statusConfig = {
@@ -43,6 +43,84 @@ const KOTStatusBadge = ({ status }) => {
 
 const ViewKOTModal = ({ isOpen, onClose, kotData }) => {
     if (!isOpen) return null;
+
+    const printKOT = (kot) => {
+        const printWindow = window.open('', '_blank');
+        const printContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>KOT #${kot.displayNumber || kot.kotNumber?.slice(-3) || kot._id.slice(-6)}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                    .kot-info { margin-bottom: 20px; }
+                    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    .items-table th, .items-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+                    .items-table th { background-color: #f0f0f0; }
+                    .status { padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+                    .status.pending { background-color: #fef3c7; color: #92400e; }
+                    .status.preparing { background-color: #fef3c7; color: #92400e; }
+                    .status.ready { background-color: #d1fae5; color: #065f46; }
+                    .status.completed { background-color: #d1fae5; color: #065f46; }
+                    .footer { margin-top: 30px; text-align: center; font-size: 12px; }
+                    @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>KITCHEN ORDER TICKET</h1>
+                    <h2>KOT #${kot.displayNumber || kot.kotNumber?.slice(-3) || kot._id.slice(-6)}</h2>
+                </div>
+                
+                <div class="kot-info">
+                    <p><strong>Table:</strong> ${kot.tableNumber || 'N/A'}</p>
+                    <p><strong>Status:</strong> <span class="status ${kot.status}">${kot.status.toUpperCase()}</span></p>
+                    <p><strong>Created:</strong> ${new Date(kot.createdAt).toLocaleString()}</p>
+                    ${kot.updatedAt ? `<p><strong>Last Updated:</strong> ${new Date(kot.updatedAt).toLocaleString()}</p>` : ''}
+                </div>
+                
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${kot.items?.map(item => `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td>${item.quantity}</td>
+                                <td>${item.notes || '-'}</td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="3">No items</td></tr>'}
+                    </tbody>
+                </table>
+                
+                <div class="footer">
+                    <p>Printed on: ${new Date().toLocaleString()}</p>
+                </div>
+                
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        window.onafterprint = function() {
+                            window.close();
+                        };
+                    };
+                </script>
+            </body>
+            </html>
+        `;
+        
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+    };
 
     return (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -106,12 +184,22 @@ const ViewKOTModal = ({ isOpen, onClose, kotData }) => {
                                         </div>
                                     </div>
 
-                                    {/* Timestamps */}
+                                    {/* Timestamps and Print Button */}
                                     <div className="mt-4 text-sm text-gray-500 flex justify-between items-center pt-3 border-t">
-                                        <span>Created: {new Date(kot.createdAt).toLocaleString()}</span>
-                                        {kot.updatedAt && (
-                                            <span>Last Updated: {new Date(kot.updatedAt).toLocaleString()}</span>
-                                        )}
+                                        <div>
+                                            <div>Created: {new Date(kot.createdAt).toLocaleString()}</div>
+                                            {kot.updatedAt && (
+                                                <div>Last Updated: {new Date(kot.updatedAt).toLocaleString()}</div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => printKOT(kot)}
+                                            className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-sm"
+                                            title="Print KOT"
+                                        >
+                                            <Printer className="w-4 h-4" />
+                                            Print
+                                        </button>
                                     </div>
                                 </div>
                             ))}
