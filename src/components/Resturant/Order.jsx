@@ -112,8 +112,7 @@ const Order = () => {
       try {
         const nocRes = await axios.get('/api/noc/all');
         const nocData = Array.isArray(nocRes.data) ? nocRes.data : (nocRes.data.nocs || []);
-        const activeNocs = nocData.filter(noc => noc.status === 'active');
-        setNocs(activeNocs);
+        setNocs(nocData);
       } catch (error) {
         console.error('Error fetching NOCs:', error);
       }
@@ -344,7 +343,6 @@ const Order = () => {
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
       console.error('Error headers:', error.response?.headers);
-      console.error('Request data that failed:', finalOrderData);
       
       // Check if it's a status validation error and try without status field
       if (error.response?.data?.error?.includes('status') && error.response?.data?.error?.includes('enum')) {
