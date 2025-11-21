@@ -849,14 +849,6 @@ const KOT = () => {
                           <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>{kot.assignedChef?.name || 'Unassigned'}</td>
                           <td className="px-2 sm:px-4 py-3">
                             <div className="flex flex-col sm:flex-row gap-1">
-                              {kot.status === 'pending' && (
-                                <button
-                                  onClick={() => updateKOTStatus(kot._id, 'preparing', kot.orderId)}
-                                  className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 whitespace-nowrap"
-                                >
-                                  Start Preparing
-                                </button>
-                              )}
                               {kot.status === 'preparing' && (
                                 <button
                                   onClick={() => updateKOTStatus(kot._id, 'ready', kot.orderId)}
@@ -883,16 +875,14 @@ const KOT = () => {
                                   </button>
                                 )
                               )}
-                              {activeTab === 'history' && (
-                                <button
-                                  onClick={() => printKOT(kot)}
-                                  className="bg-purple-500 text-white px-2 py-1 rounded text-xs hover:bg-purple-600 whitespace-nowrap flex items-center gap-1"
-                                  title="Print KOT"
-                                >
-                                  <Printer className="w-3 h-3" />
-                                  Print
-                                </button>
-                              )}
+                              <button
+                                onClick={() => printKOT(kot)}
+                                className="bg-purple-500 text-white px-2 py-1 rounded text-xs hover:bg-purple-600 whitespace-nowrap flex items-center gap-1"
+                                title="Print KOT"
+                              >
+                                <Printer className="w-3 h-3" />
+                                Print
+                              </button>
                             </div>
                           </td>
                         </tr>
