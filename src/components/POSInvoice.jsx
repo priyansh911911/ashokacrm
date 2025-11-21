@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { Printer } from 'lucide-react';
 
 export default function POSInvoice() {
   const { axios } = useAppContext();
@@ -9,6 +10,7 @@ export default function POSInvoice() {
   
   const [invoiceData, setInvoiceData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [kotData, setKotData] = useState([]);
 
   const fetchInvoiceData = async (checkoutId) => {
     try {
@@ -61,11 +63,45 @@ export default function POSInvoice() {
         };
         
         setInvoiceData(posInvoiceData);
+        
+        // Fetch KOT data for this order
+        await fetchKOTData(orderData._id);
       }
     } catch (error) {
       console.error('Error fetching POS invoice data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchKOTData = async (orderId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/api/kot/order/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data && Array.isArray(response.data)) {
+        setKotData(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching KOT data:', error);
+      // If KOT API fails, create mock KOT data from order
+      if (bookingData) {
+        const mockKot = {
+          _id: bookingData._id,
+          kotNumber: bookingData._id?.slice(-6) || `${Math.floor(Math.random() * 9000) + 1000}`,
+          tableNo: bookingData.tableNo,
+          status: 'pending',
+          items: bookingData.items?.map(item => ({
+            name: typeof item === 'object' ? (item.itemName || item.name || 'Item') : String(item),
+            quantity: typeof item === 'object' ? (item.quantity || 1) : 1,
+            kotNumber: 1
+          })) || [],
+          createdAt: new Date().toISOString()
+        };
+        setKotData([mockKot]);
+      }
     }
   };
 
@@ -111,6 +147,131 @@ export default function POSInvoice() {
     window.print();
   };
 
+  const printKOT = (kot) => {
+    const printWindow = window.open('', '_blank');
+    const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>KOT #${kot.displayNumber || kot.kotNumber?.slice(-3) || kot._id?.slice(-6) || 'N/A'}</title>
+            <style>
+                @page {
+                    size: 80mm auto;
+                    margin: 0;
+                }
+                body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: monospace;
+                    width: 80mm;
+                    font-size: 10px;
+                }
+                .print-content {
+                    width: 80mm;
+                    max-width: 80mm;
+                    margin: 0;
+                    padding: 2mm;
+                    font-size: 10px;
+                    line-height: 1.2;
+                    box-sizing: border-box;
+                }
+                .print-header {
+                    font-size: 12px;
+                    font-weight: bold;
+                }
+                .text-center { text-align: center; }
+                .mb-1 { margin-bottom: 4px; }
+                .mb-2 { margin-bottom: 8px; }
+                .mb-3 { margin-bottom: 12px; }
+                .border-b { border-bottom: 1px solid #000; }
+                .flex { display: flex; }
+                .justify-between { justify-content: space-between; }
+                .font-bold { font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <div class="print-content">
+                <div class="text-center mb-3">
+                    <div class="print-header mb-2">ASHOKA</div>
+                    <div class="mb-1">EXPERIENCE COMFORT</div>
+                    <div class="mb-2">KITCHEN ORDER TICKET</div>
+                    <div class="font-bold mb-1">ASHOKA DINING</div>
+                    <div class="mb-1">(A Unit Of Ashoka hospitality)</div>
+                    <div class="mb-1">Add : Near Hanuman Mandir, Deoria Road</div>
+                    <div class="mb-1">Kurnaghat, Gorakhpur - 273008</div>
+                    <div class="mb-1">GSTIN : 09ANHPJ7242D2Z1</div>
+                    <div class="mb-2">Mob : 6388491244</div>
+                    <div class="border-b mb-2"></div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="flex justify-between mb-1">
+                        <span>KOT #: ${kot.displayNumber || kot.kotNumber?.slice(-3) || kot._id?.slice(-6) || 'N/A'}</span>
+                        <span>Table: ${kot.tableNo || 'N/A'}</span>
+                    </div>
+                    <div class="flex justify-between mb-1">
+                        <span>Date: ${new Date().toLocaleDateString('en-GB')}</span>
+                        <span>Time: ${new Date().toLocaleTimeString('en-GB', { hour12: false })}</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span>Status: ${kot.status?.toUpperCase() || 'PENDING'}</span>
+                        <span>Priority: ${kot.priority?.toUpperCase() || 'NORMAL'}</span>
+                    </div>
+                    <div class="border-b mb-2"></div>
+                </div>
+
+                <div class="mb-2">
+                    <div class="flex justify-between font-bold border-b mb-1">
+                        <span style="width: 50%">Item</span>
+                        <span style="width: 20%; text-align: center">Qty</span>
+                        <span style="width: 30%">Notes</span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    ${kot.items?.map(item => {
+                        const itemName = typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item');
+                        const quantity = typeof item === 'object' ? (item.quantity || 1) : 1;
+                        const note = typeof item === 'object' ? (item.note || '') : '';
+                        return `
+                            <div class="flex justify-between mb-1">
+                                <span style="width: 50%">${itemName}</span>
+                                <span style="width: 20%; text-align: center">${quantity}</span>
+                                <span style="width: 30%">${note || '-'}</span>
+                            </div>
+                        `;
+                    }).join('') || '<div>No items</div>'}
+                    <div class="border-b mb-2"></div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="mb-1">Total Items: ${kot.items?.length || 0}</div>
+                    <div class="border-b mb-2"></div>
+                </div>
+
+                <div class="text-center mb-3">
+                    <div class="mb-2">Kitchen Copy</div>
+                    <div class="border-b mb-2"></div>
+                    <div>Printed: ${new Date().toLocaleString('en-GB')}</div>
+                </div>
+            </div>
+            
+            <script>
+                window.onload = function() {
+                    window.print();
+                    window.onafterprint = function() {
+                        window.close();
+                    };
+                };
+            </script>
+        </body>
+        </html>
+    `;
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   return (
     <div className="min-h-screen bg-white p-4">
       <style>{`
@@ -134,14 +295,36 @@ export default function POSInvoice() {
           }
         }
       `}</style>
-        {/* Print Button */}
-        <div className="no-print mb-4 text-center">
-          <button 
-            onClick={handlePrint}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
-          >
-            🖨️ Print Bill
-          </button>
+        {/* Print Buttons */}
+        <div className="no-print mb-4 text-center space-y-2">
+          <div>
+            <button 
+              onClick={handlePrint}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium mr-2"
+            >
+              🖨️ Print Bill
+            </button>
+          </div>
+          
+          {/* KOT Print Section */}
+          {kotData.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-800">Kitchen Order Tickets</h3>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {kotData.map((kot, index) => (
+                  <button
+                    key={kot._id || index}
+                    onClick={() => printKOT(kot)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+                    title="Print KOT"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print KOT #{kot.kotNumber?.slice(-3) || kot._id?.slice(-6) || (index + 1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="print-content max-w-sm mx-auto bg-white border border-gray-300 p-4 font-mono text-xs">
