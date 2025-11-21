@@ -109,9 +109,11 @@ const Menu = () => {
                 type="number"
                 placeholder="Enter price"
                 value={formData.Price}
-                onChange={(e) => setFormData({...formData, Price: Number(e.target.value)})}
+                onChange={(e) => setFormData({...formData, Price: Math.max(0, Number(e.target.value))})}
                 className="w-full rounded-lg px-3 py-2"
                 style={{ border: '1px solid hsl(45, 100%, 85%)', backgroundColor: 'white', color: 'hsl(45, 100%, 20%)' }}
+                min="0"
+                step="0.01"
                 required
               />
             </div>
@@ -133,9 +135,11 @@ const Menu = () => {
                 type="number"
                 placeholder="Enter discount amount"
                 value={formData.Discount}
-                onChange={(e) => setFormData({...formData, Discount: Number(e.target.value)})}
+                onChange={(e) => setFormData({...formData, Discount: Math.max(0, Number(e.target.value))})}
                 className="w-full rounded-lg px-3 py-2"
                 style={{ border: '1px solid hsl(45, 100%, 85%)', backgroundColor: 'white', color: 'hsl(45, 100%, 20%)' }}
+                min="0"
+                step="0.01"
               />
             </div>
             <div>
