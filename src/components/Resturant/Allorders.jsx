@@ -8,6 +8,8 @@ import { useOrderSocket } from '../../hooks/useOrderSocket';
 import PaymentBill from '../Pantry/PaymentBill';
 import RestaurantBill from '../Pantry/RestaurantBill';
 import LiveOrderNotifications from './LiveOrderNotifications';
+import AddItemsModal from './AddItemsModal';
+import TransferTableModal from './TransferTableModal';
 
 const AllBookings = ({ setActiveTab }) => {
   const { axios } = useAppContext();
@@ -37,7 +39,7 @@ const AllBookings = ({ setActiveTab }) => {
   const [bookings, setBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [transferForm, setTransferForm] = useState({ orderId: '', newTable: '' });
-  const [addItemsForm, setAddItemsForm] = useState({ orderId: '', itemId: '' });
+  const [addItemsForm, setAddItemsForm] = useState({ orderId: '', itemId: '', quantity: 1 });
   const [tables, setTables] = useState([]);
   const [items, setItems] = useState([]);
   const [coupons, setCoupons] = useState([]);
@@ -530,11 +532,11 @@ const AllBookings = ({ setActiveTab }) => {
       
       const currentOrder = bookings.find(b => b._id === addItemsForm.orderId);
       
-      await axios.post('/api/items/add', {
-        orderId: addItemsForm.orderId,
-        name: selectedItem.name,
-        category: selectedItem.category,
-        Price: selectedItem.Price
+      await axios.patch(`/api/restaurant-orders/${addItemsForm.orderId}/add-items`, {
+        items: [{
+          itemId: selectedItem._id,
+          quantity: parseInt(addItemsForm.quantity) || 1
+        }]
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -1374,176 +1376,6 @@ const AllBookings = ({ setActiveTab }) => {
         </div>
       )}
 
-      {/* Add Items Modal */}
-      {showAddItemsModal && selectedOrderForItems && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Add Items to Order</h3>
-              <button
-                onClick={() => {
-                  setShowAddItemsModal(false);
-                  setSelectedOrderForItems(null);
-                  setAddItemsForm({orderId: '', itemId: ''});
-                }}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="p-3 bg-gray-100 rounded">
-                <div className="font-semibold">Current Order Details:</div>
-                <div className="text-sm mt-1">
-                  <div>Order ID: {selectedOrderForItems._id?.slice(-6)}</div>
-                  <div>Table: {selectedOrderForItems.tableNo}</div>
-                  <div>Items: {selectedOrderForItems.allKotItems?.length || selectedOrderForItems.items?.length || 0}</div>
-                  <div>KOTs: {selectedOrderForItems.kotCount || 1}</div>
-                  <div>Amount: ₹{selectedOrderForItems.amount || 0}</div>
-                  <div>Status: {selectedOrderForItems.status || 'pending'}</div>
-                </div>
-                {(selectedOrderForItems.allKotItems || selectedOrderForItems.items) && (selectedOrderForItems.allKotItems || selectedOrderForItems.items).length > 0 && (
-                  <div className="text-xs mt-2 text-gray-600">
-                    <div className="font-medium">Current Items:</div>
-                    {(selectedOrderForItems.allKotItems || selectedOrderForItems.items).map((item, index) => {
-                      let itemName = 'Unknown Item';
-                      if (typeof item === 'string') {
-                        itemName = item;
-                      } else if (item.itemId) {
-                        const foundItem = items.find(i => i._id === item.itemId);
-                        itemName = foundItem ? foundItem.name : (item.name || item.itemName || 'Unknown Item');
-                      } else {
-                        itemName = item.name || item.itemName || 'Unknown Item';
-                      }
-                      return (
-                        <div key={index} className="flex items-center gap-1">
-                          <span className="bg-blue-500 text-white px-1 rounded text-xs">K{item.kotNumber || 1}</span>
-                          <span>• {itemName}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              
-              <form onSubmit={addItems} className="space-y-4">
-                <div>
-                  <label className="block font-semibold mb-2">Select Item to Add:</label>
-                  <select
-                    value={addItemsForm.itemId}
-                    onChange={(e) => setAddItemsForm({...addItemsForm, itemId: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded focus:border-purple-500 focus:outline-none"
-                    required
-                  >
-                    <option value="">Choose an item...</option>
-                    {items.map(item => (
-                      <option key={item._id} value={item._id}>
-                        {item.name} - {item.category} - ₹{item.Price}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddItemsModal(false);
-                      setSelectedOrderForItems(null);
-                      setAddItemsForm({orderId: '', itemId: ''});
-                    }}
-                    className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
-                  >
-                    Add Item
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Transfer Table Modal */}
-      {showTransferModal && selectedOrderForTransfer && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Transfer Table</h3>
-              <button
-                onClick={() => {
-                  setShowTransferModal(false);
-                  setSelectedOrderForTransfer(null);
-                  setTransferForm({orderId: '', newTable: ''});
-                }}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="p-3 bg-gray-100 rounded">
-                <div className="font-semibold">Current Order Details:</div>
-                <div className="text-sm mt-1">
-                  <div>Order ID: {selectedOrderForTransfer._id?.slice(-6)}</div>
-                  <div>Current Table: {selectedOrderForTransfer.tableNo}</div>
-                  <div>Items: {selectedOrderForTransfer.allKotItems?.length || selectedOrderForTransfer.items?.length || 0}</div>
-                  <div>KOTs: {selectedOrderForTransfer.kotCount || 1}</div>
-                  <div>Amount: ₹{selectedOrderForTransfer.amount || 0}</div>
-                  <div>Status: {selectedOrderForTransfer.status || 'pending'}</div>
-                </div>
-              </div>
-              
-              <form onSubmit={transferTable} className="space-y-4">
-                <div>
-                  <label className="block font-semibold mb-2">Select New Table:</label>
-                  <select
-                    value={transferForm.newTable}
-                    onChange={(e) => setTransferForm({...transferForm, newTable: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded focus:border-orange-500 focus:outline-none"
-                    required
-                  >
-                    <option value="">Choose a table...</option>
-                    {tables.filter(table => table.tableNumber !== selectedOrderForTransfer.tableNo).map(table => (
-                      <option key={table._id} value={table.tableNumber}>
-                        Table {table.tableNumber} ({table.status || 'available'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowTransferModal(false);
-                      setSelectedOrderForTransfer(null);
-                      setTransferForm({orderId: '', newTable: ''});
-                    }}
-                    className="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
-                  >
-                    Transfer Table
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Order Details Modal */}
       {showDetailsModal && selectedOrderDetails && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50">
@@ -1668,6 +1500,28 @@ const AllBookings = ({ setActiveTab }) => {
       
       {/* Live Order Notifications */}
       <LiveOrderNotifications />
+      
+      {/* Add Items Modal */}
+      <AddItemsModal
+        isOpen={showAddItemsModal}
+        onClose={() => {
+          setShowAddItemsModal(false);
+          setSelectedOrderForItems(null);
+        }}
+        selectedOrder={selectedOrderForItems}
+        onItemAdded={fetchBookings}
+      />
+      
+      {/* Transfer Table Modal */}
+      <TransferTableModal
+        isOpen={showTransferModal}
+        onClose={() => {
+          setShowTransferModal(false);
+          setSelectedOrderForTransfer(null);
+        }}
+        selectedOrder={selectedOrderForTransfer}
+        onTransferComplete={fetchBookings}
+      />
     </div>
   );
 };
