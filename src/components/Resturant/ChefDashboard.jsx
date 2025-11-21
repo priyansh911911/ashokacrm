@@ -450,15 +450,15 @@ const ChefDashboard = () => {
 
             {/* Items List */}
             <div className="flex-1 mb-3">
-              <div className="grid grid-cols-6 text-xs text-gray-500 font-medium border-b pb-1 mb-2">
+              <div className="grid grid-cols-6 text-xs text-gray-500 font-medium border-b pb-2 mb-2 gap-2">
                 <span className="text-center">✓</span>
-                <span className="col-span-3 truncate">Items</span>
+                <span className="col-span-3">Items</span>
                 <span className="text-right">Price</span>
                 <span className="text-right">Timer</span>
               </div>
-              <div className="max-h-32 sm:max-h-40 overflow-y-auto space-y-1">
+              <div className="max-h-32 sm:max-h-40 overflow-y-auto space-y-2">
                 {order.items?.map((item, index) => (
-                  <div key={index} className="grid grid-cols-6 text-xs sm:text-sm gap-1">
+                  <div key={index} className="grid grid-cols-6 text-xs sm:text-sm gap-2 py-1 border-b border-gray-100 last:border-b-0">
                     <div className="flex justify-center">
                       <input 
                         type="checkbox" 
@@ -478,7 +478,7 @@ const ChefDashboard = () => {
                       />
                     </div>
                     <span 
-                      className={`col-span-3 truncate ${
+                      className={`col-span-3 break-words text-xs leading-tight ${
                         itemStates[`${order._id}-${index}`]?.status === 'delivered' 
                           ? 'text-green-600 line-through' 
                           : itemStates[`${order._id}-${index}`]?.status === 'served' 
